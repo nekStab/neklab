@@ -1,17 +1,16 @@
 c-----------------------------------------------------------------------
       subroutine userchk
       use neklab
-      use LightKrylov, only: eigs
       include 'SIZE'
       include 'TOTAL'
 
 	type(nek_dvector), allocatable :: bf
 	type(nek_dvector), allocatable :: eigvecs(:), wrk
 	type(exponential_propagator), allocatable :: exptA
-	real(kind=wp) :: alpha, residuals(128)
-	complex(kind=wp) :: eigvals(128)
-	integer :: i, info
 	integer, parameter :: kdim = 128
+	real(kind=wp) :: alpha, residuals(kdim)
+	complex(kind=wp) :: eigvals(kdim)
+	integer :: i, info
 	
 	if (istep.eq.0) then
 
@@ -32,13 +31,8 @@ c-----------------------------------------------------------------------
 		! Run eigenvalue analysis.
 		call eigs(exptA, eigvecs, eigvals, residuals, info)
 
-		if (nid.eq.0) then
-			open(unit=1234, file="eigenspectrum.dat")
-			do i = 1, size(eigvals)
-			write(1234, *) eigvals(i)%re, eigvals(i)%im, residuals(i)
-			enddo
-			close(1234)
-		endif
+                if (nid.eq.0) call save_eigenspectrum(eigvals%re, eigvals%im, residuals, "eigenspectrum.npy")
+
 		do i = 1, 10
 		call outpost(eigvecs(i)%vx, eigvecs(i)%vy, eigvecs(i)%vz, eigvecs(i)%pr, eigvecs(i)%theta, "eig")
 		enddo
