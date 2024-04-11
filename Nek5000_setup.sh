@@ -103,10 +103,10 @@ if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
 
     # Define the exports as a single string without leading spaces
     exports_string="# nekStab folder location"
-    exports_string+="\nexport NEKSTAB_SOURCE_ROOT=$nekstab_source_root"
-    exports_string+="\nexport PATH=\$NEKSTAB_SOURCE_ROOT/bin:\$PATH"
+    exports_string+="\nexport NEKLAB_SOURCE_ROOT=$nekstab_source_root"
+    exports_string+="\nexport PATH=\$NEKLAB_SOURCE_ROOT/bin:\$PATH"
     exports_string+="\n# Nek5000 folder location"
-    exports_string+="\nexport NEK_SOURCE_ROOT=\"\$NEKSTAB_SOURCE_ROOT/Nek5000\""
+    exports_string+="\nexport NEK_SOURCE_ROOT=\"\$NEKLAB_SOURCE_ROOT/Nek5000\""
     exports_string+="\nexport PATH=\$NEK_SOURCE_ROOT/bin:\$PATH"
 
     # Determine the appropriate configuration file based on the current shell
