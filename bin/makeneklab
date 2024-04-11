@@ -10,7 +10,7 @@ ar=""
 
 # Fetch version information for user reference
 N_VERSION=$(git -C $NEK_SOURCE_ROOT describe --tag --long --always)
-NS_VERSION=$(git -C $NEKSTAB_SOURCE_ROOT describe --tag --long --always)
+NS_VERSION=$(git -C $NEKLAB_SOURCE_ROOT describe --tag --long --always)
 
 #-------------------------------------------------------------------------------
 # Compiler Detection
@@ -112,7 +112,7 @@ echo "nekStab version: $NS_VERSION"
 echo "preparing compilation with: $(which $FC; echo $FFLAGS $USR_LFLAGS)"
 
 # Update makefile and static variables
-echo "include $NEKSTAB_SOURCE_ROOT/core/makefile_neklab" > makefile_usr.inc
+echo "include $NEKLAB_SOURCE_ROOT/core/makefile_neklab" > makefile_usr.inc
 
 set +a -e
 $NEK_SOURCE_ROOT/bin/nekconfig $@
