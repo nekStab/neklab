@@ -1,0 +1,3 @@
+$(OBJDIR)/neklab_vectors.o:	$(NEKLAB_SOURCE_ROOT)/core/neklab_vectors.f90	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/neklab_linops.o:	$(NEKLAB_SOURCE_ROOT)/core/neklab_linops.f90	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/neklab.o:	$(NEKLAB_SOURCE_ROOT)/core/neklab.f90	;$(FC) -c $(FL2) $< -o $@
