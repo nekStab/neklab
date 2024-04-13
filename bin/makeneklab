@@ -101,7 +101,7 @@ FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
 export FFLAGS
 
 # User-specified object files
-USR+="neklab_vectors.o"
+USR="neklab_vectors.o"
 USR+=" neklab_linops.o"
 USR+=" neklab_analysis.o"
 USR+=" neklab.o"
