@@ -7,6 +7,7 @@
       private
       
       public :: nek2vec, vec2nek
+      public :: outpost_vec
       public :: nopcopy
       
       integer, parameter :: lv = lx1*ly1*lz1*lelv
@@ -14,6 +15,10 @@
       integer, parameter :: lp = lx2*ly2*lz2*lelv
       !! Local number of grid points for the pressure mesh.
       
+      !----------------------------------------
+      !-----     NEK REAL VECTOR TYPE     -----
+      !----------------------------------------
+
       type, extends(abstract_vector), public :: nek_dvector
       !! Type definition for Nek5000 state-vector (real).
       real(kind=wp), dimension(lv) :: vx, vy, vz
@@ -25,12 +30,34 @@
       contains
       private
       procedure, pass(self), public :: zero  => nek_dzero
+      !! Sets a vector to zero.
       procedure, pass(self), public :: rand  => nek_drand
+      !! Create a random vector.
       procedure, pass(self), public :: scal  => nek_dscal
+      !! Scale a vector such that $\mathbf{x} = \alpha \mathbf{x}$ with $\alpha \in \mathbb{R}$.
       procedure, pass(self), public :: axpby => nek_daxpby
+      !! Add (in-place) two vectors such that $\mathbf{x} = \alpha \mathbf{x} + \beta \mathbf{y}$ with $\alpha$ and $\beta \in \mathbb{R}$.
       procedure, pass(self), public :: dot   => nek_ddot
+      !! Compute the $\ell_2$ inner-product between two vectors.
       end type nek_dvector
-      
+
+      !-------------------------------------------
+      !-----     NEK COMPLEX VECTOR TYPE     -----
+      !-------------------------------------------
+
+      ! type, extends(abstract_vector), public :: nek_zvector
+      ! !! Type definition of Nek5000 state vector (complex).
+      ! type(nek_dvector), allocatable :: re
+      ! type(nek_dvector), allocatable :: im
+      ! contains
+      ! private
+      ! procedure, pass(self), public :: zero  => nek_zzero
+      ! procedure, pass(self), public :: rand  => nek_zrand
+      ! procedure, pass(self), public :: scal  => nek_zscal
+      ! procedure, pass(self), public :: axpby => nek_zaxpby
+      ! procedure, pass(self), public :: dot   => nek_zdot
+      ! end type nek_zvector
+
       interface nek2vec
       module procedure nek2vec_prt
       module procedure nek2vec_std
@@ -40,23 +67,23 @@
       module procedure vec2nek_std
       module procedure vec2nek_prt
       end interface
+
+      interface outpost_vec
+      module procedure outpost_dvector
+      end interface
       
       contains
       
-      !-----------------------------------------------------------
-      !-----                                                 -----
-      !-----     DEFINITION OF THE TYPE BOUND PROCEDURES     -----
-      !-----                                                 -----
-      !-----------------------------------------------------------
+      !----------------------------------------------------------------------------
+      !-----                                                                  -----
+      !-----     DEFINITION OF THE TYPE BOUND PROCEDURES FOR REAL VECTORS     -----
+      !-----                                                                  -----
+      !----------------------------------------------------------------------------
       
       subroutine nek_dzero(self)
       class(nek_dvector), intent(inout) :: self
       !! Vector to be zeroed-out.
-      self%vx = 0.0_wp
-      self%vy = 0.0_wp
-      self%vz = 0.0_wp
-      self%pr = 0.0_wp
-      self%theta = 0.0_wp
+      call self%scal(0.0_wp)
       return
       end subroutine nek_dzero
       
@@ -73,12 +100,13 @@
       xl(2) = ym1(i, 1, 1, 1)
       if (if3d) xl(3) = zm1(i, 1, 1, 1)
       
-      fcoeff(1) = 3.0e4_wp; fcoeff(2) = -1.5e3_wp; fcoeff(3) = 0.5e5_wp
+      call random_number(fcoeff) ; fcoeff = fcoeff * 1.0e4_wp
       self%vx(i) = self%vx(i) + mth_rand(i, 1, 1, 1, xl, fcoeff)
       
-      fcoeff(1) = 2.3e4_wp; fcoeff(2) = 2.3e3_wp; fcoeff(3) = -2.0e5_wp
+      call random_number(fcoeff) ; fcoeff = fcoeff * 1.0e4_wp
       self%vy(i) = self%vy(i) + mth_rand(i, 1, 1, 1, xl, fcoeff)
       end do
+
       ! Face averaging.
       call opdssum(self%vx, self%vy, self%vz)
       call opcolv(self%vx, self%vy, self%vz, vmult)
@@ -147,6 +175,49 @@
       
       return
       end function nek_ddot
+
+      !-------------------------------------------------------------------------------
+      !-----                                                                     -----
+      !-----     DEFINITION OF THE TYPE BOUND PROCEDURES FOR COMPLEX VECTORS     -----
+      !-----                                                                     -----
+      !-------------------------------------------------------------------------------
+      
+      ! subroutine nek_zzero(self)
+      ! class(nek_zvector), intent(inout) :: self
+      ! call self%re%zero()
+      ! call self%im%zero()
+      ! return
+      ! end subroutine nek_zzero
+      ! 
+      ! subroutine nek_zrand(self, ifnorm)
+      ! class(nek_zvector), intent(inout) :: self
+      ! logical, optional, intent(in) :: ifnorm
+      ! call self%re%rand()
+      ! call self%im%rand()
+      ! return
+      ! end subroutine nek_zrand
+      ! 
+      ! subroutine nek_zscal(self, alpha)
+      ! class(nek_zvector), intent(inout) :: self
+      ! real(kind=wp), intent(in) :: alpha
+      ! call self%re%scal(alpha)
+      ! call self%im%scal(alpha)
+      ! return
+      ! end subroutine nek_zscal
+      ! 
+      ! subroutine nek_zaxpby(self, alpha, vec, beta)
+      ! class(nek_zvector), intent(inout) :: self
+      ! real(kind=wp), intent(in) :: alpha
+      ! class(abstract_vector), intent(in) :: vec
+      ! real(kind=wp), intent(in) :: beta
+      ! return
+      ! end subroutine nek_zaxpby
+      ! 
+      ! real(kind=wp) function nek_zdot(self, vec) result(alpha)
+      ! class(nek_zvector), intent(in) :: self
+      ! class(abstract_vector), intent(in) :: vec
+      ! return
+      ! end function nek_zdot
       
       !-----------------------------------------
       !-----                               -----
@@ -214,8 +285,8 @@
       include 'SIZE'
       include 'TOTAL'
       integer :: n, k
-      real, intent(inout) :: a1(1), a2(1), a3(1), a4(1), a5(lx1*ly1*lz1*lelt, 1)
-      real, intent(in) :: b1(1), b2(1), b3(1), b4(1), b5(lx1*ly1*lz1*lelt, 1)
+      real(kind=wp), intent(inout) :: a1(1), a2(1), a3(1), a4(1), a5(lx1*ly1*lz1*lelt, 1)
+      real(kind=wp), intent(in) :: b1(1), b2(1), b3(1), b4(1), b5(lx1*ly1*lz1*lelt, 1)
       n = nx1*ny1*nz1*nelv
       call copy(a1, b1, n)
       call copy(a2, b2, n)
@@ -233,12 +304,20 @@
       real(kind=wp) function mth_rand(ix, iy, iz, ieg, xl, fcoeff) !generate random number
       include 'INPUT'           ! IF3D
       integer ix, iy, iz, ieg
-      real xl(LDIM), fcoeff(3)
+      real(kind=wp) xl(LDIM), fcoeff(3)
       mth_rand = fcoeff(1)*(ieg + xl(1)*sin(xl(2))) + fcoeff(2)*ix*iy + fcoeff(3)*ix
       if (IF3D) mth_rand = fcoeff(1)*(ieg + xl(NDIM)*sin(mth_rand)) + fcoeff(2)*iz*ix + fcoeff(3)*iz
-      mth_rand = 1.e3*sin(mth_rand)
-      mth_rand = 1.e3*sin(mth_rand)
+      mth_rand = 1.0e3_wp * sin(mth_rand)
+      mth_rand = 1.0e3_wp * sin(mth_rand)
       mth_rand = cos(mth_rand)
       return
       end function mth_rand
+
+      subroutine outpost_dvector(vec, prefix)
+      type(nek_dvector), intent(in) :: vec
+      character(len=3) , intent(in) :: prefix
+      call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
+      return
+      end subroutine outpost_dvector
+
       end module neklab_vectors
