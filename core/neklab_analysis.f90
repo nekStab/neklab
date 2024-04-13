@@ -57,7 +57,7 @@
       
       ! Export eigenfunctions to disk.
       do i = 1, nev
-      call outpost(eigvecs(i)%vx, eigvecs(i)%vy, eigvecs(i)%vz, eigvecs(i)%pr, eigvecs(i)%theta, "eig")
+      call outpost_vec(eigvecs(i), "eig")
       end do
       
       return
