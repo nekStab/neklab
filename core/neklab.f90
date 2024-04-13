@@ -6,6 +6,8 @@
       use neklab_vectors
       ! --> Definitions of the abstract linops in the Nek framework.
       use neklab_linops
+      ! -->
+      use neklab_analysis
       
       private
       
@@ -25,7 +27,6 @@
       public :: eigs, eighs, svds
       public :: save_eigenspectrum
       
-      
       !----------------------------------
       !-----     NEKLAB EXPORTS     -----
       !----------------------------------
@@ -35,8 +36,10 @@
       
       ! Implementation of the standard linear operators.
       public :: exponential_propagator
-
-      ! Various utilities.
-      public :: nopcopy
       
+      !
+      public :: linear_stability_analysis_fixed_point
+      
+      ! Various utilities.
+      public :: nek2vec, vec2nek
       end module neklab
