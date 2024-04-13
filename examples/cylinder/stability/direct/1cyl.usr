@@ -1,42 +1,25 @@
 c-----------------------------------------------------------------------
       subroutine userchk
+      use lightkrylov, only: rtol
       use neklab
-      include 'SIZE'
-      include 'TOTAL'
+      include "SIZE"
+      include "TOTAL"
 
 	type(nek_dvector), allocatable :: bf
-	type(nek_dvector), allocatable :: eigvecs(:), wrk
 	type(exponential_propagator), allocatable :: exptA
-	integer, parameter :: kdim = 128
-	real(kind=wp) :: alpha, residuals(kdim)
-	complex(kind=wp) :: eigvals(kdim)
-	integer :: i, info
-	
-	if (istep.eq.0) then
+	integer, parameter :: kdim = 256, nev = 4
 
+	if (istep.eq.0) then
 		! Load baseflow.
-		allocate(bf)
 		call load_fld("BF_1cyl0.f00001")
-		call nopcopy(bf%vx, bf%vy, bf%vz, bf%pr, bf%theta, vx, vy, vz, pr, t)
+		allocate(bf) ; call nek2vec(bf, vx, vy, vz, pr, t)
 
 		! Exponential propagator.
-		exptA = exponential_propagator(1.0_wp, bf)
+		exptA = exponential_propagator(1.0_wp, bf) ; call exptA%init()
 
-		! Allocate and initialize eigenvectors.
-		allocate(eigvecs(kdim+1)) ; allocate(wrk)
-		call eigvecs(1)%rand() ; call exptA%matvec(eigvecs(1), wrk)
-		call eigvecs(1)%axpby(0.0_wp, wrk, 1.0_wp)
-		alpha = eigvecs(1)%norm() ; call eigvecs(1)%scal(1.0_wp / alpha)
-
-		! Run eigenvalue analysis.
-		call eigs(exptA, eigvecs, eigvals, residuals, info)
-
-                if (nid.eq.0) call save_eigenspectrum(eigvals%re, eigvals%im, residuals, "eigenspectrum.npy")
-
-		do i = 1, 10
-		call outpost(eigvecs(i)%vx, eigvecs(i)%vy, eigvecs(i)%vz, eigvecs(i)%pr, eigvecs(i)%theta, "eig")
-		enddo
-
+		! Stability analysis.
+		call linear_stability_analysis_fixed_point(exptA, kdim, nev)
+ 
 		call nek_end()
 	endif
       return
