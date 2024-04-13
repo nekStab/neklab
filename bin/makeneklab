@@ -101,14 +101,15 @@ FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
 export FFLAGS
 
 # User-specified object files
-USR="neklab_vectors.o"
+USR+="neklab_vectors.o"
 USR+=" neklab_linops.o"
+USR+=" neklab_analysis.o"
 USR+=" neklab.o"
 export USR
 
 # Output summary of settings
 echo "Nek5000 version: $N_VERSION"
-echo "nekStab version: $NS_VERSION"
+echo "neklab version: $NS_VERSION"
 echo "preparing compilation with: $(which $FC; echo $FFLAGS $USR_LFLAGS)"
 
 # Update makefile and static variables
