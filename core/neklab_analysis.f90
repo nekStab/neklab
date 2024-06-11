@@ -1,5 +1,5 @@
       module neklab_analysis
-      use LightKrylov, only: wp, eigs, save_eigenspectrum, initialize_krylov_subspace
+      use LightKrylov, only: dp, eigs, save_eigenspectrum, initialize_krylov_subspace
       use neklab_vectors
       use neklab_linops
       implicit none
@@ -25,14 +25,15 @@
       
       ! Eigenvalue computation related variables.
       type(nek_dvector), allocatable :: eigvecs(:)
-      complex(kind=wp) :: eigvals(kdim)
-      real(kind=wp) :: residuals(kdim)
+      complex(kind=dp) , allocatable :: eigvals(:)
+      real(kind=dp)    , allocatable :: residuals(:)
       integer :: info
       
       ! Miscellaneous.
-      real(kind=wp) :: alpha
+      real(kind=dp) :: alpha
       integer :: i
       logical :: transpose
+      character(len=3) :: file_prefix
       
       ! Optional parameters.
       if (present(adjoint)) then
@@ -42,22 +43,23 @@
       end if
       
       ! Allocate eigenvectors and initialize Krylov basis.
-      allocate (eigvecs(kdim+1)); call initialize_krylov_subspace(eigvecs)
-      call eigvecs(1)%rand(); alpha = eigvecs(1)%norm()
-      call eigvecs(1)%scal(1.0_wp/alpha)
+      allocate (eigvecs(nev)); call initialize_krylov_subspace(eigvecs)
       
       ! Run the eigenvalue analysis.
-      call eigs(exptA, eigvecs, eigvals, residuals, info, nev=nev)
+      call eigs(exptA, eigvecs, eigvals, residuals, info, kdim=kdim, transpose=adjoint)
       
       ! Transform eigenspectrum to continuous-time representation.
       eigvals = log(eigvals)/exptA%tau
       
+      ! Determine the file prefix.
+      file_prefix = merge("adj", "dir", transpose)
+
       ! Save eigenspectrum to disk.
-      call save_eigenspectrum(eigvals%re, eigvals%im, residuals, "eigenspectrum.npy")
+      call save_eigenspectrum(eigvals, residuals, trim(file_prefix) // "_eigenspectrum.npy")
       
       ! Export eigenfunctions to disk.
       do i = 1, nev
-      call outpost_vec(eigvecs(i), "eig")
+      call outpost_vec(eigvecs(i), file_prefix)
       end do
       
       return

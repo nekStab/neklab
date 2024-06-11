@@ -1,27 +1,29 @@
 c-----------------------------------------------------------------------
       subroutine userchk
-      use lightkrylov, only: rtol
+      use lightkrylov, only: rtol => rtol_dp
       use neklab
       include "SIZE"
       include "TOTAL"
+      integer :: i
 
-	type(nek_dvector), allocatable :: bf
-	type(exponential_propagator), allocatable :: exptA
-	integer, parameter :: kdim = 256, nev = 4
+        type(nek_dvector), allocatable :: bf, wrk_vec1, wrk_vec2
+        type(exponential_propagator), allocatable :: exptA
+        integer, parameter :: kdim = 128, nev = 2
 
-	if (istep.eq.0) then
-		! Load baseflow.
-		call load_fld("BF_1cyl0.f00001")
-		allocate(bf) ; call nek2vec(bf, vx, vy, vz, pr, t)
+        if (istep.eq.0) then
+            ! Load baseflow.
+            call load_fld("BF_1cyl0.f00001")
+            allocate(bf) ; call nek2vec(bf, vx, vy, vz, pr, t)
+            call vec2nek(vx, vy, vz, pr, t, bf)
 
-		! Exponential propagator.
-		exptA = exponential_propagator(1.0_wp, bf) ; call exptA%init()
+            ! Exponential propagator.
+            exptA = exponential_propagator(1.0_wp, bf) ; call exptA%init()
 
-		! Stability analysis.
-		call linear_stability_analysis_fixed_point(exptA, kdim, nev)
+            ! Stability analysis.
+            call linear_stability_analysis_fixed_point(exptA, kdim, nev)
  
-		call nek_end()
-	endif
+            call nek_end()
+        endif
       return
       end
 c----------------------------------------------------------------------
