@@ -35,10 +35,11 @@
          public :: nek_dvector
       
       ! Implementation of the standard linear operators.
-         public :: exponential_propagator
+         public :: exptA_linop
       
       !
          public :: linear_stability_analysis_fixed_point
+         public :: transient_growth_analysis_fixed_point
       
       ! Various utilities.
          public :: nek2vec, vec2nek

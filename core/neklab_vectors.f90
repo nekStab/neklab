@@ -1,5 +1,5 @@
       module neklab_vectors
-         use LightKrylov, only: abstract_vector_rdp, dp
+         use LightKrylov, only: abstract_vector_rdp, abstract_vector_cdp, dp
          implicit none
          include "SIZE"
          include "TOTAL"
@@ -34,7 +34,7 @@
             procedure, pass(self), public :: rand => nek_drand
       !! Create a random vector.
             procedure, pass(self), public :: scal => nek_dscal
-      !! Scale a vector such that \( \mathbf{x} = \alpha \mathbf{x}$ with $\alpha \in \mathbb{R} \).
+      !! Scale a vector such that \( \mathbf{x} = \alpha \mathbf{x}$ with     $      \alpha \in \mathbb{R} \).
             procedure, pass(self), public :: axpby => nek_daxpby
       !! Add (in-place) two vectors such that \( \mathbf{x} = \alpha \mathbf{x} + \beta \mathbf{y} \) with \( \alpha \) and \( \beta \in \mathbb{R} \).
             procedure, pass(self), public :: dot => nek_ddot
@@ -45,18 +45,18 @@
       !-----     NEK COMPLEX VECTOR TYPE     -----
       !-------------------------------------------
       
-      ! type, extends(abstract_vector), public :: nek_zvector
-      ! !! Type definition of Nek5000 state vector (complex).
-      ! type(nek_dvector), allocatable :: re
-      ! type(nek_dvector), allocatable :: im
-      ! contains
-      ! private
-      ! procedure, pass(self), public :: zero  => nek_zzero
-      ! procedure, pass(self), public :: rand  => nek_zrand
-      ! procedure, pass(self), public :: scal  => nek_zscal
-      ! procedure, pass(self), public :: axpby => nek_zaxpby
-      ! procedure, pass(self), public :: dot   => nek_zdot
-      ! end type nek_zvector
+         type, extends(abstract_vector_cdp), public :: nek_zvector
+      !! Type definition of Nek5000 state vector (complex).
+            type(nek_dvector), allocatable :: re
+            type(nek_dvector), allocatable :: im
+         contains
+            private
+            procedure, pass(self), public :: zero => nek_zzero
+            procedure, pass(self), public :: rand => nek_zrand
+            procedure, pass(self), public :: scal => nek_zscal
+            procedure, pass(self), public :: axpby => nek_zaxpby
+            procedure, pass(self), public :: dot => nek_zdot
+         end type nek_zvector
       
          interface nek2vec
             module procedure nek2vec_prt
@@ -99,8 +99,8 @@
                normalize = ifnorm
             else
                normalize = .false.
-            endif
-
+            end if
+      
             do i = 1, n
                ieg = lglel(iel)
                xl(1) = xm1(i, 1, 1, 1)
@@ -121,11 +121,11 @@
             call dsavg(self%vy)
             if (if3d) call dsavg(self%vz)
             call bcdirvc(self%vx, self%vy, self%vz, v1mask, v2mask, v3mask)
-
+      
             if (normalize) then
                alpha = self%norm()
-               call self%scal(1.0_dp / alpha)
-            endif
+               call self%scal(1.0_dp/alpha)
+            end if
       
             return
          end subroutine nek_drand
@@ -194,55 +194,65 @@
       !-----                                                                     -----
       !-------------------------------------------------------------------------------
       
-      ! subroutine nek_zzero(self)
-      ! class(nek_zvector), intent(inout) :: self
-      ! call self%re%zero()
-      ! call self%im%zero()
-      ! return
-      ! end subroutine nek_zzero
-      !
-      ! subroutine nek_zrand(self, ifnorm)
-      ! class(nek_zvector), intent(inout) :: self
-      ! logical, optional, intent(in) :: ifnorm
-      ! call self%re%rand()
-      ! call self%im%rand()
-      ! return
-      ! end subroutine nek_zrand
-      !
-      ! subroutine nek_zscal(self, alpha)
-      ! class(nek_zvector), intent(inout) :: self
-      ! real(kind=wp), intent(in) :: alpha
-      ! call self%re%scal(alpha)
-      ! call self%im%scal(alpha)
-      ! return
-      ! end subroutine nek_zscal
-      !
-      ! subroutine nek_zaxpby(self, alpha, vec, beta)
-      ! class(nek_zvector), intent(inout) :: self
-      ! real(kind=wp), intent(in) :: alpha
-      ! class(abstract_vector), intent(in) :: vec
-      ! real(kind=wp), intent(in) :: beta
-      ! select type(vec)
-      ! type is(nek_dvector)
-      ! call self%re%axpby(alpha, vec, beta)
-      ! type is(nek_zvector)
-      ! call self%re%axpby(alpha, vec%re, beta)
-      ! call self%im%axpby(alpha, vec%im, beta)
-      ! end select
-      ! return
-      ! end subroutine nek_zaxpby
-      !
-      ! real(kind=wp) function nek_zdot(self, vec) result(alpha)
-      ! class(nek_zvector), intent(in) :: self
-      ! class(abstract_vector), intent(in) :: vec
-      ! return
-      ! end function nek_zdot
+         subroutine nek_zzero(self)
+            class(nek_zvector), intent(inout) :: self
+      !! Vector to be zeroed-out.
+            call self%scal(cmplx(0.0_dp, 0.0_dp, kind=dp))
+            return
+         end subroutine nek_zzero
+      
+         subroutine nek_zrand(self, ifnorm)
+            class(nek_zvector), intent(inout) :: self
+            logical, optional, intent(in) :: ifnorm
+            logical :: normalize
+            integer :: i, n, ieg, iel
+            real(kind=dp) :: xl(ldim), fcoeff(3), alpha
+      
+            if (present(ifnorm)) then
+               normalize = ifnorm
+            else
+               normalize = .false.
+            end if
+      
+            call self%re%rand(); call self%im%rand()
+      
+            if (normalize) then
+               alpha = self%norm()
+               call self%scal(cmplx(1.0_dp, 0.0_dp, kind=dp)/alpha)
+            end if
+      
+            return
+         end subroutine nek_zrand
+      
+         subroutine nek_zscal(self, alpha)
+            class(nek_zvector), intent(inout) :: self
+            complex(kind=dp), intent(in) :: alpha
+            return
+         end subroutine nek_zscal
+      
+         subroutine nek_zaxpby(self, alpha, vec, beta)
+            class(nek_zvector), intent(inout) :: self
+            complex(kind=dp), intent(in) :: alpha
+            class(abstract_vector_cdp), intent(in) :: vec
+            complex(kind=dp), intent(in) :: beta
+            select type (vec)
+            type is (nek_zvector)
+            end select
+            return
+         end subroutine nek_zaxpby
+      
+         complex(kind=dp) function nek_zdot(self, vec) result(alpha)
+            class(nek_zvector), intent(in) :: self
+            class(abstract_vector_cdp), intent(in) :: vec
+            return
+         end function nek_zdot
       
       !-----------------------------------------
       !-----                               -----
       !-----     NEK-RELATED UTILITIES     -----
       !-----                               -----
       !-----------------------------------------
+      
          subroutine nek2vec_prt(vec, vx_, vy_, vz_, pr_, t_)
             include "SIZE"
             type(nek_dvector), intent(out) :: vec
