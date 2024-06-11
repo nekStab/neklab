@@ -1,12 +1,12 @@
       module neklab_linops
-         !---------------------------------------
-         !-----     LightKrylov Imports     -----
-         !---------------------------------------
-         ! Default real kind.
+      !---------------------------------------
+      !-----     LightKrylov Imports     -----
+      !---------------------------------------
+      ! Default real kind.
          use LightKrylov, only: dp
-         ! Abstract types for real-valued linear operators and vectors.
+      ! Abstract types for real-valued linear operators and vectors.
          use LightKrylov, only: abstract_linop_rdp, abstract_vector_rdp
-         ! Extensions of the abstract vector types to nek data format.
+      ! Extensions of the abstract vector types to nek data format.
          use neklab_vectors
          implicit none
          include "SIZE"
@@ -15,9 +15,7 @@
          private
       
       !------------------------------------------
-      !-----                                -----
       !-----     EXPONENTIAL PROPAGATOR     -----
-      !-----                                -----
       !------------------------------------------
       
          type, extends(abstract_linop_rdp), public :: exptA_linop
@@ -97,6 +95,9 @@
             ifadj = .false.; lastep = 0; fintim = param(10)
             call bcast(ifadj, lsize)
       
+      ! Force the baseflow field.
+            call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+      
       ! Sets the initial condition for Nek5000's linearized solver.
             select type (vec_in)
             type is (nek_dvector)
@@ -125,6 +126,9 @@
       ! Nek-related setup.
             ifadj = .true.; lastep = 0; fintim = param(10)
             call bcast(ifadj, lsize)
+      
+      ! Force the baseflow field.
+            call vec2nek(vx, vy, vz, pr, t, self%baseflow)
       
       ! Sets the initial condition for Nek5000's linearized solver.
             select type (vec_in)

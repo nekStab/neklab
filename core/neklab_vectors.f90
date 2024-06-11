@@ -1,12 +1,12 @@
       module neklab_vectors
-         !---------------------------------------
-         !-----     LightKrylov Imports     -----
-         !---------------------------------------
-         ! Default real kind.
+      !---------------------------------------
+      !-----     LightKrylov Imports     -----
+      !---------------------------------------
+      ! Default real kind.
          use LightKrylov, only: dp
-         ! Abstract types for real-valued vectors.
+      ! Abstract types for real-valued vectors.
          use LightKrylov, only: abstract_vector_rdp
-
+      
          implicit none
          include "SIZE"
          include "TOTAL"
@@ -40,7 +40,7 @@
             procedure, pass(self), public :: rand => nek_drand
       !! Create a random vector.
             procedure, pass(self), public :: scal => nek_dscal
-      !! Scale a vector such that \( \mathbf{x} = \alpha \mathbf{x}$ with     $      \alpha \in \mathbb{R} \).
+      !! Scale a vector such that \( \mathbf{x} = \alpha \mathbf{x}$ with     $         \alpha \in \mathbb{R} \).
             procedure, pass(self), public :: axpby => nek_daxpby
       !! Add (in-place) two vectors such that \( \mathbf{x} = \alpha \mathbf{x} + \beta \mathbf{y} \) with \( \alpha \) and \( \beta \in \mathbb{R} \).
             procedure, pass(self), public :: dot => nek_ddot
@@ -176,7 +176,7 @@
       
             return
          end function nek_ddot
-
+      
       !-----------------------------------------
       !-----                               -----
       !-----     NEK-RELATED UTILITIES     -----
