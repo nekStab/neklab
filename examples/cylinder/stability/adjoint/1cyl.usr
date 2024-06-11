@@ -6,7 +6,7 @@ c-----------------------------------------------------------------------
       integer :: i
 
         type(nek_dvector), allocatable :: bf, wrk_vec1, wrk_vec2
-        type(exponential_propagator), allocatable :: exptA
+        type(exptA_linop), allocatable :: exptA
         integer, parameter :: kdim = 128, nev = 2
 
         if (istep.eq.0) then
@@ -16,7 +16,7 @@ c-----------------------------------------------------------------------
             call vec2nek(vx, vy, vz, pr, t, bf)
 
             ! Exponential propagator.
-            exptA = exponential_propagator(1.0_dp, bf) ; call exptA%init()
+            exptA = exptA_linop(1.0_dp, bf) ; call exptA%init()
 
             ! Stability analysis.
             call linear_stability_analysis_fixed_point(exptA, kdim, nev, adjoint=.true.)
