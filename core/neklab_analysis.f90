@@ -80,7 +80,7 @@
             integer :: info
       
       ! Miscellaneous.
-            integer :: i
+            integer :: i, j
             character(len=3) :: file_prefix
       
       ! Allocate singular vectors.
@@ -102,7 +102,7 @@
                file_prefix = "prt"; call outpost_vec(V(i), file_prefix)
                file_prefix = "rsp"; call outpost_vec(U(i), file_prefix)
             end do
-      
+
             return
          end subroutine transient_growth_analysis_fixed_point
       
