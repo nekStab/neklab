@@ -32,3 +32,5 @@
 *.app
 LightKrylov/
 Nek5000/
+examples/back_fstep/transient_growth/.state
+examples/back_fstep/transient_growth/.usr
