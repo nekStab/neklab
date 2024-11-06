@@ -67,13 +67,13 @@
             call logger%log_message('Set self%baseflow -> vx, vy, vz, pr, t', module=this_module, procedure='init_LNS')
       
       ! Setup Nek5000 for perturbation solver
-            call setup_linear_solver(if_solve_baseflow=.false., recompute_dt=.true., cfl_limit=0.5_dp, full_summary=.true.)
+            call setup_linear_solver(solve_baseflow=.false., recompute_dt=.true., cfl_limit=0.5_dp, full_summary=.true.)
       
             return
          end subroutine init_LNS
       
          subroutine LNS_matvec(self, vec_in, vec_out)
-            class(LNS_linop), intent(in) :: self
+            class(LNS_linop), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
       !
@@ -88,7 +88,7 @@
             common/scrvh/h1, h2
             common/scrhi/h2inv
       
-            call setup_linear_solver(if_adjoint=.false., silent=.true.)
+            call setup_linear_solver(transpose=.false., silent=.true.)
       
       ! Force the baseflow field.
             call vec2nek(vx, vy, vz, pr, t, self%baseflow)
@@ -154,7 +154,7 @@
          end subroutine LNS_matvec
       
          subroutine adjLNS_matvec(self, vec_in, vec_out)
-            class(LNS_linop), intent(in) :: self
+            class(LNS_linop), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
       !
@@ -168,7 +168,7 @@
             common/scrvh/h1, h2
             common/scrhi/h2inv
       
-            call setup_linear_solver(if_adjoint=.true., silent=.true.)
+            call setup_linear_solver(transpose=.true., silent=.true.)
       
       ! Force the baseflow field.
             call vec2nek(vx, vy, vz, pr, t, self%baseflow)
@@ -243,17 +243,17 @@
             call logger%log_message('Set self%baseflow -> vx, vy, vz, pr, t', module=this_module, procedure='init_exptA')
       
       ! Setup Nek5000 for perturbation solver
-            call setup_linear_solver(if_solve_baseflow=.false., recompute_dt=.true., cfl_limit=0.5_dp, full_summary=.true.)
+            call setup_linear_solver(solve_baseflow=.false., recompute_dt=.true., cfl_limit=0.5_dp, full_summary=.true.)
       
             return
          end subroutine init_exptA
       
          subroutine exptA_matvec(self, vec_in, vec_out)
-            class(exptA_linop), intent(in) :: self
+            class(exptA_linop), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
       
-            call setup_linear_solver(if_adjoint=.false., silent=.true.)
+            call setup_linear_solver(transpose=.false., silent=.true.)
       
       ! Force the baseflow field.
             call vec2nek(vx, vy, vz, pr, t, self%baseflow)
@@ -280,11 +280,11 @@
          end subroutine exptA_matvec
       
          subroutine exptA_rmatvec(self, vec_in, vec_out)
-            class(exptA_linop), intent(in) :: self
+            class(exptA_linop), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
       
-            call setup_linear_solver(if_adjoint=.true., silent=.true.)
+            call setup_linear_solver(transpose=.true., silent=.true.)
       
       ! Force the baseflow field.
             call vec2nek(vx, vy, vz, pr, t, self%baseflow)

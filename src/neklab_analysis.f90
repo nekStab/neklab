@@ -31,7 +31,7 @@
       contains
       
          subroutine linear_stability_analysis_fixed_point(exptA, kdim, nev, adjoint)
-            type(exptA_linop), intent(in) :: exptA
+            type(exptA_linop), intent(inout) :: exptA
       !! Operator whose stability properties are to be investigated.
             integer, intent(in) :: kdim
       !! Maximum dimension of the Krylov subspace.
@@ -81,7 +81,7 @@
          end subroutine linear_stability_analysis_fixed_point
       
          subroutine transient_growth_analysis_fixed_point(exptA, nsv, kdim)
-            type(exptA_linop), intent(in) :: exptA
+            type(exptA_linop), intent(inout) :: exptA
       !! Operator whose singular value decomposition needs to be computed.
             integer, intent(in) :: nsv
       !! Desired number of singular triplets.

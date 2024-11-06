@@ -304,12 +304,12 @@
             return
          end subroutine outpost_ext_dnek_basis
       
-         subroutine setup_nek(if_LNS, if_adjoint, if_solve_baseflow, recompute_dt, endtime, vtol, ptol, cfl_limit, full_summary, silent)
-            logical, intent(in) :: if_LNS
-            logical, optional, intent(in) :: if_adjoint
-            logical :: if_adjoint_
-            logical, optional, intent(in) :: if_solve_baseflow
-            logical :: if_solve_baseflow_
+         subroutine setup_nek(LNS, transpose, solve_baseflow, recompute_dt, endtime, vtol, ptol, cfl_limit, full_summary, silent)
+            logical, intent(in) :: LNS
+            logical, optional, intent(in) :: transpose
+            logical :: transpose_
+            logical, optional, intent(in) :: solve_baseflow
+            logical :: solve_baseflow_
             logical, optional, intent(in) :: recompute_dt
             logical :: recompute_dt_
             real(dp), optional, intent(in) :: endtime
@@ -325,10 +325,10 @@
             logical, optional, intent(in) :: silent
             logical :: silent_
       ! internal
-            character(len=:), allocatable :: msg
+            character(len=128) :: msg
       
-            if_adjoint_ = optval(if_adjoint, .false.)
-            if_solve_baseflow_ = optval(if_solve_baseflow, .false.)
+            transpose_ = optval(transpose, .false.)
+            solve_baseflow_ = optval(solve_baseflow, .false.)
             recompute_dt_ = optval(recompute_dt, .false.)
             endtime_ = optval(endtime, param(10))
             ptol_ = optval(ptol, param(21))
@@ -344,14 +344,14 @@
       ! Force contant time step.
             param(12) = -abs(param(12))
       
-            if (if_LNS) then
+            if (LNS) then
                ifpert = .true.; call bcast(ifpert, lsize)
-               if (if_adjoint_) then
+               if (transpose_) then
                   ifadj = .true.; call bcast(ifadj, lsize)
                else
                   ifadj = .false.; call bcast(ifadj, lsize)
                end if
-               if (if_solve_baseflow_) then
+               if (solve_baseflow_) then
                   ifbase = .true.; call bcast(ifbase, lsize)
                else
                   ifbase = .false.; call bcast(ifbase, lsize)
@@ -429,14 +429,14 @@
             real(dp), optional, intent(in) :: cfl_limit
             logical, optional, intent(in) :: full_summary
             logical, optional, intent(in) :: silent
-            call setup_nek(if_LNS=.false., recompute_dt=recompute_dt,
+            call setup_nek(LNS=.false., recompute_dt=recompute_dt,
      $   endtime = endtime, vtol = vtol, ptol = ptol, cfl_limit = cfl_limit, full_summary = full_summary, silent = silent)
             return
          end subroutine setup_nonlinear_solver
       
-         subroutine setup_linear_solver(if_adjoint, if_solve_baseflow, recompute_dt, endtime, vtol, ptol, cfl_limit, full_summary, silent)
-            logical, optional, intent(in) :: if_adjoint
-            logical, optional, intent(in) :: if_solve_baseflow
+         subroutine setup_linear_solver(transpose, solve_baseflow, recompute_dt, endtime, vtol, ptol, cfl_limit, full_summary, silent)
+            logical, optional, intent(in) :: transpose
+            logical, optional, intent(in) :: solve_baseflow
             logical, optional, intent(in) :: recompute_dt
             real(dp), optional, intent(in) :: endtime
             real(dp), optional, intent(in) :: vtol
@@ -444,13 +444,13 @@
             real(dp), optional, intent(in) :: cfl_limit
             logical, optional, intent(in) :: full_summary
             logical, optional, intent(in) :: silent
-            call setup_nek(if_LNS=.true., if_adjoint=if_adjoint, if_solve_baseflow=if_solve_baseflow, recompute_dt=recompute_dt,
+            call setup_nek(LNS=.true., transpose=transpose, solve_baseflow=solve_baseflow, recompute_dt=recompute_dt,
      $   endtime = endtime, vtol = vtol, ptol = ptol, cfl_limit = cfl_limit, full_summary = full_summary, silent = silent)
             return
          end subroutine setup_linear_solver
       
          subroutine nek_status(full_summary)
-            character(len=:), allocatable :: msg
+            character(len=128) :: msg
             logical, optional, intent(in) :: full_summary
             logical :: full_summary_
             full_summary_ = optval(full_summary, .false.)

@@ -38,14 +38,14 @@
          contains
             private
             procedure, pass(self), public :: init => init_DNS
-            procedure, pass(self), public :: eval => nonlinear_map
+            procedure, pass(self), public :: response => nonlinear_map
          end type nek_system
       
          type, extends(abstract_system_rdp), public :: nek_system_upo
          contains
             private
             procedure, pass(self), public :: init => init_DNS_upo
-            procedure, pass(self), public :: eval => nonlinear_map_upo
+            procedure, pass(self), public :: response => nonlinear_map_upo
          end type nek_system_upo
       
       !---------------------------------------------
@@ -87,7 +87,7 @@
       
          subroutine nonlinear_map(self, vec_in, vec_out, atol)
       ! Dynamical system.
-            class(nek_system), intent(in) :: self
+            class(nek_system), intent(inout) :: self
       ! Input vector.
             class(abstract_vector_rdp), intent(in) :: vec_in
       ! Output vector.
@@ -137,13 +137,13 @@
             call logger%log_message('Set self%X -> vx, vy, vz, pr, t', module=this_module, procedure='init_jac_exptA')
       
       ! Setup Nek5000 for perturbation solver
-            call setup_linear_solver(if_solve_baseflow=.false., recompute_dt=.true., cfl_limit=0.5_dp, full_summary=.true.)
+            call setup_linear_solver(solve_baseflow=.false., recompute_dt=.true., cfl_limit=0.5_dp, full_summary=.true.)
       
             return
          end subroutine init_jac_exptA
       
          subroutine jac_exptA_matvec(self, vec_in, vec_out)
-            class(nek_jacobian), intent(in) :: self
+            class(nek_jacobian), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
       
@@ -152,7 +152,7 @@
                select type (vec_out)
                type is (nek_dvector)
       ! Ensure correct nek status
-                  call setup_linear_solver(if_adjoint=.false., silent=.true.)
+                  call setup_linear_solver(transpose=.false., silent=.true.)
       
       ! Set the baseflow initial condition
                   call abs_vec2nek(vx, vy, vz, pr, t, self%X)
@@ -178,7 +178,7 @@
          end subroutine jac_exptA_matvec
       
          subroutine jac_exptA_rmatvec(self, vec_in, vec_out)
-            class(nek_jacobian), intent(in) :: self
+            class(nek_jacobian), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
       
@@ -187,7 +187,7 @@
                select type (vec_out)
                type is (nek_dvector)
       ! Ensure correct nek status
-                  call setup_linear_solver(if_adjoint=.true., silent=.true.)
+                  call setup_linear_solver(transpose=.true., silent=.true.)
       
       ! Set the baseflow initial condition
                   call abs_vec2nek(vx, vy, vz, pr, t, self%X)
@@ -230,7 +230,7 @@
       
          subroutine nonlinear_map_UPO(self, vec_in, vec_out, atol)
       ! Dynamical system.
-            class(nek_system_upo), intent(in) :: self
+            class(nek_system_upo), intent(inout) :: self
       ! Input vector.
             class(abstract_vector_rdp), intent(in) :: vec_in
       ! Output vector.
@@ -279,7 +279,7 @@
             call logger%log_message('Set self%X -> vx, vy, vz, pr, t', module=this_module, procedure='init_jac_map')
       
       ! Setup Nek5000 for perturbation solver
-            call setup_linear_solver(if_solve_baseflow=.true., recompute_dt=.true.,
+            call setup_linear_solver(solve_baseflow=.true., recompute_dt=.true.,
      $   cfl_limit = 0.4_dp, full_summary = .true.)
       
             return
@@ -287,7 +287,7 @@
       
          subroutine jac_direct_map(self, vec_in, vec_out)
       ! Dynamical system.
-            class(nek_jacobian_upo), intent(in) :: self
+            class(nek_jacobian_upo), intent(inout) :: self
       ! Input vector.
             class(abstract_vector_rdp), intent(in) :: vec_in
       ! Output vector.
@@ -303,7 +303,7 @@
                   call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
       
       ! Ensure correct nek status -> set end time
-                  call setup_linear_solver(if_adjoint=.false., endtime=vec_in%T, silent=.true.)
+                  call setup_linear_solver(transpose=.false., endtime=vec_in%T, silent=.true.)
       
       ! Set the perturbation initial condition
                   call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
@@ -336,7 +336,7 @@
          end subroutine jac_direct_map
       
          subroutine jac_adjoint_map(self, vec_in, vec_out)
-            class(nek_jacobian_upo), intent(in) :: self
+            class(nek_jacobian_upo), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
       ! internal
@@ -350,7 +350,7 @@
                   call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
       
       ! Ensure correct nek status -> set end time
-                  call setup_linear_solver(if_adjoint=.true., endtime=vec_in%T, silent=.true.)
+                  call setup_linear_solver(transpose=.true., endtime=vec_in%T, silent=.true.)
       
       ! Set the perturbation initial condition
                   call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
