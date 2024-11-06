@@ -32,5 +32,17 @@
 *.app
 LightKrylov/
 Nek5000/
-examples/back_fstep/transient_growth/.state
-examples/back_fstep/transient_growth/.usr
+
+# Build files, executables etc.
+examples/*/*.log
+examples/*/.state
+examples/*/makefile
+examples/*/makefile_usr.inc
+examples/*/nek5000
+examples/*/obj/*
+examples/*/*/*.log
+examples/*/*/.state
+examples/*/*/makefile
+examples/*/*/makefile_usr.inc
+examples/*/*/nek5000
+examples/*/*/obj/*
