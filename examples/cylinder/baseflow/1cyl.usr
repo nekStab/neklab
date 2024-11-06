@@ -22,7 +22,7 @@ c-----------------------------------------------------------------------
           ! define system
           sys = nek_system()
           sys%jacobian = nek_jacobian()
-          sys%Jacobian%X = bf
+          sys%jacobian%X = bf
 
           call newton_fixed_point_iteration(sys, bf, tol)
 
