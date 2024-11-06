@@ -7,6 +7,8 @@
          use LightKrylov, only: dp
       ! Abstract types for real-valued linear operators and vectors.
          use LightKrylov, only: abstract_linop_rdp, abstract_vector_rdp
+      ! Logging
+         use LightKrylov_Logger
       ! Extensions of the abstract vector types to nek data format.
          use neklab_vectors
          use neklab_utils, only: nek2vec, vec2nek, setup_nonlinear_solver, setup_linear_solver
@@ -15,7 +17,7 @@
          include "TOTAL"
          include "ADJOINT"
          private
-         character(len=*), parameter :: this_module = 'neklab_linops'
+         character(len=*), parameter, private :: this_module = 'neklab_linops'
 
          integer, parameter :: lv = lx1*ly1*lz1*lelv
       !! Local number of grid points for the velocity mesh.
@@ -60,8 +62,12 @@
          subroutine init_LNS(self)
             class(LNS_linop), intent(in) :: self
 
+            ! Force the baseflow field for dt/nsteps/clf computation
+            call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+            call logger%log_message('Set self%baseflow -> vx, vy, vz, pr, t', module=this_module, procedure='init_LNS')
+
             ! Setup Nek5000 for perturbation solver
-            call setup_linear_solver(if_solve_baseflow=.false., cfl_limit=0.5_dp, full_summary=.true.)
+            call setup_linear_solver(if_solve_baseflow=.false., recompute_dt=.true., cfl_limit=0.5_dp, full_summary=.true.)
                   
             return
          end subroutine init_LNS
@@ -232,8 +238,12 @@
          subroutine init_exptA(self)
             class(exptA_linop), intent(in) :: self
 
+            ! Force the baseflow field for dt/nsteps/clf computation
+            call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+            call logger%log_message('Set self%baseflow -> vx, vy, vz, pr, t', module=this_module, procedure='init_exptA')
+
             ! Setup Nek5000 for perturbation solver
-            call setup_linear_solver(if_solve_baseflow=.false., cfl_limit=0.5_dp, full_summary=.true.)
+            call setup_linear_solver(if_solve_baseflow=.false., recompute_dt=.true., cfl_limit=0.5_dp, full_summary=.true.)
 
             return
          end subroutine init_exptA
