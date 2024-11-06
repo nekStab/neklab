@@ -23,7 +23,7 @@
          include "TOTAL"
          include "ADJOINT"
          private
-         character(len=*), parameter :: this_module = 'neklab_systems'
+         character(len=*), parameter, private :: this_module = 'neklab_systems'
          
          integer, parameter :: lv = lx1*ly1*lz1*lelv
          !! Local number of grid points for the velocity mesh.
@@ -76,38 +76,12 @@
 
          subroutine init_DNS(self)
             class(nek_system), intent(in) :: self
-            call nekgsync()
-         
-            ! Setup Nek5000 logical flags for perturbative solver.
-            ifpert = .false.; ifbase = .false.
-            call bcast(ifpert, lsize); call bcast(ifbase, lsize)
-         
-            ! Deactivate OIFS.
-            if (ifchar) ifchar = .false.
-         
-            ! Force CFL to 0.5
-            if (param(26) > 0.4) then
-            if (nid == 0) then
-               write (6, *) "WARNING : Target CFL is larger than 0.5"
-               write (6, *) "          Forcing it to 0.5"
-            end if
-            param(26) = 0.4_dp
-            end if
-         
-            ! Compute appropriate step size.
-            call compute_cfl(ctarg, vx, vy, vz, 1.0_dp)
-            dt = param(26)/ctarg; nsteps = ceiling(param(10)/dt)
-            dt = param(10)/nsteps; param(12) = dt
-            call compute_cfl(ctarg, vx, vy, vz, dt)
-            if (nid == 0) write (6, *) "INFO : Current CFL and target CFL :", ctarg, param(26)
-            lastep = 0; fintim = nsteps*dt
-         
-            ! Force contant time step.
-            param(12) = -abs(param(12))
-         
-            ! Broadcast parameters.
-            call bcast(param, 200*wdsize)
-         
+            
+            ! We assume the baseflow has been set already!
+
+            ! Setup Nek5000 for perturbation solver
+            call setup_nonlinear_solver(recompute_dt=.true., cfl_limit=0.4_dp, full_summary=.true.)
+
             return
          end subroutine init_DNS
 
@@ -121,24 +95,16 @@
             ! Solver tolerances if needed
             real(dp),                   intent(in)  :: atol
 
-            ! Deactivate linear solver
-            ifpert = .false.; call bcast(ifpert, lsize)
-            ifbase = .true.; call bcast(ifbase, lsize)
-
-            call self%init()
-
-            ! Set parameters
-            param(22) = atol/100         ! pressure tolerance
-            param(21) = atol/100         ! velocity tolerance
-            param(31) = 0; npert = 0 ! number of perturbations
-            lastep = 0
-            ! Broadcast parameters.
-            call bcast(param, 200*wdsize)
-
             select type (vec_in)
             type is (nek_dvector)
                select type (vec_out)
                type is (nek_dvector)
+                  ! Set appropriate tolerances
+                  call setup_nonlinear_solver(vtol=atol/100, ptol=atol/100)
+
+                  ! Ensure correct nek status and reset dt based on new baseflow
+                  call self%init()
+            
                   ! Set the initial condition
                   call vec2nek(vx, vy, vz, pr, t, vec_in)
 
@@ -165,61 +131,14 @@
 
          subroutine init_jac_exptA(self)
             class(nek_jacobian), intent(in) :: self
-            call nekgsync()
-      
-            ! Setup Nek5000 logical flags for perturbative solver.
-            ifpert = .true.; ifbase = .false.
-            call bcast(ifpert, lsize); call bcast(ifbase, lsize)
-      
-            ! Force single perturbation mode.
-            if (param(31) > 1) then
-               if (nid == 0) write (6, *) "neklab does not support (yet) npert > 1."
-               call nek_end()
-            else
-               param(31) = 1; npert = 1
-            end if
-      
-            ! Deactivate OIFS.
-            if (ifchar) then
-            if (nid == 0) then
-               write (6, *) "WARNING : OIFS is not available for linearized solver."
-               write (6, *) "          Turning it off."
-            end if
-            ifchar = .false.
-            end if
-      
-            ! Force CFL to 0.5
-            if (param(26) > 0.5) then
-            if (nid == 0) then
-               write (6, *) "WARNING : Target CFL is larger than 0.5"
-               write (6, *) "          Forcing it to 0.5"
-            end if
-            param(26) = 0.5_dp
-            end if
-      
-            ! Compute appropriate step size.
-            call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
-            call compute_cfl(ctarg, vx, vy, vz, 1.0_dp)
-            dt = param(26)/ctarg; nsteps = ceiling(param(10)/dt)
-            dt = param(10)/nsteps; param(12) = dt
-            call compute_cfl(ctarg, vx, vy, vz, dt)
-            if (nid == 0) write (6, *) "INFO : Current CFL and target CFL :", ctarg, param(26)
-            lastep = 0; fintim = nsteps*dt
-      
-            ! Force contant time step.
-            param(12) = -abs(param(12))
-      
-            ! Broadcast parameters.
-            call bcast(param, 200*wdsize)
 
-            if (nid .eq. 0) then
-               print *, 'init_jac_exptA:'
-               print *, '     param(12) = ', param(12)
-               print *, '     param(10) = ', param(10)
-               print *, '     dt = ', dt
-               print *, '     npert = ', npert
-            end if
-      
+            ! Force the baseflow field for dt/nsteps/clf computation
+            call abs_vec2nek(vx, vy, vz, pr, t, self%X)
+            call logger%log_message('Set self%X -> vx, vy, vz, pr, t', module=this_module, procedure='init_jac_exptA')
+
+            ! Setup Nek5000 for perturbation solver
+            call setup_linear_solver(if_solve_baseflow=.false., recompute_dt=.true., cfl_limit=0.5_dp, full_summary=.true.)
+
             return
          end subroutine init_jac_exptA
 
@@ -228,23 +147,18 @@
             class(abstract_vector_rdp), intent(in)  :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
       
-            ! Nek-related setup.
-            ifadj = .false.; lastep = 0; fintim = param(10)
-            call bcast(ifadj, lsize)
-      
-            ! Reinitialize Jacobian to incorporate changes in the baseflow
-            call self%init()
-
-            ! Set the baseflow initial condition
-            call abs_vec2nek(vx, vy, vz, pr, t, self%X)
-      
             select type (vec_in)
             type is (nek_dvector)
                select type (vec_out)
                type is (nek_dvector)
+                  ! Ensure correct nek status
+                  call setup_linear_solver(if_adjoint=.false., silent=.true.)
+
+                  ! Set the baseflow initial condition
+                  call abs_vec2nek(vx, vy, vz, pr, t, self%X)
+
                   ! Set the initial condition for Nek5000's linearized solver.
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
-                  !call outpost_dnek(vec_in, 'pr0')
       
                   ! Integrate the equations forward in time.
                   time = 0.0_dp
@@ -254,16 +168,12 @@
             
                   ! Extract the final solution to vector.
                   call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
-                  !call outpost_dnek(vec_out, 'pr1')
 
                   ! Evaluate [ exp(tau*J) - I ] @ dx.
                   call vec_out%sub(vec_in)
-                  !call outpost_dnek(vec_out, 'pr2')
                end select
             end select
 
-            !STOP 9
-      
             return
          end subroutine jac_exptA_matvec
       
@@ -271,20 +181,17 @@
             class(nek_jacobian), intent(in) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
-            ! Nek-related setup.
-            ifadj = .true.; lastep = 0; fintim = param(10)
-            call bcast(ifadj, lsize)
-      
-            ! Reinitialize Jacobian to incorporate changes in the baseflow
-            call self%init()
 
-            ! Set the baseflow initial condition
-            call abs_vec2nek(vx, vy, vz, pr, t, self%X)
-      
             select type (vec_in)
             type is (nek_dvector)
                select type (vec_out)
                type is (nek_dvector)
+                  ! Ensure correct nek status
+                  call setup_linear_solver(if_adjoint=.true., silent=.true.)
+
+                  ! Set the baseflow initial condition
+                  call abs_vec2nek(vx, vy, vz, pr, t, self%X)
+
                   ! Set the initial condition for Nek5000's linearized solver.
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
                
@@ -310,44 +217,18 @@
          !-----     TYPE BOUND PROCEDURES FOR NEK_SYSTEM_UPO    -----
          !-----------------------------------------------------------
 
-         subroutine init_DNS_upo(self)
+         subroutine init_DNS_UPO(self)
             class(nek_system_upo), intent(in) :: self
-            call nekgsync()
-         
-            ! Setup Nek5000 logical flags for perturbative solver.
-            ifpert = .false.; ifbase = .false.
-            call bcast(ifpert, lsize); call bcast(ifbase, lsize)
-         
-            ! Deactivate OIFS.
-            if (ifchar) ifchar = .false.
-         
-            ! Force CFL to 0.5
-            if (param(26) > 0.4) then
-            if (nid == 0) then
-               write (6, *) "WARNING : Target CFL is larger than 0.5"
-               write (6, *) "          Forcing it to 0.5"
-            end if
-            param(26) = 0.4_dp
-            end if
-         
-            ! Compute appropriate step size.
-            call compute_cfl(ctarg, vx, vy, vz, 1.0_dp)
-            dt = param(26)/ctarg; nsteps = ceiling(param(10)/dt)
-            dt = param(10)/nsteps; param(12) = dt
-            call compute_cfl(ctarg, vx, vy, vz, dt)
-            if (nid == 0) write (6, *) "INFO : Current CFL and target CFL :", ctarg, param(26)
-            lastep = 0; fintim = nsteps*dt
-         
-            ! Force contant time step.
-            param(12) = -abs(param(12))
-         
-            ! Broadcast parameters.
-            call bcast(param, 200*wdsize)
+
+            ! We assume the baseflow has been set already!
+
+            ! Setup Nek5000 for perturbation solver
+            call setup_nonlinear_solver(recompute_dt=.true., cfl_limit=0.4_dp, full_summary=.true.)
          
             return
-         end subroutine init_DNS_upo
+         end subroutine init_DNS_UPO
 
-         subroutine nonlinear_map_upo(self, vec_in, vec_out, atol)
+         subroutine nonlinear_map_UPO(self, vec_in, vec_out, atol)
             ! Dynamical system.
             class(nek_system_upo),      intent(in)  :: self
             ! Input vector.
@@ -357,24 +238,16 @@
             ! Solver tolerances if needed
             real(dp),                   intent(in)  :: atol
 
-            ! Deactivate linear solver
-            ifpert = .false.; call bcast(ifpert, lsize)
-            ifbase = .false.; call bcast(ifbase, lsize)
-
-            call self%init()
-
-            ! Set parameters
-            param(21) = atol         ! pressure tolerance
-            param(21) = atol         ! velocity tolerance
-            param(31) = 0; npert = 0 ! number of perturbations
-            lastep = 0
-            ! Broadcast parameters.
-            call bcast(param, 200*wdsize)
-
             select type (vec_in)
             type is (nek_ext_dvector)
                select type (vec_out)
                type is (nek_ext_dvector)
+                  ! Set appropriate tolerances
+                  call setup_nonlinear_solver(vtol=atol/100, ptol=atol/100)
+
+                  ! Ensure correct nek status and reset dt based on new baseflow
+                  call self%init()
+
                   ! Set the initial condition
                   call ext_vec2nek(vx, vy, vz, pr, t, vec_in)
             
@@ -393,7 +266,7 @@
             end select
 
             return
-         end subroutine nonlinear_map_upo
+         end subroutine nonlinear_map_UPO
 
          !-------------------------------------------------------------
          !-----     TYPE BOUND PROCEDURES FOR NEK_JACOBIAN_UPO    -----
@@ -401,59 +274,13 @@
 
          subroutine init_jac_map(self)
             class(nek_jacobian_upo), intent(in) :: self
-            ! internal
-            real(dp), parameter :: cfl_limit = 0.4_dp
+            ! Force the initial condition for dt/nsteps/clf computation
+            call abs_vec2nek(vx, vy, vz, pr, t, self%X)
+            call logger%log_message('Set self%X -> vx, vy, vz, pr, t', module=this_module, procedure='init_jac_map')
 
-            call nekgsync()
-      
-            ! Setup Nek5000 flags for coupled solver
-            ifpert = .true.; ifbase = .true.
-            call bcast(ifpert, lsize); call bcast(ifbase, lsize)
-      
-            ! Force single perturbation mode.
-            if (param(31) > 1) then
-               if (nid == 0) write (6, *) "neklab does not (yet) support npert > 1."
-               call nek_end()
-            else
-               param(31) = 1; npert = 1
-            end if
-      
-            ! Deactivate OIFS.
-            if (ifchar) then
-               if (nid == 0) then
-                  write (6, *) "WARNING : OIFS is not available for linearized solver."
-                  write (6, *) "          Turning it off."
-               end if
-               ifchar = .false.
-            end if
-      
-            ! Force CFL to cfl_limit
-            ! we are a bit conservative because the baseflow will evolve
-            if (param(26) > cfl_limit) then
-               if (nid == 0) then
-                  write (6, *) "WARNING : Target CFL is larger than", cfl_limit
-                  write (6, *) "          Forcing it to", cfl_limit
-               end if
-               param(26) = cfl_limit
-            end if
-      
-            ! Compute appropriate step size based on the baseflow
-            call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
-            call compute_cfl(ctarg, vx, vy, vz, 1.0_dp)
-            dt = param(26)/ctarg; nsteps = ceiling(param(10)/dt)
-            dt = param(10)/nsteps; param(12) = dt
-            call compute_cfl(ctarg, vx, vy, vz, dt)
-            if (nid == 0) write (6, *) "INFO : Current CFL and target CFL :", ctarg, param(26)
-            lastep = 0
-            
-            ! Set integration time
-            fintim = nsteps*dt
-      
-            ! Force contant time step.
-            param(12) = -abs(param(12))
-      
-            ! Broadcast parameters.
-            call bcast(param, 200*wdsize)
+            ! Setup Nek5000 for perturbation solver
+            call setup_linear_solver(if_solve_baseflow=.true., recompute_dt=.true., 
+     &                               cfl_limit=0.4_dp, full_summary=.true.)
       
             return
          end subroutine init_jac_map
@@ -467,23 +294,19 @@
             class(abstract_vector_rdp), intent(out) :: vec_out
             ! internal
             type(nek_ext_dvector) :: vec
-
-            ! Set the baseflow initial condition
-            call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
             
             select type (vec_in)
             type is (nek_ext_dvector)
                select type (vec_out)
                type is (nek_ext_dvector)
+                  ! Set the baseflow initial condition
+                  call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
+
+                  ! Ensure correct nek status -> set end time
+                  call setup_linear_solver(if_adjoint=.false., endtime=vec_in%T, silent=.true.)
+
                   ! Set the perturbation initial condition
                   call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
-
-                  ! Set integration time
-                  param(10) = vec_in%T
-                  fintim = param(10)
-
-                  ! Reinitialize Jacobian to incorporate changes in the baseflow
-                  call self%init()
             
                   ! Intgrate the coupled equations forward
                   time = 0.0_dp
@@ -519,27 +342,18 @@
             ! internal
             type(nek_ext_dvector) :: vec
 
-            ! Nek-related setup.
-            ifadj = .true.; lastep = 0; 
-            call bcast(ifadj, lsize)
-
-            ! Set the baseflow initial condition
-            call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
-      
-            
             select type (vec_in)
             type is (nek_ext_dvector)
                select type (vec_out)
                type is (nek_ext_dvector)
-                  ! Sets the initial condition for Nek5000's linearized solver.
+                  ! Set the baseflow initial condition
+                  call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
+
+                  ! Ensure correct nek status -> set end time
+                  call setup_linear_solver(if_adjoint=.true., endtime=vec_in%T, silent=.true.)
+
+                  ! Set the perturbation initial condition
                   call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
-
-                  ! Set integration time
-                  param(10) = vec_in%T
-                  fintim = param(10)
-
-                  ! Reinitialize Jacobian to incorporate changes in the baseflow & period
-                  call self%init()
            
                   ! Integrate the equations forward in time.
                   time = 0.0_dp
