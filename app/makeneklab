@@ -102,7 +102,9 @@ export FFLAGS
 
 # User-specified object files
 USR="neklab_vectors.o"
+USR+=" neklab_utils.o"
 USR+=" neklab_linops.o"
+USR+=" neklab_systems.o"
 USR+=" neklab_analysis.o"
 USR+=" neklab.o"
 export USR
@@ -113,7 +115,7 @@ echo "neklab version: $NS_VERSION"
 echo "preparing compilation with: $(which $FC; echo $FFLAGS $USR_LFLAGS)"
 
 # Update makefile and static variables
-echo "include $NEKLAB_SOURCE_ROOT/core/makefile_neklab" > makefile_usr.inc
+echo "include $NEKLAB_SOURCE_ROOT/src/makefile_neklab" > makefile_usr.inc
 
 set +a -e
 $NEK_SOURCE_ROOT/bin/nekconfig $@
