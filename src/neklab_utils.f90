@@ -306,12 +306,14 @@
             return
          end subroutine outpost_ext_dnek_basis
 
-         subroutine setup_nek(if_LNS, if_adjoint, if_solve_baseflow, endtime, vtol, ptol, cfl_limit, full_summary, silent)
+         subroutine setup_nek(if_LNS, if_adjoint, if_solve_baseflow, recompute_dt, endtime, vtol, ptol, cfl_limit, full_summary, silent)
             logical,            intent(in) :: if_LNS
             logical, optional,  intent(in) :: if_adjoint
             logical                        :: if_adjoint_
             logical, optional,  intent(in) :: if_solve_baseflow
             logical                        :: if_solve_baseflow_
+            logical, optional,  intent(in) :: recompute_dt
+            logical                        :: recompute_dt_
             real(dp), optional, intent(in) :: endtime
             real(dp)                       :: endtime_
             real(dp), optional, intent(in) :: vtol
@@ -324,9 +326,12 @@
             logical                        :: full_summary_
             logical, optional,  intent(in) :: silent
             logical                        :: silent_
+            ! internal
+            character(len=:), allocatable :: msg
   
             if_adjoint_        = optval(if_adjoint,        .false.)
             if_solve_baseflow_ = optval(if_solve_baseflow, .false.)
+            recompute_dt_      = optval(recompute_dt,      .false.)
             endtime_           = optval(endtime, param(10))
             ptol_              = optval(ptol, param(21))
             vtol_              = optval(vtol, param(22))
@@ -356,17 +361,18 @@
                end if
                ! Force single perturbation mode.
                if (param(31) > 1) then
-                  if (nid == 0) print *, "Neklab does not (yet) support npert > 1."
+                  msg = "Neklab does not (yet) support npert > 1."
+                  call logger%log_message(msg, module=this_module, procedure='setup_nek')
+                  if (nid == 0) print *, msg
                   call nek_end()
                else
                   param(31) = 1; npert = 1
                end if
                ! Deactivate OIFS.
                if (ifchar) then
-                  if (nid == 0) then
-                     print *, "WARNING : OIFS is not available for linearized solver."
-                     print *, "          Turning it off."
-                  end if
+                  msg = "WARNING : OIFS is not available for linearized solver. Turning it off."
+                  call logger%log_message(msg, module=this_module, procedure='setup_nek')
+                  if (nid == 0) print *, msg
                   ifchar = .false.
                end if
             else
@@ -376,26 +382,37 @@
 
             ! Force CFL to chosen limit
             if (cfl_limit_ < 0.0_dp .or. cfl_limit_ > 0.5_dp) then
-               if (nid == 0) then
-                  print *, "WARNING : Invalid target CFL. ", cfl_limit_
-                  print *, "          Forcing it to", 0.5_dp
-               end if
+               write(msg,*) "WARNING : Invalid target CFL. ", cfl_limit_
+               call logger%log_message(msg, module=this_module, procedure='setup_nek')
+               if (nid == 0) print *, msg
+               write(msg,*) "          Forcing it to", 0.5_dp
+               call logger%log_message(msg, module=this_module, procedure='setup_nek')
+               if (nid == 0) print *, msg
                cfl_limit_ = 0.5_dp
             end if
             param(26) = cfl_limit_
 
             ! Set integration time
             if (endtime_ <= 0.0_dp) then
-               if (nid == 0) print *, 'Invalid endtime specified. Endtime =', endtime_
+               write(msg,*) 'Invalid endtime specified. Endtime =', endtime_
+               call logger%log_message(msg, module=this_module, procedure='setup_nek')
+               if (nid == 0) print *, msg
                call nek_end()
             end if
             param(10) = endtime_
 
-            call compute_cfl(ctarg, vx, vy, vz, 1.0_dp)
-            dt = param(26)/ctarg; nsteps = ceiling(param(10)/dt)
-            dt = param(10)/nsteps; param(12) = dt
-            call compute_cfl(ctarg, vx, vy, vz, dt)
-            if (nid == 0) print *, "INFO : Current CFL and target CFL :", ctarg, param(26)
+            if (recompute_dt_) then
+               msg = 'Recomputing dt/nsteps/cfl from clf_limit and current baseflow.'
+               call logger%log_message(msg, module=this_module, procedure='setup_nek')
+               if (nid == 0) print *, msg
+               call compute_cfl(ctarg, vx, vy, vz, 1.0_dp)
+               dt = param(26)/ctarg; nsteps = ceiling(param(10)/dt)
+               dt = param(10)/nsteps; param(12) = dt
+               call compute_cfl(ctarg, vx, vy, vz, dt)
+               write(msg,*) 'Current CFL and target CFL :', ctarg, param(26)
+               call logger%log_message(msg, module=this_module, procedure='setup_nek')
+               if (nid == 0) print *, msg
+            end if
             fintim = nsteps*dt
 
             ! Broadcast parameters
@@ -407,28 +424,30 @@
             return
          end subroutine setup_nek
 
-         subroutine setup_nonlinear_solver(endtime, vtol, ptol, cfl_limit, full_summary, silent)
+         subroutine setup_nonlinear_solver(recompute_dt, endtime, vtol, ptol, cfl_limit, full_summary, silent)
+            logical, optional,  intent(in) :: recompute_dt
             real(dp), optional, intent(in) :: endtime
             real(dp), optional, intent(in) :: vtol
             real(dp), optional, intent(in) :: ptol
             real(dp), optional, intent(in) :: cfl_limit
             logical, optional,  intent(in) :: full_summary
             logical, optional,  intent(in) :: silent
-            call setup_nek(if_LNS=.false.,
+            call setup_nek(if_LNS=.false., recompute_dt=recompute_dt, 
      &                  endtime=endtime, vtol=vtol, ptol=ptol, cfl_limit=cfl_limit, full_summary=full_summary, silent=silent)
             return
          end subroutine setup_nonlinear_solver
-
-         subroutine setup_linear_solver(if_adjoint, if_solve_baseflow, endtime, vtol, ptol, cfl_limit, full_summary, silent)
+         
+         subroutine setup_linear_solver(if_adjoint, if_solve_baseflow, recompute_dt, endtime, vtol, ptol, cfl_limit, full_summary, silent)
             logical, optional,  intent(in) :: if_adjoint
             logical, optional,  intent(in) :: if_solve_baseflow
+            logical, optional,  intent(in) :: recompute_dt
             real(dp), optional, intent(in) :: endtime
             real(dp), optional, intent(in) :: vtol
             real(dp), optional, intent(in) :: ptol
             real(dp), optional, intent(in) :: cfl_limit
             logical, optional,  intent(in) :: full_summary
             logical, optional,  intent(in) :: silent
-            call setup_nek(if_LNS=.true., if_adjoint=if_adjoint, if_solve_baseflow=if_solve_baseflow,
+            call setup_nek(if_LNS=.true., if_adjoint=if_adjoint, if_solve_baseflow=if_solve_baseflow, recompute_dt=recompute_dt, 
      &                  endtime=endtime, vtol=vtol, ptol=ptol, cfl_limit=cfl_limit, full_summary=full_summary, silent=silent)
             return
          end subroutine setup_linear_solver
