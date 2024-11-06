@@ -12,7 +12,7 @@
          include "SIZE"
          include "TOTAL"
          private
-         character(len=*), parameter :: this_module = 'neklab_vectors'
+         character(len=*), parameter, private :: this_module = 'neklab_vectors'
       
          integer, parameter :: lv = lx1*ly1*lz1*lelv
       !! Local number of grid points for the velocity mesh.
