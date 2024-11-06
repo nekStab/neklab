@@ -17,7 +17,7 @@
          include "TOTAL"
          include "ADJOINT"
          private
-         character(len=*), parameter :: this_module = 'neklab_utils'
+         character(len=*), parameter, private :: this_module = 'neklab_utils'
           
          integer, parameter :: lv = lx1*ly1*lz1*lelv
       !! Local number of grid points for the velocity mesh.
