@@ -18,19 +18,19 @@
          include "ADJOINT"
          private
          character(len=*), parameter, private :: this_module = 'neklab_utils'
-          
+      
          integer, parameter :: lv = lx1*ly1*lz1*lelv
       !! Local number of grid points for the velocity mesh.
          integer, parameter :: lp = lx2*ly2*lz2*lelv
       !! Local number of grid points for the pressure mesh.
-
-         ! utilities for regular nek vectors
+      
+      ! utilities for regular nek vectors
          public :: nek2vec, vec2nek, abs_vec2nek, outpost_dnek
-         ! utilities for extended nek vectors
+      ! utilities for extended nek vectors
          public :: nek2ext_vec, ext_vec2nek, abs_ext_vec2nek, outpost_ext_dnek
-         ! Set up solver
+      ! Set up solver
          public :: setup_nek, setup_nonlinear_solver, setup_linear_solver, nek_status
-         ! miscellaneous
+      ! miscellaneous
          public :: nopcopy
       
          interface nek2vec
@@ -42,7 +42,7 @@
             module procedure vec2nek_std
             module procedure vec2nek_prt
          end interface
-
+      
          interface abs_vec2nek
             module procedure abstract_vec2nek_std
             module procedure abstract_vec2nek_prt
@@ -52,7 +52,7 @@
             module procedure outpost_dnek_vector
             module procedure outpost_dnek_basis
          end interface
-
+      
          interface nek2ext_vec
             module procedure nek2ext_vec_std
             module procedure nek2ext_vec_prt
@@ -62,7 +62,7 @@
             module procedure ext_vec2nek_std
             module procedure ext_vec2nek_prt
          end interface
-
+      
          interface abs_ext_vec2nek
             module procedure abstract_ext_vec2nek_std
             module procedure abstract_ext_vec2nek_prt
@@ -74,7 +74,7 @@
          end interface
       
       contains
-
+      
          subroutine nek2vec_prt(vec, vx_, vy_, vz_, pr_, t_)
             include "SIZE"
             type(nek_dvector), intent(out) :: vec
@@ -130,7 +130,7 @@
       
             return
          end subroutine vec2nek_prt
-
+      
          subroutine abstract_vec2nek_std(vx_, vy_, vz_, pr_, t_, vec)
             include "SIZE"
             class(abstract_vector_rdp), intent(in) :: vec
@@ -139,7 +139,7 @@
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(out) :: vz_
             real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(out) :: pr_
             real(kind=dp), dimension(lx1, ly1, lz1, lelt, ldimt), intent(out) :: t_
-            select type(vec)
+            select type (vec)
             type is (nek_dvector)
                call nopcopy(vx_, vy_, vz_, pr_, t_, vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
             end select
@@ -154,17 +154,15 @@
             real(kind=dp), dimension(lx1*ly1*lz1*lelv, lpert), intent(out) :: vz_
             real(kind=dp), dimension(lx2*ly2*lz2*lelv, lpert), intent(out) :: pr_
             real(kind=dp), dimension(lx1*ly1*lz1*lelt, ldimt, lpert), intent(out) :: t_
-            select type(vec)
+            select type (vec)
             type is (nek_dvector)
                call nopcopy(vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1), vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
             end select
             return
          end subroutine abstract_vec2nek_prt
-
-
-         ! EXTENDED
-
-
+      
+      ! EXTENDED
+      
          subroutine nek2ext_vec_prt(vec, vx_, vy_, vz_, pr_, t_)
             include "SIZE"
             type(nek_ext_dvector), intent(out) :: vec
@@ -220,7 +218,7 @@
       
             return
          end subroutine ext_vec2nek_prt
-
+      
          subroutine abstract_ext_vec2nek_std(vx_, vy_, vz_, pr_, t_, vec)
             include "SIZE"
             class(abstract_vector_rdp), intent(in) :: vec
@@ -229,7 +227,7 @@
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(out) :: vz_
             real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(out) :: pr_
             real(kind=dp), dimension(lx1, ly1, lz1, lelt, ldimt), intent(out) :: t_
-            select type(vec)
+            select type (vec)
             type is (nek_ext_dvector)
                call nopcopy(vx_, vy_, vz_, pr_, t_, vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
             end select
@@ -244,7 +242,7 @@
             real(kind=dp), dimension(lx1*ly1*lz1*lelv, lpert), intent(out) :: vz_
             real(kind=dp), dimension(lx2*ly2*lz2*lelv, lpert), intent(out) :: pr_
             real(kind=dp), dimension(lx1*ly1*lz1*lelt, ldimt, lpert), intent(out) :: t_
-            select type(vec)
+            select type (vec)
             type is (nek_ext_dvector)
                call nopcopy(vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1), vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
             end select
@@ -278,7 +276,7 @@
             call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
             return
          end subroutine outpost_dnek_vector
-
+      
          subroutine outpost_dnek_basis(vec, prefix)
             type(nek_dvector), intent(in) :: vec(:)
             character(len=3), intent(in) :: prefix
@@ -288,14 +286,14 @@
             end do
             return
          end subroutine outpost_dnek_basis
-
+      
          subroutine outpost_ext_dnek_vector(vec, prefix)
             type(nek_ext_dvector), intent(in) :: vec
             character(len=3), intent(in) :: prefix
             call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
             return
          end subroutine outpost_ext_dnek_vector
-
+      
          subroutine outpost_ext_dnek_basis(vec, prefix)
             type(nek_ext_dvector), intent(in) :: vec(:)
             character(len=3), intent(in) :: prefix
@@ -305,48 +303,47 @@
             end do
             return
          end subroutine outpost_ext_dnek_basis
-
+      
          subroutine setup_nek(if_LNS, if_adjoint, if_solve_baseflow, recompute_dt, endtime, vtol, ptol, cfl_limit, full_summary, silent)
-            logical,            intent(in) :: if_LNS
-            logical, optional,  intent(in) :: if_adjoint
-            logical                        :: if_adjoint_
-            logical, optional,  intent(in) :: if_solve_baseflow
-            logical                        :: if_solve_baseflow_
-            logical, optional,  intent(in) :: recompute_dt
-            logical                        :: recompute_dt_
+            logical, intent(in) :: if_LNS
+            logical, optional, intent(in) :: if_adjoint
+            logical :: if_adjoint_
+            logical, optional, intent(in) :: if_solve_baseflow
+            logical :: if_solve_baseflow_
+            logical, optional, intent(in) :: recompute_dt
+            logical :: recompute_dt_
             real(dp), optional, intent(in) :: endtime
-            real(dp)                       :: endtime_
+            real(dp) :: endtime_
             real(dp), optional, intent(in) :: vtol
-            real(dp)                       :: vtol_
+            real(dp) :: vtol_
             real(dp), optional, intent(in) :: ptol
-            real(dp)                       :: ptol_
+            real(dp) :: ptol_
             real(dp), optional, intent(in) :: cfl_limit
-            real(dp)                       :: cfl_limit_
-            logical, optional,  intent(in) :: full_summary
-            logical                        :: full_summary_
-            logical, optional,  intent(in) :: silent
-            logical                        :: silent_
-            ! internal
+            real(dp) :: cfl_limit_
+            logical, optional, intent(in) :: full_summary
+            logical :: full_summary_
+            logical, optional, intent(in) :: silent
+            logical :: silent_
+      ! internal
             character(len=:), allocatable :: msg
-  
-            if_adjoint_        = optval(if_adjoint,        .false.)
+      
+            if_adjoint_ = optval(if_adjoint, .false.)
             if_solve_baseflow_ = optval(if_solve_baseflow, .false.)
-            recompute_dt_      = optval(recompute_dt,      .false.)
-            endtime_           = optval(endtime, param(10))
-            ptol_              = optval(ptol, param(21))
-            vtol_              = optval(vtol, param(22))
-            cfl_limit_         = optval(cfl_limit, param(26))
-            full_summary_      = optval(full_summary,      .false.)
-            silent_            = optval(silent,            .false.)
-
+            recompute_dt_ = optval(recompute_dt, .false.)
+            endtime_ = optval(endtime, param(10))
+            ptol_ = optval(ptol, param(21))
+            vtol_ = optval(vtol, param(22))
+            cfl_limit_ = optval(cfl_limit, param(26))
+            full_summary_ = optval(full_summary, .false.)
+            silent_ = optval(silent, .false.)
+      
             call nekgsync()
-
-            ! general settings
-            lastep = 0;
-
-            ! Force contant time step.
+      
+      ! general settings
+            lastep = 0; 
+      ! Force contant time step.
             param(12) = -abs(param(12))
-            
+      
             if (if_LNS) then
                ifpert = .true.; call bcast(ifpert, lsize)
                if (if_adjoint_) then
@@ -359,7 +356,7 @@
                else
                   ifbase = .false.; call bcast(ifbase, lsize)
                end if
-               ! Force single perturbation mode.
+      ! Force single perturbation mode.
                if (param(31) > 1) then
                   msg = "Neklab does not (yet) support npert > 1."
                   call logger%log_message(msg, module=this_module, procedure='setup_nek')
@@ -368,7 +365,7 @@
                else
                   param(31) = 1; npert = 1
                end if
-               ! Deactivate OIFS.
+      ! Deactivate OIFS.
                if (ifchar) then
                   msg = "WARNING : OIFS is not available for linearized solver. Turning it off."
                   call logger%log_message(msg, module=this_module, procedure='setup_nek')
@@ -379,28 +376,28 @@
                ifpert = .false.; call bcast(ifpert, lsize)
                param(31) = 0; npert = 0
             end if
-
-            ! Force CFL to chosen limit
+      
+      ! Force CFL to chosen limit
             if (cfl_limit_ < 0.0_dp .or. cfl_limit_ > 0.5_dp) then
-               write(msg,*) "WARNING : Invalid target CFL. ", cfl_limit_
+               write (msg, *) "WARNING : Invalid target CFL. ", cfl_limit_
                call logger%log_message(msg, module=this_module, procedure='setup_nek')
                if (nid == 0) print *, msg
-               write(msg,*) "          Forcing it to", 0.5_dp
+               write (msg, *) "          Forcing it to", 0.5_dp
                call logger%log_message(msg, module=this_module, procedure='setup_nek')
                if (nid == 0) print *, msg
                cfl_limit_ = 0.5_dp
             end if
             param(26) = cfl_limit_
-
-            ! Set integration time
+      
+      ! Set integration time
             if (endtime_ <= 0.0_dp) then
-               write(msg,*) 'Invalid endtime specified. Endtime =', endtime_
+               write (msg, *) 'Invalid endtime specified. Endtime =', endtime_
                call logger%log_message(msg, module=this_module, procedure='setup_nek')
                if (nid == 0) print *, msg
                call nek_end()
             end if
             param(10) = endtime_
-
+      
             if (recompute_dt_) then
                msg = 'Recomputing dt/nsteps/cfl from clf_limit and current baseflow.'
                call logger%log_message(msg, module=this_module, procedure='setup_nek')
@@ -409,86 +406,86 @@
                dt = param(26)/ctarg; nsteps = ceiling(param(10)/dt)
                dt = param(10)/nsteps; param(12) = dt
                call compute_cfl(ctarg, vx, vy, vz, dt)
-               write(msg,*) 'Current CFL and target CFL :', ctarg, param(26)
+               write (msg, *) 'Current CFL and target CFL :', ctarg, param(26)
                call logger%log_message(msg, module=this_module, procedure='setup_nek')
                if (nid == 0) print *, msg
             end if
             fintim = nsteps*dt
-
-            ! Broadcast parameters
+      
+      ! Broadcast parameters
             call bcast(param, 200*wdsize)
-
-            ! Print status
+      
+      ! Print status
             if (.not. silent_) call nek_status(full_summary=full_summary_)
-
+      
             return
          end subroutine setup_nek
-
+      
          subroutine setup_nonlinear_solver(recompute_dt, endtime, vtol, ptol, cfl_limit, full_summary, silent)
-            logical, optional,  intent(in) :: recompute_dt
+            logical, optional, intent(in) :: recompute_dt
             real(dp), optional, intent(in) :: endtime
             real(dp), optional, intent(in) :: vtol
             real(dp), optional, intent(in) :: ptol
             real(dp), optional, intent(in) :: cfl_limit
-            logical, optional,  intent(in) :: full_summary
-            logical, optional,  intent(in) :: silent
-            call setup_nek(if_LNS=.false., recompute_dt=recompute_dt, 
-     &                  endtime=endtime, vtol=vtol, ptol=ptol, cfl_limit=cfl_limit, full_summary=full_summary, silent=silent)
+            logical, optional, intent(in) :: full_summary
+            logical, optional, intent(in) :: silent
+            call setup_nek(if_LNS=.false., recompute_dt=recompute_dt,
+     $   endtime = endtime, vtol = vtol, ptol = ptol, cfl_limit = cfl_limit, full_summary = full_summary, silent = silent)
             return
          end subroutine setup_nonlinear_solver
-         
+      
          subroutine setup_linear_solver(if_adjoint, if_solve_baseflow, recompute_dt, endtime, vtol, ptol, cfl_limit, full_summary, silent)
-            logical, optional,  intent(in) :: if_adjoint
-            logical, optional,  intent(in) :: if_solve_baseflow
-            logical, optional,  intent(in) :: recompute_dt
+            logical, optional, intent(in) :: if_adjoint
+            logical, optional, intent(in) :: if_solve_baseflow
+            logical, optional, intent(in) :: recompute_dt
             real(dp), optional, intent(in) :: endtime
             real(dp), optional, intent(in) :: vtol
             real(dp), optional, intent(in) :: ptol
             real(dp), optional, intent(in) :: cfl_limit
-            logical, optional,  intent(in) :: full_summary
-            logical, optional,  intent(in) :: silent
-            call setup_nek(if_LNS=.true., if_adjoint=if_adjoint, if_solve_baseflow=if_solve_baseflow, recompute_dt=recompute_dt, 
-     &                  endtime=endtime, vtol=vtol, ptol=ptol, cfl_limit=cfl_limit, full_summary=full_summary, silent=silent)
+            logical, optional, intent(in) :: full_summary
+            logical, optional, intent(in) :: silent
+            call setup_nek(if_LNS=.true., if_adjoint=if_adjoint, if_solve_baseflow=if_solve_baseflow, recompute_dt=recompute_dt,
+     $   endtime = endtime, vtol = vtol, ptol = ptol, cfl_limit = cfl_limit, full_summary = full_summary, silent = silent)
             return
          end subroutine setup_linear_solver
-
+      
          subroutine nek_status(full_summary)
             character(len=:), allocatable :: msg
             logical, optional, intent(in) :: full_summary
             logical :: full_summary_
             full_summary_ = optval(full_summary, .false.)
-            ! overview
+      ! overview
             if (ifpert) then
                call logger%log_message('LINEAR MODE ACTIVE', module=this_module, procedure='nek_status')
-               write(msg, '(A, L8)') padl('npert: ', 20), param(31)
+               write (msg, '(A, L8)') padl('npert: ', 20), param(31)
                if (ifadj) then
-                  write(msg, '(A, L8)') padl('adjoint mode: ', 20), ifadj
+                  write (msg, '(A, L8)') padl('adjoint mode: ', 20), ifadj
                   call logger%log_message(msg, module=this_module, procedure='nek_status')
                end if
                call logger%log_message(msg, module=this_module, procedure='nek_status')
                if (ifbase) then
-                  write(msg, '(A, L8)') padl('solve for baseflow: ', 20), ifbase
+                  write (msg, '(A, L8)') padl('solve for baseflow: ', 20), ifbase
                   call logger%log_message(msg, module=this_module, procedure='nek_status')
                end if
             else
                call logger%log_message('  NONLINEAR MODE ACTIVE', module=this_module, procedure='nek_status')
             end if
             if (full_summary_) then
-               write(msg, '(A, L8)') padl('OIFS: ', 20), ifchar
+               write (msg, '(A, L8)') padl('OIFS: ', 20), ifchar
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               ! params
+      ! params
                call logger%log_message('PARAMETERS:', module=this_module, procedure='nek_status')
-               write(msg, '(A, F15.8)') padl('endTime: ', 20), param(10)
+               write (msg, '(A, F15.8)') padl('endTime: ', 20), param(10)
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               write(msg, '(A, E15.8)') padl('dt: ', 20), param(12)
+               write (msg, '(A, E15.8)') padl('dt: ', 20), param(12)
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               write(msg, '(A, I8)') padl('nsteps: ', 20), nsteps
-               write(msg, '(A, F15.3)') padl('CFL: ', 20), param(26)
+               write (msg, '(A, I8)') padl('nsteps: ', 20), nsteps
+               write (msg, '(A, F15.3)') padl('CFL: ', 20), param(26)
                call logger%log_message(msg, module=this_module, procedure='nek_status')
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               write(msg, '(A, E15.8)') padl('pressure tol: ', 20), param(21)
+               write (msg, '(A, E15.8)') padl('pressure tol: ', 20), param(21)
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               write(msg, '(A, E15.8)') padl('velocity tol: ', 20), param(22)
+               write (msg, '(A, E15.8)') padl('velocity tol: ', 20), param(22)
                call logger%log_message(msg, module=this_module, procedure='nek_status')
             end if
          end subroutine nek_status

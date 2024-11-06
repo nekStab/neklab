@@ -38,7 +38,7 @@
             procedure, pass(self), public :: rand => nek_drand
       !! Create a random vector.
             procedure, pass(self), public :: scal => nek_dscal
-      !! Scale a vector such that \( \mathbf{x} = \alpha \mathbf{x}$ with     $         \alpha \in \mathbb{R} \).
+      !! Scale a vector such that \( \mathbf{x} = \alpha \mathbf{x}$ with     $            \alpha \in \mathbb{R} \).
             procedure, pass(self), public :: axpby => nek_daxpby
       !! Add (in-place) two vectors such that \( \mathbf{x} = \alpha \mathbf{x} + \beta \mathbf{y} \) with \( \alpha \) and \( \beta \in \mathbb{R} \).
             procedure, pass(self), public :: dot => nek_ddot
@@ -46,7 +46,7 @@
             procedure, pass(self), public :: get_size => nek_dsize
       !! Return the size of the vector
          end type nek_dvector
-
+      
          type, extends(abstract_vector_rdp), public :: nek_ext_dvector
       !! Type definition for Nek5000 state-vector (real).
             real(kind=dp), dimension(lv) :: vx, vy, vz
@@ -64,7 +64,7 @@
             procedure, pass(self), public :: rand => nek_ext_drand
       !! Create a random vector.
             procedure, pass(self), public :: scal => nek_ext_dscal
-      !! Scale a vector such that \( \mathbf{x} = \alpha \mathbf{x}$ with     $         \alpha \in \mathbb{R} \).
+      !! Scale a vector such that \( \mathbf{x} = \alpha \mathbf{x}$ with     $            \alpha \in \mathbb{R} \).
             procedure, pass(self), public :: axpby => nek_ext_daxpby
       !! Add (in-place) two vectors such that \( \mathbf{x} = \alpha \mathbf{x} + \beta \mathbf{y} \) with \( \alpha \) and \( \beta \in \mathbb{R} \).
             procedure, pass(self), public :: dot => nek_ext_ddot
@@ -163,18 +163,18 @@
       
             select type (vec)
             type is (nek_dvector)
-            ! Kinetic energy contribution.
+      ! Kinetic energy contribution.
                alpha = glsc3(self%vx, bm1, vec%vx, lv) + glsc3(self%vy, bm1, vec%vy, lv)
                if (if3d) then
                   alpha = alpha + glsc3(self%vz, bm1, vec%vz)
                end if
       
-            ! Thermal energy contribution.
+      ! Thermal energy contribution.
                if (ifto) then
                   alpha = alpha + glsc3(self%theta(:, 1), bm1, vec%theta(:, 1), lv)
                end if
       
-            ! Whatever contribution from additional scalars.
+      ! Whatever contribution from additional scalars.
                if (ldimt > 1) then
                do i = 2, ldimt
                   if (ifpsco(i - 1)) alpha = alpha + glsc3(self%theta(:, i), bm1, vec%theta(:, i), lv)
@@ -184,7 +184,7 @@
       
             return
          end function nek_ddot
-
+      
          integer pure function nek_dsize(self) result(N)
             class(nek_dvector), intent(in) :: self
             integer :: i
@@ -192,13 +192,13 @@
             if (if3d) N = N + lv
             if (ifto) N = N + lv
             if (ldimt > 1) then
-               do i = 2, ldimt
-                  if (ifpsco(i - 1)) N = N + lv
-               end do
+            do i = 2, ldimt
+               if (ifpsco(i - 1)) N = N + lv
+            end do
             end if
             return
          end function nek_dsize
-
+      
       !-------------------------------------------------------------------------------------
       !-----                                                                           -----
       !-----     DEFINITION OF THE TYPE BOUND PROCEDURES FOR EXTENDED REAL VECTORS     -----
@@ -244,7 +244,7 @@
             call bcdirvc(self%vx, self%vy, self%vz, v1mask, v2mask, v3mask)
       
             call random_number(self%T)
-
+      
             if (normalize) then
                alpha = self%norm()
                call self%scal(1.0_dp/alpha)
@@ -291,18 +291,18 @@
       
             select type (vec)
             type is (nek_ext_dvector)
-            ! Kinetic energy contribution.
+      ! Kinetic energy contribution.
                alpha = glsc3(self%vx, bm1, vec%vx, lv) + glsc3(self%vy, bm1, vec%vy, lv)
                if (if3d) then
                   alpha = alpha + glsc3(self%vz, bm1, vec%vz)
                end if
       
-            ! Thermal energy contribution.
+      ! Thermal energy contribution.
                if (ifto) then
                   alpha = alpha + glsc3(self%theta(:, 1), bm1, vec%theta(:, 1), lv)
                end if
       
-            ! Whatever contribution from additional scalars.
+      ! Whatever contribution from additional scalars.
                if (ldimt > 1) then
                do i = 2, ldimt
                   if (ifpsco(i - 1)) alpha = alpha + glsc3(self%theta(:, i), bm1, vec%theta(:, i), lv)
@@ -313,7 +313,7 @@
       
             return
          end function nek_ext_ddot
-
+      
          integer pure function nek_ext_dsize(self) result(N)
             class(nek_ext_dvector), intent(in) :: self
             integer :: i
@@ -321,19 +321,19 @@
             if (if3d) N = N + lv
             if (ifto) N = N + lv
             if (ldimt > 1) then
-               do i = 2, ldimt
-                  if (ifpsco(i - 1)) N = N + lv
-               end do
+            do i = 2, ldimt
+               if (ifpsco(i - 1)) N = N + lv
+            end do
             end if
             return
          end function nek_ext_dsize
-
-         !---------------------------------------
-         !    
-         !       UTILITY for random vectors
-         !
-         !---------------------------------------
-
+      
+      !---------------------------------------
+      !
+      !       UTILITY for random vectors
+      !
+      !---------------------------------------
+      
          real(kind=dp) function mth_rand(ix, iy, iz, ieg, xl, fcoeff) !generate random number
             include 'INPUT'           ! IF3D
             integer ix, iy, iz, ieg

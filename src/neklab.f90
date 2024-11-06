@@ -39,11 +39,11 @@
       
       ! Implementation of the standard linear operators.
          public :: exptA_linop
-
+      
       ! Implementation of the abstract systems and Jacobians
          public :: nek_system, nek_system_upo
          public :: nek_jacobian, nek_jacobian_upo
-
+      
       ! Baseflow computation
          public :: newton_fixed_point_iteration
       
