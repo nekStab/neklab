@@ -39,6 +39,7 @@ examples/*/.state
 examples/*/makefile
 examples/*/makefile_usr.inc
 examples/*/nek5000
+examples/*/run*/*
 examples/*/obj/*
 examples/*/*/*.log
 examples/*/*/.state
@@ -46,3 +47,4 @@ examples/*/*/makefile
 examples/*/*/makefile_usr.inc
 examples/*/*/nek5000
 examples/*/*/obj/*
+examples/*/*/run*/*
