@@ -180,7 +180,7 @@
                   call vec_out%sub(vec_in)
                end select
             end select
-
+      
             return
          end subroutine jac_exptA_rmatvec
       

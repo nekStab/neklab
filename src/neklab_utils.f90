@@ -348,8 +348,8 @@
             vtol_ = optval(vtol, param(22))
             cfl_limit_ = optval(cfl_limit, param(26))
             silent_ = optval(silent, .false.)
-
-            if ( maxval(abs(vx)) == 0.0_dp .and. maxval(abs(vy)) == 0.0_dp .and. maxval(abs(vz)) == 0.0_dp) then
+      
+            if (maxval(abs(vx)) == 0.0_dp .and. maxval(abs(vy)) == 0.0_dp .and. maxval(abs(vz)) == 0.0_dp) then
                recompute_dt_ = .false.
             else
                recompute_dt_ = optval(recompute_dt, .false.)
