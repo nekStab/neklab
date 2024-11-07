@@ -37,14 +37,12 @@
          type, extends(abstract_system_rdp), public :: nek_system
          contains
             private
-            procedure, pass(self), public :: init => init_DNS
             procedure, pass(self), public :: response => nonlinear_map
          end type nek_system
       
          type, extends(abstract_system_rdp), public :: nek_system_upo
          contains
             private
-            procedure, pass(self), public :: init => init_DNS_upo
             procedure, pass(self), public :: response => nonlinear_map_upo
          end type nek_system_upo
       
@@ -55,7 +53,6 @@
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian
          contains
             private
-            procedure, pass(self), public :: init => init_jac_exptA
             procedure, pass(self), public :: matvec => jac_exptA_matvec
             procedure, pass(self), public :: rmatvec => jac_exptA_rmatvec
          end type nek_jacobian
@@ -63,7 +60,6 @@
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian_upo
          contains
             private
-            procedure, pass(self), public :: init => init_jac_map
             procedure, pass(self), public :: matvec => jac_direct_map
             procedure, pass(self), public :: rmatvec => jac_adjoint_map
          end type nek_jacobian_upo
@@ -73,17 +69,6 @@
       !-------------------------------------------------------
       !-----     TYPE BOUND PROCEDURES FOR NEK_SYSTEM    -----
       !-------------------------------------------------------
-      
-         subroutine init_DNS(self)
-            class(nek_system), intent(in) :: self
-      
-      ! We assume the baseflow has been set already!
-      
-      ! Setup Nek5000 for perturbation solver
-            call setup_nonlinear_solver(recompute_dt=.true., cfl_limit=0.4_dp, full_summary=.true.)
-      
-            return
-         end subroutine init_DNS
       
          subroutine nonlinear_map(self, vec_in, vec_out, atol)
       ! Dynamical system.
@@ -99,14 +84,12 @@
             type is (nek_dvector)
                select type (vec_out)
                type is (nek_dvector)
-      ! Set appropriate tolerances
-                  call setup_nonlinear_solver(vtol=atol/100, ptol=atol/100)
-      
-      ! Ensure correct nek status and reset dt based on new baseflow
-                  call self%init()
-      
       ! Set the initial condition
                   call vec2nek(vx, vy, vz, pr, t, vec_in)
+      
+      ! Set appropriate tolerances
+                  call setup_nonlinear_solver(recompute_dt=.true., cfl_limit=0.4_dp,
+     $   vtol = atol/10.0, ptol = atol/10.0)
       
       ! Intgrate the nonlinear equations forward
                   time = 0.0_dp
@@ -129,19 +112,6 @@
       !-----     TYPE BOUND PROCEDURES FOR NEK_JACOBIAN    -----
       !---------------------------------------------------------
       
-         subroutine init_jac_exptA(self)
-            class(nek_jacobian), intent(in) :: self
-      
-      ! Force the baseflow field for dt/nsteps/clf computation
-            call abs_vec2nek(vx, vy, vz, pr, t, self%X)
-            call logger%log_message('Set self%X -> vx, vy, vz, pr, t', module=this_module, procedure='init_jac_exptA')
-      
-      ! Setup Nek5000 for perturbation solver
-            call setup_linear_solver(solve_baseflow=.false., recompute_dt=.true., cfl_limit=0.5_dp, full_summary=.true.)
-      
-            return
-         end subroutine init_jac_exptA
-      
          subroutine jac_exptA_matvec(self, vec_in, vec_out)
             class(nek_jacobian), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
@@ -151,11 +121,12 @@
             type is (nek_dvector)
                select type (vec_out)
                type is (nek_dvector)
-      ! Ensure correct nek status
-                  call setup_linear_solver(transpose=.false., silent=.true.)
-      
       ! Set the baseflow initial condition
                   call abs_vec2nek(vx, vy, vz, pr, t, self%X)
+      
+      ! Ensure correct nek status
+                  call setup_linear_solver(solve_baseflow=.false.,
+     $   recompute_dt = .true., cfl_limit = 0.5_dp)
       
       ! Set the initial condition for Nek5000's linearized solver.
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
@@ -186,11 +157,12 @@
             type is (nek_dvector)
                select type (vec_out)
                type is (nek_dvector)
-      ! Ensure correct nek status
-                  call setup_linear_solver(transpose=.true., silent=.true.)
-      
       ! Set the baseflow initial condition
                   call abs_vec2nek(vx, vy, vz, pr, t, self%X)
+      
+      ! Ensure correct nek status
+                  call setup_linear_solver(transpose=.true., solve_baseflow=.false.,
+     $   recompute_dt = .true., cfl_limit = 0.5_dp)
       
       ! Set the initial condition for Nek5000's linearized solver.
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
@@ -208,25 +180,13 @@
                   call vec_out%sub(vec_in)
                end select
             end select
-      
-            ifadj = .false.
+
             return
          end subroutine jac_exptA_rmatvec
       
       !-----------------------------------------------------------
       !-----     TYPE BOUND PROCEDURES FOR NEK_SYSTEM_UPO    -----
       !-----------------------------------------------------------
-      
-         subroutine init_DNS_UPO(self)
-            class(nek_system_upo), intent(in) :: self
-      
-      ! We assume the baseflow has been set already!
-      
-      ! Setup Nek5000 for perturbation solver
-            call setup_nonlinear_solver(recompute_dt=.true., cfl_limit=0.4_dp, full_summary=.true.)
-      
-            return
-         end subroutine init_DNS_UPO
       
          subroutine nonlinear_map_UPO(self, vec_in, vec_out, atol)
       ! Dynamical system.
@@ -242,14 +202,12 @@
             type is (nek_ext_dvector)
                select type (vec_out)
                type is (nek_ext_dvector)
-      ! Set appropriate tolerances
-                  call setup_nonlinear_solver(vtol=atol/100, ptol=atol/100)
-      
-      ! Ensure correct nek status and reset dt based on new baseflow
-                  call self%init()
-      
       ! Set the initial condition
                   call ext_vec2nek(vx, vy, vz, pr, t, vec_in)
+      
+      ! Set appropriate tolerances and Nek status
+                  call setup_nonlinear_solver(recompute_dt=.true., cfl_limit=0.4_dp,
+     $   vtol = atol/10.0, ptol = atol/10.0)
       
       ! Intgrate the nonlinear equations forward
                   time = 0.0_dp
@@ -272,19 +230,6 @@
       !-----     TYPE BOUND PROCEDURES FOR NEK_JACOBIAN_UPO    -----
       !-------------------------------------------------------------
       
-         subroutine init_jac_map(self)
-            class(nek_jacobian_upo), intent(in) :: self
-      ! Force the initial condition for dt/nsteps/clf computation
-            call abs_vec2nek(vx, vy, vz, pr, t, self%X)
-            call logger%log_message('Set self%X -> vx, vy, vz, pr, t', module=this_module, procedure='init_jac_map')
-      
-      ! Setup Nek5000 for perturbation solver
-            call setup_linear_solver(solve_baseflow=.true., recompute_dt=.true.,
-     $   cfl_limit = 0.4_dp, full_summary = .true.)
-      
-            return
-         end subroutine init_jac_map
-      
          subroutine jac_direct_map(self, vec_in, vec_out)
       ! Dynamical system.
             class(nek_jacobian_upo), intent(inout) :: self
@@ -303,7 +248,8 @@
                   call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
       
       ! Ensure correct nek status -> set end time
-                  call setup_linear_solver(transpose=.false., endtime=vec_in%T, silent=.true.)
+                  call setup_linear_solver(solve_baseflow=.true., transpose=.false.,
+     $   recompute_dt = .true., endtime = vec_in%T, cfl_limit = 0.4_dp)
       
       ! Set the perturbation initial condition
                   call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
@@ -350,7 +296,8 @@
                   call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
       
       ! Ensure correct nek status -> set end time
-                  call setup_linear_solver(transpose=.true., endtime=vec_in%T, silent=.true.)
+                  call setup_linear_solver(solve_baseflow=.true., transpose=.true.,
+     $   recompute_dt = .true., endtime = vec_in%T, cfl_limit = 0.4_dp)
       
       ! Set the perturbation initial condition
                   call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
@@ -380,7 +327,6 @@
                end select
             end select
       
-            ifadj = .false.
             return
          end subroutine jac_adjoint_map
       
