@@ -38,7 +38,7 @@
             procedure, pass(self), public :: rand => nek_drand
       !! Create a random vector.
             procedure, pass(self), public :: scal => nek_dscal
-      !! Scale a vector such that \( \mathbf{x} = \alpha \mathbf{x}$ with     $            \alpha \in \mathbb{R} \).
+      !! Scale a vector such that \( \mathbf{x} = \alpha \mathbf{x}$ with $\alpha \in \mathbb{R} \).
             procedure, pass(self), public :: axpby => nek_daxpby
       !! Add (in-place) two vectors such that \( \mathbf{x} = \alpha \mathbf{x} + \beta \mathbf{y} \) with \( \alpha \) and \( \beta \in \mathbb{R} \).
             procedure, pass(self), public :: dot => nek_ddot
@@ -64,7 +64,7 @@
             procedure, pass(self), public :: rand => nek_ext_drand
       !! Create a random vector.
             procedure, pass(self), public :: scal => nek_ext_dscal
-      !! Scale a vector such that \( \mathbf{x} = \alpha \mathbf{x}$ with     $            \alpha \in \mathbb{R} \).
+      !! Scale a vector such that \( \mathbf{x} = \alpha \mathbf{x}$ with $\alpha \in \mathbb{R} \).
             procedure, pass(self), public :: axpby => nek_ext_daxpby
       !! Add (in-place) two vectors such that \( \mathbf{x} = \alpha \mathbf{x} + \beta \mathbf{y} \) with \( \alpha \) and \( \beta \in \mathbb{R} \).
             procedure, pass(self), public :: dot => nek_ext_ddot
@@ -158,26 +158,24 @@
          real(kind=dp) function nek_ddot(self, vec) result(alpha)
             class(nek_dvector), intent(in) :: self
             class(abstract_vector_rdp), intent(in) :: vec
-            real(kind=dp), external :: glsc3
+            real(kind=dp), external :: op_glsc2_wt, glsc3
             integer :: i
       
+            ifield = 1
             select type (vec)
             type is (nek_dvector)
       ! Kinetic energy contribution.
-               alpha = glsc3(self%vx, bm1, vec%vx, lv) + glsc3(self%vy, bm1, vec%vy, lv)
-               if (if3d) then
-                  alpha = alpha + glsc3(self%vz, bm1, vec%vz)
-               end if
+               alpha = op_glsc2_wt(self%vx, self%vy, self%vz, vec%vx, vec%vy, vec%vz, bm1)
       
       ! Thermal energy contribution.
                if (ifto) then
-                  alpha = alpha + glsc3(self%theta(:, 1), bm1, vec%theta(:, 1), lv)
+                  alpha = alpha + glsc3(self%theta(:, 1), vec%theta(:, 1), bm1, lv)
                end if
       
       ! Whatever contribution from additional scalars.
                if (ldimt > 1) then
                do i = 2, ldimt
-                  if (ifpsco(i - 1)) alpha = alpha + glsc3(self%theta(:, i), bm1, vec%theta(:, i), lv)
+                  if (ifpsco(i - 1)) alpha = alpha + glsc3(self%theta(:, i), vec%theta(:, i), bm1, lv)
                end do
                end if
             end select
