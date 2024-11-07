@@ -343,12 +343,17 @@
       
             transpose_ = optval(transpose, .false.)
             solve_baseflow_ = optval(solve_baseflow, .false.)
-            recompute_dt_ = optval(recompute_dt, .false.)
             endtime_ = optval(endtime, param(10))
             ptol_ = optval(ptol, param(21))
             vtol_ = optval(vtol, param(22))
             cfl_limit_ = optval(cfl_limit, param(26))
             silent_ = optval(silent, .false.)
+
+            if ( maxval(abs(vx)) == 0.0_dp .and. maxval(abs(vy)) == 0.0_dp .and. maxval(abs(vz)) == 0.0_dp) then
+               recompute_dt_ = .false.
+            else
+               recompute_dt_ = optval(recompute_dt, .false.)
+            end if
       
             call nekgsync()
       
@@ -431,7 +436,7 @@
                call logger%log_information(msg, module=this_module, procedure='setup_nek')
                if (nid == 0) print '(A)', msg
             else
-               dt = param(10)/nsteps
+               nsteps = ceiling(param(10)/dt)
                param(12) = dt
             end if
             fintim = nsteps*dt
