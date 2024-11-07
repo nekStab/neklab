@@ -158,6 +158,9 @@
             class(LNS_linop), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
+            ! internal
+            real(dp), dimension(lv, 1) :: dv1, dv2, dv3
+            common /scrns/ dv1, dv2, dv3
       !
       ! NOTE: only for a single perturbation vector !
       !
@@ -176,6 +179,20 @@
             
       ! Apply LNS operator in place
                   call apply_L(trans=.false.)
+
+      ! Compute divergence of velocity dp = D^T @ u
+                  call opdiv(prp, vxp, vyp, vzp)
+
+                  !call outpost(vxp, vyp, vzp, prp, tp, 'tst')
+
+      ! Solve for pressure correction to enforce continuity D^T @ D @ dp = D^T @ u
+                  call project_perturbation(prp) ! in-place
+      
+      ! Compute corresponding velocity correction
+                  call opgradt(dv1, dv2, dv3, prp)
+
+      ! Compute final velocity
+                  call opadd2(vxp, vyp, vzp, dv1, dv2, dv3)
             
       ! Copy the final solution to vector.
                   call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
@@ -188,6 +205,9 @@
             class(LNS_linop), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
+            ! internal
+            real(dp), dimension(lv, 1) :: dv1, dv2, dv3
+            common /scrns/ dv1, dv2, dv3
       !
       ! NOTE: only for a single perturbation vector !
       !
@@ -206,9 +226,23 @@
             
       ! Apply adjoint LNS operator in place
                   call apply_L(trans=.true.)
+
+      ! Compute divergence of velocity dp = D^T @ u
+                  call opdiv(prp, vxp, vyp, vzp)
+
+                  !call outpost(vxp, vyp, vzp, prp, tp, 'tst')
+
+      ! Solve for pressure correction to enforce continuity D^T @ D @ dp = D^T @ u
+                  call project_perturbation(prp) ! in-place
+      
+      ! Compute corresponding velocity correction
+                  call opgradt(dv1, dv2, dv3, prp)
+
+      ! Compute final velocity
+                  call opadd2(vxp, vyp, vzp, dv1, dv2, dv3)
       
       ! Copy the final solution to vector.
-               call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
+                  call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
                end select
             end select
       
@@ -249,11 +283,11 @@
       !---------------------
       ! Diffusion term
       !---------------------
-      ! set factors for the Helmholtz operator
-            call rzero(h1, lv)
-            call copy(h2, vtrans(1,1,1,1,ifield), lv)
+      ! set factors for the Helmholtz operator  (H = h1*A + h2*B)
+            call copy(h1, vdiff(1,1,1,1,ifield), lv)
+            call rzero(h2, lv)
       ! add a diagonal term to the operator for the ON/on/O/o boundary conditions    
-            if (trans) call bc_out_adj(h2)
+      !      if (trans) call bc_out_adj(h2) ! not needed since h2 = 0
       ! and apply to the velocity field to compute the diffusion term
             call ophx(dv1, dv2, dv3, vxp, vyp, vzp, h1, h2)
       
@@ -262,155 +296,95 @@
             return
          end subroutine apply_L
 
-         subroutine project_perturbation()
+         subroutine project_perturbation(dpr)
       !! Project perturbation velocity fields onto closest solenoidal space
       !! with div u = 0
       !! For this, we solve
-      !!        D^T @ D @ dp = D^T @ u
+      !!        D^T @ D @ dpr = D^T @ u
       !! using CG iteration to the recover the corresponding velocity correction
       !!        du = D @ p
       !! that we add to the previously computed velocity field.
+            real(dp), dimension(lp, 1), intent(inout) :: dpr
+            ! internal
+            real(dp), dimension(lx1, ly1, lz1, lelv) :: vxtmp, vytmp, vztmp
+            real(dp), dimension(lx1, ly1, lz1, lelv) :: h1, h2
+            real(dp), dimension(lx2, ly2, lz2, lelv) :: wp, xCG, rpCG
+            logical :: iconv
+            integer :: iter
+            real(dp) :: tolps, tolpss
+            real(dp) :: rrp1, rrp2 
+            real(dp) :: alpha, beta
+            real(dp) :: div0, rnorm, rnrm1, ratio, pDTDp
+            real(dp), external :: glsc2 ! inner product
+            common /scruz/ wp, xCG, rpCG
+            common /scrvh/ h1, h2
 
-      ! compute divergence of velocity dp = D^T @ u
-            call opdiv(prp, vxp, vyp, vzp)
-      ! project out null-space
-            call ortho(prp)
+            call ortho(dpr) ! project out null-space
 
-!            subroutine uzawa (rcg,h1,h2,h2inv,intype,iter)
-!               C-----------------------------------------------------------------------
-!               C
-!               C     Solve the pressure equation by (nested) preconditioned 
-!               C     conjugate gradient iteration.
-!               C     INTYPE =  0  (steady)
-!               C     INTYPE =  1  (explicit)
-!               C     INTYPE = -1  (implicit)
-!               C
-!               C-----------------------------------------------------------------------
-!                     include 'SIZE'
-!                     include 'TOTAL'
-!                     COMMON  /CTOLPR/ DIVEX
-!                     COMMON  /CPRINT/ IFPRINT
-!                     LOGICAL          IFPRINT
-!                     REAL             RCG  (LX2,LY2,LZ2,LELV)
-!                     REAL             H1   (LX1,LY1,LZ1,LELV)
-!                     REAL             H2   (LX1,LY1,LZ1,LELV)
-!                     REAL             H2INV(LX1,LY1,LZ1,LELV)
-!                     COMMON /SCRUZ/   WP   (LX2,LY2,LZ2,LELV)
-!                    $ ,               XCG  (LX2,LY2,LZ2,LELV)
-!                    $ ,               PCG  (LX2,LY2,LZ2,LELV) 
-!                    $ ,               RPCG (LX2,LY2,LZ2,LELV)
-!                
-!                     real*8 etime1,dnekclock
-!                     integer*8 ntotg,nxyz2
-!               
-!               
-!                     etime1 = dnekclock()
-!                     DIVEX = 0.
-!                     ITER  = 0
-!               c
-!                     CALL CHKTCG2 (TOLPS,RCG,ICONV)
-!                     if (param(21).gt.0.and.tolps.gt.abs(param(21))) 
-!                    $   TOLPS = abs(param(21))
-!               C
-!               c      IF (ICONV.EQ.1) THEN
-!               c         IF (NID.EQ.0) WRITE(6,9999) ITER,DIVEX,TOLPS
-!               c         return
-!               c      ENDIF
-!               
-!                     nxyz2 = lx2*ly2*lz2
-!                     ntot2 = nxyz2*nelv
-!                     ntotg = nxyz2*nelgv
-!               
-!                     CALL UZPREC  (RPCG,RCG,H1,H2,INTYPE,WP)
-!                     RRP1 = GLSC2 (RPCG,RCG,NTOT2)
-!                     CALL COPY    (PCG,RPCG,NTOT2)
-!                     CALL RZERO   (XCG,NTOT2)
-!                     if (rrp1.eq.0) return
-!                     BETA = 0.
-!                     div0=0.
-!               C
-!                     tolpss = tolps
-!                     DO 1000 ITER=1,NMXP
-!               C
-!               C        CALL CONVPR  (RCG,tolpss,ICONV,RNORM)
-!                        call convprn (iconv,rnorm,rrp1,rcg,rpcg,tolpss)
-!               
-!                        if (iter.eq.1)      div0   = rnorm
-!                        if (param(21).lt.0) tolpss = abs(param(21))*div0
-!               
-!                        ratio = rnorm/div0
-!                        IF (IFPRINT.AND.NIO.EQ.0) 
-!                    $   WRITE (6,66) iter,tolpss,rnorm,div0,ratio,istep
-!                  66    format(i5,1p4e12.5,i8,' Divergence')
-!               c
-!                        IF (ICONV.EQ.1.and.iter.gt.1) GOTO 9000
-!               c        IF (ICONV.EQ.1.and.(iter.gt.1.or.istep.le.2)) GOTO 9000
-!               c        IF (ICONV.EQ.1) GOTO 9000
-!               c        if (ratio.le.1.e-5) goto 9000
-!               
-!               
-!                        IF (ITER .NE. 1) THEN
-!                           BETA = RRP1/RRP2
-!                           CALL ADD2S1 (PCG,RPCG,BETA,NTOT2)
-!                        ENDIF
-!               
-!                        CALL CDABDTP  (WP,PCG,H1,H2,H2INV,INTYPE)
-!                        PAP   = GLSC2 (PCG,WP,NTOT2)
-!               
-!                        IF (PAP.NE.0.) THEN
-!                           ALPHA = RRP1/PAP
-!                        ELSE
-!                           pcgmx = glamax(pcg,ntot2)
-!                           wp_mx = glamax(wp ,ntot2)
-!                           ntot1 = lx1*ly1*lz1*nelv
-!                           h1_mx = glamax(h1 ,ntot1)
-!                           h2_mx = glamax(h2 ,ntot1)
-!                           if (nid.eq.0) write(6,*) 'ERROR: pap=0 in uzawa.'
-!                    $      ,iter,pcgmx,wp_mx,h1_mx,h2_mx
-!                           call exitt
-!                        ENDIF
-!                        CALL ADD2S2 (XCG,PCG,ALPHA,NTOT2)
-!                        CALL ADD2S2 (RCG,WP,-ALPHA,NTOT2)
-!               
-!                        if (iter.eq.-1) then
-!                           call convprn (iconv,rnrm1,rrpx,rcg,rpcg,tolpss)
-!                           if (iconv.eq.1) then
-!                              rnorm = rnrm1
-!                              ratio = rnrm1/div0
-!                              if (nio.eq.0) 
-!                    $         write (6,66) iter,tolpss,rnrm1,div0,ratio,istep
-!                              goto 9000
-!                           endif
-!                        endif
-!               
-!                        call ortho(rcg)
-!               
-!                        RRP2 = RRP1
-!                        CALL UZPREC  (RPCG,RCG,H1,H2,INTYPE,WP)
-!               c        RRP1 = GLSC2 (RPCG,RCG,NTOT2)
-!               
-!                1000 CONTINUE
-!                     if (nid.eq.0) WRITE (6,3001) ITER,RNORM,tolpss
-!               c     if (istep.gt.20) CALL EMERXIT
-!                3001 FORMAT(I6,' **ERROR**: Failed to converge in UZAWA:',6E13.4)
-!                9000 CONTINUE
-!               
-!                     divex = rnorm
-!                     iter  = iter-1
-!               
-!                     if (iter.gt.0) call copy (rcg,xcg,ntot2)
-!                     call ortho(rcg)
-!               
-!                     etime1 = dnekclock()-etime1
-!                     IF (NIO.EQ.0) WRITE(6,9999) ISTEP, '  U-Press std. ',
-!                    &                            ITER,DIVEX,div0,tolpss,etime1
-!                9999 FORMAT(I11,a,I7,1p4E13.4)
-!               19999 FORMAT(I11,'  U-Press 1.e-5: ',I7,1p4E13.4)
-!               C
-!               C
-!                     return
-!                     END
+            iter = 0
 
+            CALL chktCG2 (tolps,dpr,iconv) ! copute tolerance for pressure solver
+            if (param(21) > 0 .and. tolps > abs(param(21))) tolps = abs(param(21))
+            ! param(21) is the pressure tolerance
+
+            !call uzprec(rpCG,dpr,h1,h2,0,wp)
+            ! let's see whether we can use the preconditioner, this is what it does
+            !call col3        (wp,dpr,h1m2,lp)     ! wp = dpr .* h1m1
+            !call col3        (rpCG,wp,BM2inv,lp) ! rpCG = wp ./ bm2
+            ! rpCG = dpr .* h1m2./bm2
+            !rrp1 = glsc2 (rpCG,dpr,lp)                 ! < p , p >_(diag(h1m2/bm2)) = < r , z >
+            !call copy    (dpr,rpCG,lp)
+
+            rrp1 = glsc2(dpr,dpr,lp)
+            call rzero   (xCG,lp)                     ! xCG = 0
+
+            beta = 0.0_dp
+            div0 = 0.0_dp
+
+            call convprn (iconv,rnorm,rrp1,dpr,rpCG,tolpss) ! computes rrp1
+
+            tolpss = tolps
+            if (nid == 0) print *, 'rrp1', rrp1, tolpss
+            cg_loop: do iter = 1, nmxp
+               if (nid == 0) print *, 'Step', iter
+               ! compute wp = D^T @ D @ dpr
+               call opgradt(vxtmp, vytmp, vztmp, dpr)
+               call opdiv(wp, vxtmp, vytmp, vztmp)
+
+               pDTDp = glsc2(dpr,wp,lp)        ! < p , p >_(D^T @ D)
+
+               if (nid == 0) print *, 'pDTDp', pDTDp
+      
+               alpha = rrp1/pDTDp             ! step size
+               call add2s2 (xCG,dpr,alpha,lp)  ! x = x + alpha*dpr
+               call add2s2 (dpr,wp,-alpha,lp)  ! r = r - alpha*DTDdpr
+            
+               call ortho(dpr) ! project out null-space
+      
+               ! preconditioner
+               !call uzprec  (rpCG,dpr,h1,h2,0,wp)
+               call copy(rpCG, dpr)
+
+               ! check for convergence  
+               call convprn (iconv,rnorm,rrp2,dpr,rpCG,tolpss) ! Convergence test for the pressure step;  < r , z >  ! rrp2 is output
+               if (iter == 1) div0 = rnorm ! reference is the initial rnorm
+               if (param(21) < 0) tolpss = abs(param(21))*div0 ! relative norm
+               ratio = rnorm/div0
+               if (nio == 0) write(6,'(I5,1P4E12.5," Divergence")') iter,tolpss,rnorm,div0,ratio
+               if (iconv .and. iter > 1) exit cg_loop
+
+               beta = rrp2/rrp1
+               call add2s1 (dpr,rpCG,beta,lp) ! dpr = beta*dpr + rpCG
+
+               rrp1 = rrp2
+            end do cg_loop
+
+            iter  = iter-1
+
+            if (iter > 0) call copy (dpr,xCG,lp) ! copy result into input/output vector
+            call ortho(dpr)
+               
+            return
          end subroutine project_perturbation
       
          subroutine apply_exptA(vec_out, A, vec_in, tau, info, trans)
@@ -454,21 +428,95 @@
             return
          end subroutine apply_exptA
 
-!         ! project onto closest solenoidal space (~ incomprp)
+!         real(dp), dimension(lp, 1), intent(inout) :: dp
+!            ! internal
+!            real(dp), dimension(lx1, ly1, lz1, lelv) :: vxtmp, vytmp, vztmp
+!            real(dp), dimension(lx1, ly1, lz1, lelv) :: h1 !, h2, h2inv
+!            real(dp), dimension(lx2, ly2, lz2, lelv) :: wp, xCG, rpCG
+!            logical :: iconv
+!            integer :: iter
+!            real(dp) :: tolps, tolpss
+!            real(dp) :: rrp1, rrp2 
+!            real(dp) :: alpha, beta
+!            real(dp) :: div0, rnorm, rnrm1, ratio, pDTDp
+!            real(dp), external :: glsc2 ! inner product
+!            common /scruz/ wp, xCG, pCG, rpCG
+!            common /scrvh/ h1 !, h2, h2inv
+!            COMMON /CTOLPR/ DIVEX
+!
+!            call ortho(dp) ! project out null-space
+!
+!            iter = 0
+!            divex = 0.0_dp
+!
+!            CALL chktCG2 (tolps,dp,iconv) ! copute tolerance for pressure solver
+!            if (param(21) > 0 .and. tolps > abs(param(21))) tolps = abs(param(21))
+!            ! param(21) is the pressure tolerance
+!
+!            call uzprec(rpCG,dp,h1,h2,0,wp)
+!            ! let's see whether we can use the preconditioner, this is what it does
+!            !call col3        (wp,dp,h1m2,lp)     ! wp = dp .* h1m1
+!            !call col3        (rpCG,wp,BM2inv,lp) ! rpCG = wp ./ bm2
+!            ! rpCG = dp .* h1m2./bm2
+!            rrp1 = glsc2 (rpCG,dp,lp)                 ! < p , p >_(diag(h1m2/bm2)) = < r , z >
+!            call copy    (dp,rpCG,lp)
+!            call rzero   (xCG,lp)                     ! xCG = 0
+!
+!            beta = 0.0_dp
+!            div0 = 0.0_dp
+!
+!            tolpss = tolps
+!            cg_iter: do iter = 1, nmxp
+!
+!               call convpr  (dp,tolpss,iconv,rnorm)           ! convergence test for the pressure step    
+!               call convprn (iconv,rnorm,rrp1,dp,rpCG,tolpss) ! Convergence test for the pressure step;  < r , z >
+!
+!               if (iter == 1) div0 = rnorm
+!
+!               if (param(21) < 0) tolpss = abs(param(21))*div0 ! relative norm
+!
+!               ratio = rnorm/div0
+!
+!               if (nio == 0) then 
+!                  write(6,'(I5,1P4E12.5," Divergence")') iter,tolpss,rnorm,div0,ratio
+!               end if
+!
+!               if (iconv .and. iter > 1) exit cg_iter
+!
+!               if (iter /= 1) then
+!                  beta = rrp1/rrp2
+!                  call add2s1 (dp,rpCG,beta,lp) ! dp = beta*dp + rpCG
+!               endif
+!
+!               ! compute wp = D^T @ D @ dp
+!               call opgradt(vxtmp, vytmp, vztmp, dp)
+!               call opdiv(wp, vxtmp, vytmp, vztmp)
+!
+!               pDTDp = glsc2(dp,wp,lp)        ! < p , p >_(D^T @ D)
 !      
-!      ! compute divergence of velocity dp = D^T @ u
-!         call opdiv(prp, vxp, vyp, vzp)
-!         call chsign(prp, lp)
-!! call ortho(dp) ! project out null-space (is done already in esolver)
-!! solve D @ A^(-1) @ D^T @ x = dp using the uzawa splitting
-!! set factors for the Helmholtz operator
-!         call rzero(h1, lv)
-!         call copy(h2, vtrans(1, 1, 1, 1, ifield), lv)
-!         call invers2(h2inv, h2, lv)
-!         call esolver(prp, h1, h2, h2inv, intype)  ! --> overwrites prp with solution
-!! compute gradient of pressure correction --> velocity correction
-!         call opgradt(dv1, dv2, dv3, prp)
-!! and add it to velocity
-!         call opadd2(vxp, vyp, vzp, dv1, dv2, dv3)
+!               alpha = rrp1/pDTDp             ! step size
+!               call add2s2 (xCG,dp,alpha,lp)  ! x = x + alpha*dp
+!               call add2s2 (dp,wp,-alpha,lp)  ! r = r - alpha*DTDdp
+!      
+!               if (iter == -1) then
+!                  call convprn (iconv,rnrm1,rrpx,dp,rpCG,tolpss)
+!                  if (iconv) then
+!                     rnorm = rnrm1
+!                     ratio = rnrm1/div0
+!                     if (nio == 0) write(6,'(I5,1P4E12.5," Divergence")') iter,tolpss,rnorm,div0,ratio
+!                  endif
+!               endif
+!      
+!               call ortho(dp) ! project out null space
+!      
+!               rrp2 = rrp1
+!               call uzprec  (rpCG,dp,h1,h2,0,wp)
+!            end do
+!
+!            divex = rnorm
+!            iter  = iter-1
+!
+!            if (iter > 0) call copy (dp,xCG,lp) ! copy result into input/output vector
+!            call ortho(dp)
       
       end module neklab_linops
