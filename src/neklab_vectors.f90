@@ -284,16 +284,14 @@
          real(kind=dp) function nek_ext_ddot(self, vec) result(alpha)
             class(nek_ext_dvector), intent(in) :: self
             class(abstract_vector_rdp), intent(in) :: vec
-            real(kind=dp), external :: glsc3
+            real(kind=dp), external :: op_glsc2_wt, glsc3
             integer :: i
       
+            ifield = 1      
             select type (vec)
             type is (nek_ext_dvector)
       ! Kinetic energy contribution.
-               alpha = glsc3(self%vx, bm1, vec%vx, lv) + glsc3(self%vy, bm1, vec%vy, lv)
-               if (if3d) then
-                  alpha = alpha + glsc3(self%vz, bm1, vec%vz)
-               end if
+               alpha = op_glsc2_wt(self%vx, self%vy, self%vz, vec%vx, vec%vy, vec%vz, bm1)
       
       ! Thermal energy contribution.
                if (ifto) then
