@@ -51,6 +51,9 @@
             integer :: i
             logical :: adjoint_
             character(len=3) :: file_prefix
+
+      ! Set up logging
+            call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
       
       ! Optional parameters.
             if (present(adjoint)) then
@@ -96,6 +99,9 @@
       ! Miscellaneous.
             integer :: i, j
             character(len=3) :: file_prefix
+
+      ! Set up logging
+            call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
       
       ! Allocate singular vectors.
             allocate (U(nsv)); call initialize_krylov_subspace(U)
@@ -151,7 +157,7 @@
          subroutine compare_nek_arnoldi(A, exptA, tau)
             type(LNS_linop), intent(inout) :: A
             type(exptA_linop), intent(inout) :: exptA
-            real(dp) :: tau
+            real(dp), intent(in) :: tau
       
       ! internal variables
             type(nek_dvector) :: U, Vkr, Vts
@@ -161,27 +167,31 @@
       ! I/O
             character(len=3) :: file_prefix
       
+      ! Set up logging
+            call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      
             kdim = 50
-            tau = 0.1_dp
             tol = 1e-12
+            time = 0.0_dp
       
             call U%rand(ifnorm=.true.)
-      !file_prefix = 'ini'; call outpost_dnek(U, file_prefix)
-      !file_prefix = 'vnk'; call outpost_dnek(U, file_prefix)
+            file_prefix = 'ini'; call outpost_dnek(U, file_prefix)
+            file_prefix = 'vnk'; call outpost_dnek(U, file_prefix)
             file_prefix = 'vkr'; call outpost_dnek(U, file_prefix)
       
-      !call apply_exptA(Vts, exptA, U, tau, info, trans=.false.)
-      !file_prefix = 'vts'; call outpost_dnek(Vts, file_prefix)
+            call apply_exptA(Vts, exptA, U, tau, info, trans=.false.)
+            file_prefix = 'vts'; call outpost_dnek(Vts, file_prefix)
       
-      !call Vts%axpby(1.0_dp, U, -1.0_dp)
-      !call Vts%scal(1.0_dp/tau)
-      !file_prefix = 'vnk'; call outpost_dnek(Vts, file_prefix)
+            call Vts%axpby(1.0_dp, U, -1.0_dp)
+            call Vts%scal(1.0_dp/tau)
+            file_prefix = 'vnk'; call outpost_dnek(Vts, file_prefix)
       
-      !call kexpm(Vkr, A, U, tau, tol, info, verbosity=.true., kdim=kdim)
+            !call kexpm(Vkr, A, U, tau, tol, info, kdim=kdim)
             call A%matvec(U, Vkr)
             file_prefix = 'vkr'; call outpost_dnek(Vkr, file_prefix)
       
-      !call Vkr%axpby(1.0_dp, Vts, -1.0_dp)
+            call Vkr%axpby(1.0_dp, Vts, -1.0_dp)
+            STOP 9
       !if (Vkr%norm()/Vkr%get_size() > 10*atol_dp) then
       !   if (nid.eq.0) print *, "Solutions do not match!"
       !   if (nid.eq.0) print *, " tol", 10*atol_dp, "delta = ", Vkr%norm()/Vkr%get_size()
