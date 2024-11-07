@@ -38,7 +38,7 @@
          public :: nek_dvector
       
       ! Implementation of the standard linear operators.
-         public :: exptA_linop
+         public :: exptA_linop, LNS_linop
       
       ! Implementation of the abstract systems and Jacobians
          public :: nek_system, nek_system_upo
@@ -50,6 +50,9 @@
       ! Stability analysis exports.
          public :: linear_stability_analysis_fixed_point
          public :: transient_growth_analysis_fixed_point
+
+      ! Miscellaneous
+         public :: compare_nek_arnoldi
       
       ! Various utilities.
          public :: nek2vec, vec2nek
