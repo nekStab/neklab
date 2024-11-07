@@ -1,0 +1,108 @@
+c-----------------------------------------------------------------------
+      subroutine userchk
+      use neklab
+      include 'SIZE'
+      include 'TOTAL'
+
+      type(nek_dvector) :: bf
+    	type(exptA_linop) :: exptA
+      type(LNS_linop)   :: A
+      real(dp) :: tau
+	
+    	if (istep.eq.0) then
+    		! Load baseflow.
+    		call load_fld("BF_bfs0.f00001")
+    		call nek2vec(bf, vx, vy, vz, pr, t)
+
+            tau = 0.0001_dp
+
+    		! Exponential propagator.
+    		exptA = exptA_linop(tau, bf)
+            call exptA%init()
+
+            ! LNS.
+    		A = LNS_linop(bf)
+            call A%init()
+
+            ! 
+            call compare_nek_arnoldi(A, exptA, tau)
+
+    		call nek_end()
+    	endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+	include 'SIZE'
+	include 'TOTAL'
+
+        call setbc(5, 1, "W  ")
+        call setbc(2, 1, "v  ")
+        call setbc(3, 1, "v  ")
+        call setbc(4, 1, "SYM")
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end
