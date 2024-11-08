@@ -11,6 +11,10 @@
          use neklab_systems
       ! --> Stability analysis routines
          use neklab_analysis
+
+         ! skern
+         use neklab_pvectors
+         use neklab_plinops
       
          private
       
@@ -19,7 +23,7 @@
       !------------------------------------------
       
       ! Global variables.
-         public :: dp
+         public :: dp, rtol_dp, atol_dp
       
       ! Krylov factorizations.
          public :: initialize_krylov_subspace
@@ -29,16 +33,21 @@
       ! Matrix factorizations.
          public :: eigs, eighs, svds
          public :: save_eigenspectrum
+
+      ! Linear solvers.
+         public :: cg
+      ! Auxiliary exports
+         public :: cg_dp_opts, cg_dp_metadata
       
       !----------------------------------
       !-----     NEKLAB EXPORTS     -----
       !----------------------------------
       
       ! Definition of the abstract vectors in the Nek framework.
-         public :: nek_dvector
+         public :: nek_dvector, nek_pdvector
       
       ! Implementation of the standard linear operators.
-         public :: exptA_linop, LNS_linop
+         public :: exptA_linop, LNS_linop, DTD_linop
       
       ! Implementation of the abstract systems and Jacobians
          public :: nek_system, nek_system_upo
@@ -56,5 +65,8 @@
       
       ! Various utilities.
          public :: nek2vec, vec2nek
+         public :: nek2pvec, pvec2nek
          public :: setup_nonlinear_solver, setup_linear_solver
+         public :: apply_L
+
       end module neklab

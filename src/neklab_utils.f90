@@ -11,6 +11,8 @@
          use LightKrylov, only: abstract_vector_rdp
       ! Neklab vectors
          use neklab_vectors
+      ! Nekalb pvectors
+         use neklab_pvectors
       
          implicit none
          include "SIZE"
@@ -30,6 +32,8 @@
          public :: nek2vec, vec2nek, abs_vec2nek, outpost_dnek, outpost_dnek_abs_vector
       ! utilities for extended nek vectors
          public :: nek2ext_vec, ext_vec2nek, abs_ext_vec2nek, outpost_ext_dnek
+      ! utilities for nek pvectors
+         public :: nek2pvec, pvec2nek
       ! Set up solver
          public :: setup_nek, setup_nonlinear_solver, setup_linear_solver, nek_status
       ! miscellaneous
@@ -73,6 +77,16 @@
          interface outpost_ext_dnek
             module procedure outpost_ext_dnek_vector
             module procedure outpost_ext_dnek_basis
+         end interface
+
+         interface nek2pvec
+            module procedure nek2pvec_std
+            module procedure nek2pvec_prt
+         end interface
+      
+         interface pvec2nek
+            module procedure pvec2nek_std
+            module procedure pvec2nek_prt
          end interface
       
       contains
@@ -250,6 +264,38 @@
             end select
             return
          end subroutine abstract_ext_vec2nek_prt
+
+         subroutine nek2pvec_prt(vec, pr_)
+            include "SIZE"
+            type(nek_pdvector), intent(out) :: vec
+            real(kind=dp), dimension(lp, lpert), intent(in) :: pr_
+            call copy(vec%pr, pr_(:, 1), lp)
+            return
+         end subroutine nek2pvec_prt
+      
+         subroutine nek2pvec_std(vec, pr_)
+            include "SIZE"
+            type(nek_pdvector), intent(out) :: vec
+            real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(in) :: pr_
+            call copy(vec%pr, pr_, lp)
+            return
+         end subroutine nek2pvec_std
+      
+         subroutine pvec2nek_std(pr_, vec)
+            include "SIZE"
+            type(nek_pdvector), intent(in) :: vec
+            real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(out) :: pr_
+            call copy(pr_, vec%pr, lp) 
+            return
+         end subroutine pvec2nek_std
+      
+         subroutine pvec2nek_prt(pr_, vec)
+            include "SIZE"
+            type(nek_pdvector), intent(in) :: vec
+            real(kind=dp), dimension(lp, lpert), intent(out) :: pr_
+            call copy(pr_(:, 1), vec%pr, lp)
+            return
+         end subroutine pvec2nek_prt
       
          subroutine nopcopy(a1, a2, a3, a4, a5, b1, b2, b3, b4, b5)
             implicit none

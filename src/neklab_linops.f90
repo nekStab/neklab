@@ -24,7 +24,7 @@
          integer, parameter :: lp = lx2*ly2*lz2*lelv
       !! Local number of grid points for the pressure mesh.
       
-         public :: apply_exptA
+         public :: apply_exptA, apply_L
       
       !------------------------------------------
       !-----     EXPONENTIAL PROPAGATOR     -----
@@ -178,7 +178,7 @@
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
             
       ! Apply LNS operator in place
-                  call apply_L(trans=.false.)
+                  call apply_L(vxp, vyp, vzp, trans=.false.)
 
       ! Compute divergence of velocity dp = D^T @ u
                   call opdiv(prp, vxp, vyp, vzp)
@@ -225,7 +225,7 @@
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
             
       ! Apply adjoint LNS operator in place
-                  call apply_L(trans=.true.)
+                  call apply_L(vxp, vyp, vzp, trans=.true.)
 
       ! Compute divergence of velocity dp = D^T @ u
                   call opdiv(prp, vxp, vyp, vzp)
@@ -248,9 +248,12 @@
       
          end subroutine adjLNS_matvec
 
-         subroutine apply_L(trans)
+         subroutine apply_L(vxp_in, vyp_in, vzp_in, trans)
       !! Apply LNS operator (before the projection onto the divergence-free space)
       !! This function assumes that the input vector has already been loaded into v[xyz]p
+            real(dp), dimension(lv, 1), intent(inout) :: vxp_in
+            real(dp), dimension(lv, 1), intent(inout) :: vyp_in
+            real(dp), dimension(lv, 1), intent(inout) :: vzp_in
             logical, intent(in) :: trans
             !! adjoint?
             ! internal
@@ -341,16 +344,13 @@
             beta = 0.0_dp
             div0 = 0.0_dp
 
-            call convprn (iconv,rnorm,rrp1,dpr,rpCG,tolpss) ! computes rrp1
+            call convprn (iconv,rnorm,rrp1,dpr,rpCG,tolpss) ! computes rnorm, rrp1
 
             tolpss = tolps
             if (nid == 0) print *, 'rrp1', rrp1, tolpss
             cg_loop: do iter = 1, nmxp
                if (nid == 0) print *, 'Step', iter
-               ! compute wp = D^T @ D @ dpr
-               call opgradt(vxtmp, vytmp, vztmp, dpr)
-               call opdiv(wp, vxtmp, vytmp, vztmp)
-
+               
                pDTDp = glsc2(dpr,wp,lp)        ! < p , p >_(D^T @ D)
 
                if (nid == 0) print *, 'pDTDp', pDTDp

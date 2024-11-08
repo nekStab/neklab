@@ -1,34 +1,157 @@
 c-----------------------------------------------------------------------
       subroutine userchk
       use neklab
+      use LightKrylov_Logger
       include 'SIZE'
       include 'TOTAL'
 
       type(nek_dvector) :: bf
     	type(exptA_linop) :: exptA
       type(LNS_linop)   :: A
-      real(dp) :: tau
+      type(DTD_linop)   :: DTD
+      real(dp) :: tau, rnorm
+
+      type(nek_pdvector) :: dpr, xCG
+      real(dp), dimension(lx2, ly2, lz2, lelv) :: ptmp
+      type(cg_dp_opts) :: opts
+      type(cg_dp_metadata) :: meta
+      integer :: info
+
+      integer, parameter :: lv = lx1*ly1*lz1*lelv
+      !! Local number of grid points for the velocity mesh.
+      integer, parameter :: lp = lx2*ly2*lz2*lelv
+      !! Local number of grid points for the pressure mesh.
+
+      real(dp), dimension(lx1, ly1, lz1, lelv) :: resv1, resv2, resv3, dv1, dv2, dv3, h1, h2
+      !common /scrns/ resv1, resv2, resv3, dv1, dv2, dv3
+      !common /scrvh/ h1, h2
 	
     	if (istep.eq.0) then
     		! Load baseflow.
     		call load_fld("BF_bfs0.f00001")
     		call nek2vec(bf, vx, vy, vz, pr, t)
 
-            tau = 0.0001_dp
+            call opcopy(vxp, vyp, vzp, vx, vy, vz)
+            time = 0.0_dp
+
+            !tau = 0.0001_dp
 
     		! Exponential propagator.
-    		exptA = exptA_linop(tau, bf)
-            call exptA%init()
+    		!exptA = exptA_linop(tau, bf)
+            !call exptA%init()
+            !ifield = 1
+            !! Set up logging
+            !call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+            !call outpost(vxp, vyp, vzp, prp, tp, 'ppp')
+            !! Apply LNS (velocity part)
+            !call apply_L(vxp, vyp, vzp, trans=.false.)
+            !! compute divergence
+            !call opdiv(prp, vxp, vyp, vzp)
+            !call outpost(vxp, vyp, vzp, prp, tp, 'ppp')
+            !! copy divergence field into nek_pdvector
+            !call nek2pvec(dpr, prp)
+            !! compute norm to see where we are at
+            !if (nid.eq.0) print *, 'rnorm =', dpr%norm()
+            !! DTD
+            !DTD = DTD_linop()
+            !call xCG%zero()
+            !opts = cg_dp_opts(maxiter = 100, if_print_metadata = .true.)
+            !meta = cg_dp_metadata()
+            !call cg(DTD, dpr, xCG, info, rtol=rtol_dp, atol=atol_dp, options=opts, meta=meta)
+            !if (nid.eq.0) call meta%print()
+            !STOP 9
+      end if
 
+      if (istep == 1) then
+
+            call outpost(vxp, vyp, vzp, prp, tp, 'ppp')
+
+            ifield = 1
+      ! apply BCs
+            call bcdirvc(vxp, vyp, vzp, v1mask, v2mask, v3mask)
+      
+            call outpost(vxp, vyp, vzp, prp, tp, 'ppp')
+      !---------------------
+      ! Pressure gradient
+      !---------------------
+            call opgradt(resv1, resv2, resv3, prp)
+
+            call outpost(resv1, resv2, resv3, prp, tp, 'ppp')
+            
+      !---------------------
+      ! Convective term
+      !---------------------
+            call rzero(bfxp, lv)
+            call rzero(bfyp, lv)
+            call rzero(bfzp, lv)
+      ! construct convective terms and add them to bf[xyz]p
+            call advabp
+
+            call outpost(bfxp, bfyp, bfzp, prp, tp, 'ppp')
+      ! add the convective terms bf[xyz]p to the pressure gradient
+            call opadd2(resv1, resv2, resv3, bfxp, bfyp, bfzp)
+      
+            call outpost(resv1, resv2, resv3, prp, tp, 'ppp')
+      !---------------------
+      ! Diffusion term
+      !---------------------
+      ! set factors for the Helmholtz operator  (H = h1*A + h2*B)
+            call copy(h1, vdiff(1,1,1,1,ifield), lv)
+            call rzero(h2, lv)
+      ! add a diagonal term to the operator for the ON/on/O/o boundary conditions    
+      !      if (trans) call bc_out_adj(h2) ! not needed since h2 = 0
+      ! and apply to the velocity field to compute the diffusion term
+            call ophx(dv1, dv2, dv3, vxp, vyp, vzp, h1, h2)
+
+            call outpost(dv1, dv2, dv3, prp, tp, 'ppp')
+      
+      ! substract result form rest of rhs and put into v[xyz]p
+            call opsub3(vxp, vyp, vzp, resv1, resv2, resv3, dv1, dv2, dv3)
+
+            call outpost(vxp, vyp, vzp, prp, tp, 'ppp')
+
+      ! compute divergence
+            call opdiv(prp, vxp, vyp, vzp)
+            
+            call outpost(vxp, vyp, vzp, prp, tp, 'ppp')
+
+            print *, 'rnorm1 =', sqrt(glsc3(prp, bm2inv, prp, lp)/volvm2)
+            print *, 'rnorm2 =', glsc2(prp, prp, lp)
+
+
+
+
+
+
+
+
+
+
+
+            STOP 90
+
+
+
+
+
+
+
+
+
+
+            
             ! LNS.
-    		A = LNS_linop(bf)
-            call A%init()
-
+    		!A = LNS_linop(bf)
+            !call A%init()
+            
+            
             ! 
-            call compare_nek_arnoldi(A, exptA, tau)
+            !call compare_nek_arnoldi(A, exptA, tau)
 
-    		call nek_end()
+    		!call nek_end()
     	endif
+
+      if (mod(istep,25) == 0 .or. istep == 1) call outpost(vxp,vyp,vzp,prp,tp,'prt')
 
       return
       end
