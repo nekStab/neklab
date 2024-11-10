@@ -223,6 +223,7 @@
       
       ! Copy the final solution to vector.
                   call nek2ext_vec(vec_out, vx, vy, vz, pr, t)
+                  vec_out%T = vec_in%T
       
       ! Evaluate residual F(X) - X.
                   call vec_out%sub(vec_in)
@@ -255,7 +256,7 @@
       
       ! Ensure correct nek status -> set end time
                   call setup_linear_solver(solve_baseflow=.true., transpose=.false.,
-     $   recompute_dt = .true., endtime = vec_in%T, cfl_limit = 0.4_dp)
+     $   recompute_dt=.true., endtime=get_period_abs(self%X), cfl_limit=0.4_dp)
       
       ! Set the perturbation initial condition
                   call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
@@ -273,11 +274,12 @@
                   call vec_out%sub(vec_in)
       
       ! Evaluate f'(X(T), T) * dT and add it to the position residual
+      ! Here we assume that vx,vy,vz contains the endpoint of the nonlinear trajectory
                   call compute_fdot(vec)
                   call vec_out%axpby(1.0_dp, vec, vec_in%T)
       
       ! Evaluate f'(X(0), 0).T @ dx and add phase condition
-      ! Get the initial point of the orbit
+      ! Set the initial point of the nonlinear trajectory
                   call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
                   call compute_fdot(vec)
                   vec_out%T = vec_in%dot(vec)
@@ -303,7 +305,7 @@
       
       ! Ensure correct nek status -> set end time
                   call setup_linear_solver(solve_baseflow=.true., transpose=.true.,
-     $   recompute_dt = .true., endtime = vec_in%T, cfl_limit = 0.4_dp)
+     $   recompute_dt=.true., endtime=get_period_abs(self%X), cfl_limit=0.4_dp)
       
       ! Set the perturbation initial condition
                   call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
@@ -321,7 +323,6 @@
                   call vec_out%sub(vec_in)
       
       ! Evaluate f'(X(T), T) * dT and add it to the position residual
-                  param(10) = vec_out%T
                   call compute_fdot(vec)
                   call vec_out%axpby(1.0_dp, vec, vec_in%T)
       
