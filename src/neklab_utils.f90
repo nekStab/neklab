@@ -29,12 +29,13 @@
       ! utilities for regular nek vectors
          public :: nek2vec, vec2nek, abs_vec2nek, outpost_dnek, outpost_dnek_abs_vector
       ! utilities for extended nek vectors
-         public :: nek2ext_vec, ext_vec2nek, abs_ext_vec2nek, outpost_ext_dnek
+         public :: nek2ext_vec, ext_vec2nek, abs_ext_vec2nek, outpost_ext_dnek, get_period, get_period_abs
       ! Set up solver
          public :: setup_nek, setup_nonlinear_solver, setup_linear_solver, nek_status
       ! miscellaneous
          public :: nopcopy
       
+      ! Nek vector utilities
          interface nek2vec
             module procedure nek2vec_std
             module procedure nek2vec_prt
@@ -55,6 +56,7 @@
             module procedure outpost_dnek_basis
          end interface
       
+      ! Extended nek vector utilities
          interface nek2ext_vec
             module procedure nek2ext_vec_std
             module procedure nek2ext_vec_prt
@@ -250,6 +252,19 @@
             end select
             return
          end subroutine abstract_ext_vec2nek_prt
+
+         pure real(dp) function get_period_abs(vec) result(period)
+            class(abstract_vector_rdp), intent(in) :: vec
+            select type (vec)
+            type is (nek_ext_dvector)
+               period = vec%T 
+            end select
+         end function get_period_abs
+
+         pure real(dp) function get_period(vec) result(period)
+            class(nek_ext_dvector), intent(in) :: vec
+            period = vec%T 
+         end function get_period
       
          subroutine nopcopy(a1, a2, a3, a4, a5, b1, b2, b3, b4, b5)
             implicit none
@@ -382,7 +397,7 @@
                if (param(31) > 1) then
                   write (msg, *) "Neklab does not (yet) support npert > 1."
                   call logger%log_message(msg, module=this_module, procedure='setup_nek')
-                  if (nid == 0) print *, msg
+                  if (nid == 0) print *, trim(msg)
                   call nek_end()
                else
                   param(31) = 1; npert = 1
@@ -391,7 +406,7 @@
                if (ifchar) then
                   write (msg, *) "OIFS is not available for linearized solver. Turning it off."
                   call logger%log_warning(msg, module=this_module, procedure='setup_nek')
-                  if (nid == 0) print *, "WARNING :", msg
+                  if (nid == 0) print *, "WARNING :", trim(msg)
                   ifchar = .false.
                end if
             else
@@ -404,7 +419,7 @@
             if (endtime_ <= 0.0_dp) then
                write (msg, *) 'Invalid endtime specified. Endtime =', endtime_
                call logger%log_message(msg, module=this_module, procedure='setup_nek')
-               if (nid == 0) print *, msg
+               if (nid == 0) print *, trim(msg)
                call nek_end()
             end if
             param(10) = endtime_
@@ -414,10 +429,10 @@
             if (cfl_limit_ < 0.0_dp .or. cfl_limit_ > 0.5_dp) then
                write (msg, *) "Invalid target CFL. CLF_target =", cfl_limit_
                call logger%log_warning(msg, module=this_module, procedure='setup_nek')
-               if (nid == 0) print *, "WARNING :", msg
+               if (nid == 0) print *, "WARNING :", trim(msg)
                write (msg, *) "          Forcing it to", 0.5_dp
                call logger%log_warning(msg, module=this_module, procedure='setup_nek')
-               if (nid == 0) print *, msg
+               if (nid == 0) print *, trim(msg)
                cfl_limit_ = 0.5_dp
             end if
             param(26) = cfl_limit_
@@ -427,14 +442,14 @@
             if (recompute_dt_) then
                write (msg, '(5X,A)') 'Recomputing dt/nsteps/cfl from target_cfl and current baseflow.'
                call logger%log_information(msg, module=this_module, procedure='setup_nek')
-               if (nid == 0) print '(A)', msg
+               if (nid == 0) print '(A)', trim(msg)
                call compute_cfl(ctarg, vx, vy, vz, 1.0_dp)
                dt = param(26)/ctarg; nsteps = ceiling(param(10)/dt)
                dt = param(10)/nsteps; param(12) = dt
                call compute_cfl(ctarg, vx, vy, vz, dt)
                write (msg, '(5X,A,F15.8)') padl('effective CFL = ', 20), ctarg
                call logger%log_information(msg, module=this_module, procedure='setup_nek')
-               if (nid == 0) print '(A)', msg
+               if (nid == 0) print '(A)', trim(msg)
             else
                nsteps = ceiling(param(10)/dt)
                param(12) = dt
@@ -510,27 +525,27 @@
                if (nid == 0) print nekfmt, 'LINEAR MODE:'
                write (msg, '(A,L8)') padl('ifpert: ', 20), ifpert
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               if (nid == 0) print nekfmt, msg
+               if (nid == 0) print nekfmt, trim(msg)
                write (msg, '(A,I8)') padl('npert: ', 20), npert
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               if (nid == 0) print nekfmt, msg
+               if (nid == 0) print nekfmt, trim(msg)
                if (ifadj) then
                   write (msg, '(A,L8)') padl('adjoint mode: ', 20), ifadj
                   call logger%log_message(msg, module=this_module, procedure='nek_status')
-                  if (nid == 0) print nekfmt, msg
+                  if (nid == 0) print nekfmt, trim(msg)
                end if
                if (ifbase) then
                   write (msg, '(A,L8)') padl('solve for baseflow: ', 20), ifbase
                   call logger%log_message(msg, module=this_module, procedure='nek_status')
-                  if (nid == 0) print nekfmt, msg
+                  if (nid == 0) print nekfmt, trim(msg)
                end if
                write (msg, '(A,L8)') padl('OIFS: ', 20), ifchar
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               if (nid == 0) print nekfmt, msg
+               if (nid == 0) print nekfmt, trim(msg)
             else
                write (msg, '(A,A,L8,A,I8)') 'LINEAR MODE: ', padl('ifpert: ', 10), ifpert, padl('npert: ', 10), npert
                call logger%log_message('NEK5000 '//msg, module=this_module, procedure='nek_status')
-               if (nid == 0) print nekfmt, msg
+               if (nid == 0) print nekfmt, trim(msg)
             end if
             else
             if (full_summary_) then
@@ -538,11 +553,11 @@
                if (nid == 0) print nekfmt, 'NONLINEAR MODE:'
                write (msg, '(A,L8)') padl('OIFS: ', 20), ifchar
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               if (nid == 0) print nekfmt, msg
+               if (nid == 0) print nekfmt, trim(msg)
             else
                write (msg, '(A)') 'NONLINEAR MODE'
                call logger%log_message('NEK5000 '//msg, module=this_module, procedure='nek_status')
-               if (nid == 0) print nekfmt, msg
+               if (nid == 0) print nekfmt, trim(msg)
             end if
             end if
             if (full_summary_) then
@@ -551,22 +566,22 @@
                if (nid == 0) print nekfmt, 'PARAMETERS:'
                write (msg, '(A,F15.8)') padl('endtime: ', 20), param(10)
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               if (nid == 0) print nekfmt, msg
+               if (nid == 0) print nekfmt, trim(msg)
                write (msg, '(A,E15.8)') padl('dt: ', 20), abs(param(12))
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               if (nid == 0) print nekfmt, msg
+               if (nid == 0) print nekfmt, trim(msg)
                write (msg, '(A,I8)') padl('nsteps: ', 20), nsteps
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               if (nid == 0) print nekfmt, msg
+               if (nid == 0) print nekfmt, trim(msg)
                write (msg, '(A,F15.8)') padl('Target CFL: ', 20), param(26)
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               if (nid == 0) print nekfmt, msg
+               if (nid == 0) print nekfmt, trim(msg)
                write (msg, '(A,E15.8)') padl('pressure tol: ', 20), param(21)
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               if (nid == 0) print nekfmt, msg
+               if (nid == 0) print nekfmt, trim(msg)
                write (msg, '(A,E15.8)') padl('velocity tol: ', 20), param(22)
                call logger%log_message(msg, module=this_module, procedure='nek_status')
-               if (nid == 0) print nekfmt, msg
+               if (nid == 0) print nekfmt, trim(msg)
             end if
             if (nid == 0) then
                print *, ''
