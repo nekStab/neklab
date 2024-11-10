@@ -14,7 +14,7 @@ c-----------------------------------------------------------------------
       if (istep.eq.0) then
           call load_fld('BF_1cyl.fld')
           call nek2ext_vec(bf, vx, vy, vz, pr, t)
-	    bf%T = 5.0_dp
+	    bf%T = 5.158_dp
 
           ! parameters
           tol = 1e-6_dp

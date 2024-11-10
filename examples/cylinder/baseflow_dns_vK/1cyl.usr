@@ -6,20 +6,21 @@ c-----------------------------------------------------------------------
 
       real(dp) :: op_glsc2_wt
       real(dp) :: inc_norm
+      real(dp), dimension(lx1,ly1,lz1,lelv) :: vx_ref, vy_ref, vz_ref
       real(dp), dimension(lx1,ly1,lz1,lelv) :: vx_lag, vy_lag, vz_lag
 
       if (istep == 0) time = 0.0_dp
 
       call hpts()
 
-      if (istep > 0) then
-         if (mod(istep+1,50) == 0) then
-            call opcopy(vx_lag, vy_lag, vz_lag, vx, vy, vz) 
-         else if(mod(istep,50) == 0) then
-	         call opsub2(vx_lag, vy_lag, vz_lag, vx, vy, vz)
-            inc_norm = op_glsc2_wt(vx_lag,vy_lag,vz_lag,vx_lag,vy_lag,vz_lag,bm1)
-            if (nid == 0) print *, 'Step', istep, ' t = ', time, ': increment_norm = ', sqrt(inc_norm)
-         end if
+      if (istep == 0) then
+         call load_fld('BF_1cyl.fld')
+         call opcopy(vx_ref, vy_ref, vz_ref, vx, vy, vz)
+      else
+         call opcopy(vx_lag, vy_lag, vz_lag, vx, vy, vz)
+         call opsub2(vx_lag, vy_lag, vz_lag, vx_ref, vy_ref, vz_ref)
+         inc_norm = op_glsc2_wt(vx_lag,vy_lag,vz_lag,vx_lag,vy_lag,vz_lag,bm1)
+         if (nid == 0) print *, 'Step', istep, ' t = ', time, ': rnorm = ', sqrt(inc_norm)
       end if
 
       return

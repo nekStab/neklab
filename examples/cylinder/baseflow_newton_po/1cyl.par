@@ -2,7 +2,7 @@
 startFrom = 'BF_1cyl.fld'
 stopAt = endtime
 #numSteps = 1000
-endTime = 1.0
+endTime = 5.158
 
 dt = 0.0075
 variableDt = no
