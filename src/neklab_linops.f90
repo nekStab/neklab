@@ -263,7 +263,7 @@
 
             ifield = 1
       ! apply BCs
-            call bcdirvc(vxp, vyp, vzp, v1mask, v2mask, v3mask)
+            call bcdirvc(vxp_in, vyp_in, vzp_in, v1mask, v2mask, v3mask)
       
       !---------------------
       ! Pressure gradient
@@ -295,7 +295,7 @@
             call ophx(dv1, dv2, dv3, vxp, vyp, vzp, h1, h2)
       
       ! substract result form rest of rhs and put into v[xyz]p
-            call opsub3(vxp, vyp, vzp, resv1, resv2, resv3, dv1, dv2, dv3)
+            call opsub3(vxp_in, vyp_in, vzp_in, resv1, resv2, resv3, dv1, dv2, dv3)
             return
          end subroutine apply_L
 
