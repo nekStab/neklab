@@ -46,6 +46,10 @@
             procedure, pass(self), public :: get_size => nek_dsize
       !! Return the size of the vector
          end type nek_dvector
+
+      !-------------------------------------------------
+      !-----     NEK EXTENDED REAL VECTOR TYPE     -----
+      !-------------------------------------------------
       
          type, extends(abstract_vector_rdp), public :: nek_ext_dvector
       !! Type definition for Nek5000 state-vector (real).
@@ -109,6 +113,11 @@
       
                call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
                self%vy(i) = self%vy(i) + mth_rand(i, 1, 1, 1, xl, fcoeff)
+
+               if (if3D) then
+                  call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
+                  self%vz(i) = self%vz(i) + mth_rand(i, 1, 1, 1, xl, fcoeff)
+               end if
             end do
       
       ! Face averaging.
@@ -231,6 +240,9 @@
       
                call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
                self%vy(i) = self%vy(i) + mth_rand(i, 1, 1, 1, xl, fcoeff)
+               
+               call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
+               self%vz(i) = self%vz(i) + mth_rand(i, 1, 1, 1, xl, fcoeff)
             end do
       
       ! Face averaging.
