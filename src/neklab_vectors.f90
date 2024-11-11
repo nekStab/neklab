@@ -276,7 +276,7 @@
                if (if3d) call daxpy(lv, beta, vec%vz, 1, self%vz, 1)
                call daxpy(lp, beta, vec%pr, 1, self%pr, 1)
                if (ifto) call daxpy(lv, beta, vec%theta(:, 1), 1, self%theta(:, 1), 1)
-               self%T = alpha*self%T + vec%T
+               self%T = alpha*self%T + beta*vec%T
             end select
             return
          end subroutine nek_ext_daxpby

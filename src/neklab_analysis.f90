@@ -26,6 +26,7 @@
          public :: linear_stability_analysis_fixed_point
          public :: transient_growth_analysis_fixed_point
          public :: newton_fixed_point_iteration
+         public :: newton_periodic_orbit
          public :: compare_nek_arnoldi
       
       contains
@@ -153,7 +154,37 @@
       
             return
          end subroutine newton_fixed_point_iteration
+
+         subroutine newton_periodic_orbit(sys, bf, tol)
+            type(nek_system_upo), intent(inout) :: sys
+      !! System for which a fixed point is sought
+            type(nek_ext_dvector), intent(inout) :: bf
+      !! Initial guess for the fixed point
+            real(dp), intent(inout) :: tol
+      !! Absolute tolerance for the Newton solver
       
+      ! Misc
+            integer :: info
+            type(newton_dp_opts) :: opts
+      !type(gmres_dp_opts)  :: gmres_opts
+            character(len=3) :: file_prefix
+      
+      ! Set up logging
+            call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      
+      ! Define options for the Newton solver
+            opts = newton_dp_opts(maxiter=30, ifbisect=.true.)
+      
+      ! Call to LightKrylov.
+            call newton(sys, bf, gmres_rdp, info, tolerance=tol, options=opts, scheduler=constant_atol_dp)
+      
+      ! Outpost initial condition.
+            file_prefix = 'nwt'
+            call outpost_ext_dnek(bf, file_prefix)
+      
+            return
+         end subroutine newton_periodic_orbit
+
          subroutine compare_nek_arnoldi(A, exptA, tau)
             type(LNS_linop), intent(inout) :: A
             type(exptA_linop), intent(inout) :: exptA
@@ -165,11 +196,7 @@
             real(dp) :: tol
             integer :: kdim, info
       ! I/O
-            character(len=3) :: file_prefix
-      
-      ! Set up logging
-            call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
-      
+
             kdim = 50
             tol = 1e-12
             time = 0.0_dp
@@ -196,7 +223,6 @@
       !   if (nid.eq.0) print *, "Solutions do not match!"
       !   if (nid.eq.0) print *, " tol", 10*atol_dp, "delta = ", Vkr%norm()/Vkr%get_size()
       !end if
-            return
          end subroutine compare_nek_arnoldi
       
       end module neklab_analysis

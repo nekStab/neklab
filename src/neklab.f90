@@ -44,7 +44,9 @@
       !----------------------------------
       
       ! Definition of the abstract vectors in the Nek framework.
-         public :: nek_dvector, nek_pdvector
+         public :: nek_dvector
+         public :: nek_pdvector
+         public :: nek_ext_dvector
       
       ! Implementation of the standard linear operators.
          public :: exptA_linop, LNS_linop, DTD_linop
@@ -55,6 +57,7 @@
       
       ! Baseflow computation
          public :: newton_fixed_point_iteration
+         public :: newton_periodic_orbit
       
       ! Stability analysis exports.
          public :: linear_stability_analysis_fixed_point
@@ -66,6 +69,7 @@
       ! Various utilities.
          public :: nek2vec, vec2nek
          public :: nek2pvec, pvec2nek
+         public :: nek2ext_vec, ext_vec2nek
          public :: setup_nonlinear_solver, setup_linear_solver
          public :: apply_L
 
