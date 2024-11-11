@@ -1,0 +1,206 @@
+c-----------------------------------------------------------------------
+      subroutine userchk
+      use neklab
+      include "SIZE"
+      include "TOTAL"
+
+      ! System for which we seek a fixed point
+      type(nek_otd) :: OTD
+      ! State vectors
+      type(nek_dvector) :: bf
+      ! OTD forcing
+      real OTDfx (lx1*ly1*lz1*lelv,lpert)       ! x direction
+     $ ,   OTDfy (lx1*ly1*lz1*lelv,lpert)       ! y direction
+     $ ,   OTDfz (lx1*ly1*lz1*lelv,lpert)       ! z direction
+      common /OTD_frc/ OTDfx,OTDfy,OTDfz
+      
+      if (istep.eq.0) then
+         call load_fld('BF.fld')
+         call nek2vec(bf, vx, vy, vz, pr, t)
+
+         ! define OTD structure
+         OTD = nek_otd()
+   
+         ! initialize OTD structure
+         call OTD%init(bf, startstep = 1, nIC = 0)
+      else
+         if (istep >= OTD%startstep) then
+            ! load perturbations
+            do i = 1, OTD%r
+               nek2vec(OTD%basis(i), vxp(:,i), vyp(:,i), vzp(:,i), 
+     $                  prp(:,i), tp(:,i))
+            end do
+
+            ! orthonormalize
+            if (mod(istep, OTD%orthostep) == 0) then
+               call orthonormalize_basis(OTD%basis)
+            end if
+
+            ! compute Lu
+            call OTD%generate_Lu()
+
+            ! compute reduced operator
+            call OTD%compute_Lr()
+
+            ! compute internal rotation matrix
+            call OTD%compute_Phi()
+
+            ! output projected modes
+            if (mod(istep, OTD%printstep) == 0) then
+               OTD%spectral_analysis()
+            end if
+
+            ! at the end of the step we copy data back to nek2vec
+            do i = 1, OTD%r
+               vec2nek(vxp(:,i), vyp(:,i), vzp(:,i), prp(:,i), tp(:,i), OTD%basis(i))
+            end do
+
+            ! project basis vectors and output modes
+            if (mod(istep, OTD%iostep) == 0) then
+               OTD%outpost_OTDmodes()
+            end if
+
+            ! set the forcing
+            call OTD%generate_OTD_forcing(OTDfx, OTDfy, OTDfz)
+         end if
+      end if
+
+      
+
+      return
+      end
+c----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      ! argument list
+      integer ix,iy,iz,ieg
+      ! output 
+      real    ffx,ffy,ffz
+      ! local variable list
+      integer ijke,e
+      ! OTD forcing
+      real OTDfx (lx1*ly1*lz1*lelv,lpert)       ! x direction
+     $ ,   OTDfy (lx1*ly1*lz1*lelv,lpert)       ! y direction
+     $ ,   OTDfz (lx1*ly1*lz1*lelv,lpert)       ! z direction
+      common /OTD_frc/ OTDfx,OTDfy,OTDfz
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      e = gllel(ieg)
+
+      ijke = ix + lx1*((iy-1) + ly1*((iz-1) + lz1*(e-1)))
+      if (jp.ne.0) then
+!       only for the perturbations
+        FFX = FFX - OTDfx(ijke,jp)
+        FFY = FFY - OTDfy(ijke,jp)
+        FFZ = FFZ - OTDfz(ijke,jp)
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      integer iel,ifc
+      
+      !this mesh was generatd with genbox
+      !with only BCs for velicity
+      !here we chenge outflow to dirichlet if adjoint
+      !and initilize BCs for scalar field
+
+      if(uparam(1)==3.2)then !if adjoint, change BCs
+      do iel=1,nelt
+      do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
+      enddo
+      enddo
+      endif
+
+      if(ifheat)then
+      cbc(:,:,2)=cbc(:,:,1)
+      do iel=1,nelt
+       do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+      enddo
+      enddo
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end
