@@ -12,6 +12,7 @@
       ! Extensions of the abstract vector types to nek data format.
          use neklab_vectors
          use neklab_utils, only: nek2vec, vec2nek, setup_nonlinear_solver, setup_linear_solver, nek_status
+         use neklab_LNS_utils
          implicit none
          include "SIZE"
          include "TOTAL"
@@ -24,7 +25,7 @@
          integer, parameter :: lp = lx2*ly2*lz2*lelv
       !! Local number of grid points for the pressure mesh.
       
-         public :: apply_exptA, apply_L
+         public :: apply_exptA
       
       !------------------------------------------
       !-----     EXPONENTIAL PROPAGATOR     -----
@@ -159,8 +160,7 @@
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
             ! internal
-            real(dp), dimension(lv, 1) :: dv1, dv2, dv3
-            common /scrns/ dv1, dv2, dv3
+            real(dp), dimension(lv, 1) :: Lux, Luy, Luz, dv1, dv2, dv3
       !
       ! NOTE: only for a single perturbation vector !
       !
@@ -177,13 +177,11 @@
       ! Sets the initial condition for Nek5000's linearized solver.
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
             
-      ! Apply LNS operator in place
-                  call apply_L(vxp, vyp, vzp, trans=.false.)
+      ! Apply LNS operator
+                  call apply_L(Lux, Luy, Luz, vxp, vyp, vzp, prp, trans=.false.)
 
       ! Compute divergence of velocity dp = D^T @ u
-                  call opdiv(prp, vxp, vyp, vzp)
-
-                  !call outpost(vxp, vyp, vzp, prp, tp, 'tst')
+                  call opdiv(prp, Lux, Luy, Luz)
 
       ! Solve for pressure correction to enforce continuity D^T @ D @ dp = D^T @ u
                   call project_perturbation(prp) ! in-place
@@ -192,10 +190,10 @@
                   call opgradt(dv1, dv2, dv3, prp)
 
       ! Compute final velocity
-                  call opadd2(vxp, vyp, vzp, dv1, dv2, dv3)
+                  call opadd2(Lux, Luy, Luz, dv1, dv2, dv3)
             
       ! Copy the final solution to vector.
-                  call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
+                  call nek2vec(vec_out, Lux, Luy, Luz, prp, tp)
                end select
             end select
       
@@ -206,8 +204,7 @@
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
             ! internal
-            real(dp), dimension(lv, 1) :: dv1, dv2, dv3
-            common /scrns/ dv1, dv2, dv3
+            real(dp), dimension(lv, 1) :: Lux, Luy, Luz, dv1, dv2, dv3
       !
       ! NOTE: only for a single perturbation vector !
       !
@@ -224,13 +221,11 @@
       ! Sets the initial condition for Nek5000's linearized solver.
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
             
-      ! Apply adjoint LNS operator in place
-                  call apply_L(vxp, vyp, vzp, trans=.true.)
+      ! Apply adjoint LNS operator
+                  call apply_L(Lux, Luy, Luz, vxp, vyp, vzp, prp, trans=.true.)
 
       ! Compute divergence of velocity dp = D^T @ u
-                  call opdiv(prp, vxp, vyp, vzp)
-
-                  !call outpost(vxp, vyp, vzp, prp, tp, 'tst')
+                  call opdiv(prp, Lux, Luy, Luz)
 
       ! Solve for pressure correction to enforce continuity D^T @ D @ dp = D^T @ u
                   call project_perturbation(prp) ! in-place
@@ -239,65 +234,16 @@
                   call opgradt(dv1, dv2, dv3, prp)
 
       ! Compute final velocity
-                  call opadd2(vxp, vyp, vzp, dv1, dv2, dv3)
+                  call opadd2(Lux, Luy, Luz, dv1, dv2, dv3)
       
       ! Copy the final solution to vector.
-                  call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
+                  call nek2vec(vec_out, Lux, Luy, Luz, prp, tp)
                end select
             end select
       
          end subroutine adjLNS_matvec
 
-         subroutine apply_L(vxp_in, vyp_in, vzp_in, trans)
-      !! Apply LNS operator (before the projection onto the divergence-free space)
-      !! This function assumes that the input vector has already been loaded into v[xyz]p
-            real(dp), dimension(lv, 1), intent(inout) :: vxp_in
-            real(dp), dimension(lv, 1), intent(inout) :: vyp_in
-            real(dp), dimension(lv, 1), intent(inout) :: vzp_in
-            logical, intent(in) :: trans
-            !! adjoint?
-            ! internal
-            real(dp), dimension(lv, 1) :: resv1, resv2, resv3, dv1, dv2, dv3, h1, h2
-            common /scrns/ resv1, resv2, resv3, dv1, dv2, dv3
-            common /scrvh/ h1, h2
-
-            ifield = 1
-      ! apply BCs
-            call bcdirvc(vxp, vyp, vzp, v1mask, v2mask, v3mask)
-      
-      !---------------------
-      ! Pressure gradient
-      !---------------------
-            call opgradt(resv1, resv2, resv3, prp)
-            
-      !---------------------
-      ! Convective term
-      !---------------------
-            if (trans) then
-      ! construct convective terms and add them to bf[xyz]p
-               call advabp_adjoint
-            else  
-      ! construct convective terms and add them to bf[xyz]p
-               call advabp
-            end if
-      ! add the convective terms bf[xyz]p to the pressure gradient
-            call opadd2(resv1, resv2, resv3, bfxp, bfyp, bfzp)
-      
-      !---------------------
-      ! Diffusion term
-      !---------------------
-      ! set factors for the Helmholtz operator  (H = h1*A + h2*B)
-            call copy(h1, vdiff(1,1,1,1,ifield), lv)
-            call rzero(h2, lv)
-      ! add a diagonal term to the operator for the ON/on/O/o boundary conditions    
-      !      if (trans) call bc_out_adj(h2) ! not needed since h2 = 0
-      ! and apply to the velocity field to compute the diffusion term
-            call ophx(dv1, dv2, dv3, vxp, vyp, vzp, h1, h2)
-      
-      ! substract result form rest of rhs and put into v[xyz]p
-            call opsub3(vxp, vyp, vzp, resv1, resv2, resv3, dv1, dv2, dv3)
-            return
-         end subroutine apply_L
+         
 
          subroutine project_perturbation(dpr)
       !! Project perturbation velocity fields onto closest solenoidal space

@@ -12,9 +12,12 @@
       ! --> Stability analysis routines
          use neklab_analysis
 
+         !use otd_tools
+
          ! skern
          use neklab_pvectors
          use neklab_plinops
+         use neklab_LNS_utils
       
          private
       
@@ -63,7 +66,13 @@
          public :: linear_stability_analysis_fixed_point
          public :: transient_growth_analysis_fixed_point
 
-      ! Miscellaneous
+      ! LNS utilities.
+         public :: compute_LNS_conv
+         public :: compute_LNS_gradp
+         public :: compute_LNS_laplacian
+         public :: apply_L
+
+      ! Miscellaneous.
          public :: compare_nek_arnoldi
       
       ! Various utilities.
@@ -71,6 +80,5 @@
          public :: nek2pvec, pvec2nek
          public :: nek2ext_vec, ext_vec2nek
          public :: setup_nonlinear_solver, setup_linear_solver
-         public :: apply_L
 
       end module neklab

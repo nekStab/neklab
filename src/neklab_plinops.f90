@@ -16,6 +16,7 @@
          use neklab_pvectors
          use neklab_utils, only: nek2vec, vec2nek, nek2pvec, pvec2nek
          use neklab_utils, only: setup_nonlinear_solver, setup_linear_solver, nek_status
+         use neklab_LNS_utils
          implicit none
          include "SIZE"
          include "TOTAL"
@@ -87,18 +88,17 @@
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
             ! internal
-            real(dp), dimension(lx1*ly1*lz1*lelv) :: vxtmp, vytmp, vztmp
+            real(dp), dimension(lv) :: vxtmp, vytmp, vztmp
             ifield = 1
             select type (vec_in)
             type is (nek_pdvector)
                select type (vec_out)
                type is (nek_pdvector)
-                  call pvec2nek(prp, vec_in)
                   ! compute wp = D^T @ D @ dpr
+                  !call compute_LNS_gradp(vxtmp, vytmp, vztmp, vec_in%pr)
                   call opgradt(vxtmp, vytmp, vztmp, vec_in%pr)
                   call bcdirvc(vxtmp, vytmp, vztmp, v1mask, v2mask, v3mask)
                   call opdiv(vec_out%pr, vxtmp, vytmp, vztmp)
-                  call nek2pvec(vec_out, prp)
                end select
             end select
             return
@@ -113,7 +113,7 @@
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
             ! internal
-            real(dp), dimension(lx1*ly1*lz1*lelv) :: dv1, dv2, dv3
+            real(dp), dimension(lv) :: dv1, dv2, dv3
             type(nek_pdvector)   :: dpr, x
             type(cg_dp_opts)     :: opts
             type(cg_dp_metadata) :: meta
@@ -151,6 +151,7 @@
             class(LNS_v_linop), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
+            real(dp), dimension(lv, 1) :: Lux, Luy, Luz
             select type (vec_in)
             type is (nek_dvector)
                select type (vec_out)
@@ -158,9 +159,9 @@
       ! Copy into to nek
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Apply LNS operator
-                  call apply_L(vxp, vyp, vzp, trans=.false.)
+                  call apply_L(Lux, Luy, Luz, vxp, vyp, vzp, prp, trans=.false.)
       ! Copty output to vec_out
-                  call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
+                  call nek2vec(vec_out, Lux, Luy, Luz, prp, tp)
                end select
             end select
             return
@@ -170,6 +171,7 @@
             class(LNS_v_linop), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
+            real(dp), dimension(lv, 1) :: Lux, Luy, Luz
             select type (vec_in)
             type is (nek_dvector)
                select type (vec_out)
@@ -177,60 +179,13 @@
       ! Copy into to nek
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Apply adjoint LNS operator
-                  call apply_L(vxp, vyp, vzp, trans=.true.)
+                  call apply_L(Lux, Luy, Luz, vxp, vyp, vzp, prp, trans=.true.)
       ! Copty output to vec_out
                   call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
                end select
             end select
             return
          end subroutine apply_L_adjoint
-
-         subroutine apply_L(vxp_in, vyp_in, vzp_in, trans)
-            !! Apply LNS operator (before the projection onto the divergence-free space)
-            !! This function assumes that the input vector has already been loaded into v[xyz]p
-            real(dp), dimension(lv, 1), intent(inout) :: vxp_in
-            real(dp), dimension(lv, 1), intent(inout) :: vyp_in
-            real(dp), dimension(lv, 1), intent(inout) :: vzp_in
-            logical, intent(in) :: trans
-            !! adjoint?
-            ! internal
-            real(dp), dimension(lv, 1) :: resv1, resv2, resv3, dv1, dv2, dv3, h1, h2
-            common /scrns/ resv1, resv2, resv3, dv1, dv2, dv3
-            common /scrvh/ h1, h2
-
-            ifield = 1
-      ! apply BCs
-            call bcdirvc(vxp_in, vyp_in, vzp_in, v1mask, v2mask, v3mask)
-      !---------------------
-      ! Pressure gradient
-      !---------------------
-            call opgradt(resv1, resv2, resv3, prp)         
-      !---------------------
-      ! Convective term
-      !---------------------
-            if (trans) then
-      ! construct convective terms and add them to bf[xyz]p
-               call advabp_adjoint
-            else  
-      ! construct convective terms and add them to bf[xyz]p
-               call advabp
-            end if
-      ! add the convective terms bf[xyz]p to the pressure gradient
-            call opadd2(resv1, resv2, resv3, bfxp, bfyp, bfzp)
-      !---------------------
-      ! Diffusion term
-      !---------------------
-      ! set factors for the Helmholtz operator  (H = h1*A + h2*B)
-            call copy(h1, vdiff(1,1,1,1,ifield), lv)
-            call rzero(h2, lv)
-      ! add a diagonal term to the operator for the ON/on/O/o boundary conditions    
-      !      if (trans) call bc_out_adj(h2) ! not needed since h2 = 0
-      ! and apply to the velocity field to compute the diffusion term
-            call ophx(dv1, dv2, dv3, vxp, vyp, vzp, h1, h2)
-      ! substract result form rest of rhs and put into v[xyz]p
-            call opsub3(vxp_in, vyp_in, vzp_in, resv1, resv2, resv3, dv1, dv2, dv3)
-            return
-         end subroutine apply_L
 
          subroutine LNS_matvec(self, vec_in, vec_out)
             class(LNS_div0_linop), intent(inout) :: self

@@ -107,6 +107,7 @@ USR+=" neklab_utils.o"
 USR+=" neklab_linops.o"
 USR+=" neklab_plinops.o"
 USR+=" neklab_systems.o"
+USR+=" neklab_LNS_utils.o"
 USR+=" neklab_analysis.o"
 USR+=" neklab.o"
 export USR
