@@ -54,7 +54,7 @@ if [ "$should_clone" == "yes" ]; then
         echo "Cloning LightKrylov repository..."
         git clone https://github.com/nekStab/LightKrylov.git
         cd LightKrylov
-        git checkout Updated_exports
+        git checkout dev
     else
         echo "Skipping cloning."
     fi
