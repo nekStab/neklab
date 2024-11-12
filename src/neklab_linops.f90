@@ -2,17 +2,29 @@
       !---------------------------------------
       !-----     LightKrylov Imports     -----
       !---------------------------------------
+         use stdlib_optval, only: optval
       ! Default real kind.
          use LightKrylov, only: dp
       ! Abstract types for real-valued linear operators and vectors.
          use LightKrylov, only: abstract_linop_rdp, abstract_vector_rdp
+      ! Logging
+         use LightKrylov_Logger
       ! Extensions of the abstract vector types to nek data format.
          use neklab_vectors
+         use neklab_utils, only: nek2vec, vec2nek, setup_nonlinear_solver, setup_linear_solver
          implicit none
          include "SIZE"
          include "TOTAL"
          include "ADJOINT"
          private
+         character(len=*), parameter, private :: this_module = 'neklab_linops'
+      
+         integer, parameter :: lv = lx1*ly1*lz1*lelv
+      !! Local number of grid points for the velocity mesh.
+         integer, parameter :: lp = lx2*ly2*lz2*lelv
+      !! Local number of grid points for the pressure mesh.
+      
+         public :: apply_exptA
       
       !------------------------------------------
       !-----     EXPONENTIAL PROPAGATOR     -----
@@ -23,77 +35,36 @@
             type(nek_dvector) :: baseflow
          contains
             private
+            procedure, pass(self), public :: init => init_exptA
             procedure, pass(self), public :: matvec => exptA_matvec
             procedure, pass(self), public :: rmatvec => exptA_rmatvec
-            procedure, pass(self), public :: init => init_exptA
          end type exptA_linop
       
       contains
       
-      !--------------------------------------------------
-      !-----     TYPE-BOUND PROCEDURE FOR exptA     -----
-      !--------------------------------------------------
+      !---------------------------------------------------
+      !-----     TYPE-BOUND PROCEDURES FOR exptA     -----
+      !---------------------------------------------------
       
          subroutine init_exptA(self)
             class(exptA_linop), intent(in) :: self
-            call nekgsync()
       
-      ! Setup Nek5000 logical flags for perturbative solver.
-            ifpert = .true.; ifbase = .false.
-            call bcast(ifpert, lsize); call bcast(ifbase, lsize)
+      ! Force the baseflow field for dt/nsteps/clf computation
+            call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+            call logger%log_message('Set self%baseflow -> vx, vy, vz, pr, t', module=this_module, procedure='init_exptA')
       
-      ! Force single perturbation mode.
-            if (param(31) > 1) then
-               if (nid == 0) write (6, *) "neklab does not support (yet) npert > 1."
-               call nek_end()
-            else
-               param(31) = 1; npert = 1
-            end if
-      
-      ! Deactivate OIFS.
-            if (ifchar) then
-            if (nid == 0) then
-               write (6, *) "WARNING : OIFS is not available for linearized solver."
-               write (6, *) "          Turning it off."
-            end if
-            ifchar = .false.
-            end if
-      
-      ! Force CFL to 0.5
-            if (param(26) > 0.5) then
-            if (nid == 0) then
-               write (6, *) "WARNING : Target CFL is larger than 0.5"
-               write (6, *) "          Forcing it to 0.5"
-            end if
-            param(26) = 0.5_dp
-            end if
-      
-      ! Compute appropriate step size.
-            param(10) = self%tau
-            call compute_cfl(ctarg, self%baseflow%vx, self%baseflow%vy, self%baseflow%vz, 1.0_dp)
-            dt = param(26)/ctarg; nsteps = ceiling(self%tau/dt)
-            dt = self%tau/nsteps; param(12) = dt
-            call compute_cfl(ctarg, self%baseflow%vx, self%baseflow%vy, self%baseflow%vz, dt)
-            if (nid == 0) write (6, *) "INFO : Current CFL and target CFL :", ctarg, param(26)
-            lastep = 0; fintim = nsteps*dt
-      
-      ! Force contant time step.
-            param(12) = -abs(param(12))
-      
-      ! Broadcast parameters.
-            call bcast(param, 200*wdsize)
+      ! Setup Nek5000 for perturbation solver
+            call setup_linear_solver(solve_baseflow=.false., endtime=self%tau, recompute_dt=.true., cfl_limit=0.5_dp)
       
             return
          end subroutine init_exptA
       
          subroutine exptA_matvec(self, vec_in, vec_out)
-            class(exptA_linop), intent(in) :: self
+            class(exptA_linop), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
       
-      ! Nek-related setup.
-            ifadj = .false.; lastep = 0; fintim = param(10)
-            call bcast(ifadj, lsize)
+            call setup_linear_solver(transpose=.false., silent=.true.)
       
       ! Force the baseflow field.
             call vec2nek(vx, vy, vz, pr, t, self%baseflow)
@@ -120,12 +91,11 @@
          end subroutine exptA_matvec
       
          subroutine exptA_rmatvec(self, vec_in, vec_out)
-            class(exptA_linop), intent(in) :: self
+            class(exptA_linop), intent(inout) :: self
             class(abstract_vector_rdp), intent(in) :: vec_in
             class(abstract_vector_rdp), intent(out) :: vec_out
-      ! Nek-related setup.
-            ifadj = .true.; lastep = 0; fintim = param(10)
-            call bcast(ifadj, lsize)
+      
+            call setup_linear_solver(transpose=.true., silent=.true.)
       
       ! Force the baseflow field.
             call vec2nek(vx, vy, vz, pr, t, self%baseflow)
@@ -148,8 +118,47 @@
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
             end select
       
-            ifadj = .false.
             return
          end subroutine exptA_rmatvec
+      
+         subroutine apply_exptA(vec_out, A, vec_in, tau, info, trans)
+      !! Subroutine for the exponential propagator that conforms with the abstract interface
+      !! defined in expmlib.f90
+            class(abstract_vector_rdp), intent(out) :: vec_out
+      !! Output vector
+            class(abstract_linop_rdp), intent(inout) :: A
+      !! Linear operator
+            class(abstract_vector_rdp), intent(in) :: vec_in
+      !! Input vector.
+            real(dp), intent(in) :: tau
+      !! Integration horizon
+            integer, intent(out) :: info
+      !! Information flag
+            logical, optional, intent(in) :: trans
+            logical :: transpose
+      !! Direct or Adjoint?
+      
+      ! optional argument
+            transpose = optval(trans, .false.)
+      
+      ! time integrator
+            select type (vec_in)
+            type is (nek_dvector)
+               select type (vec_out)
+               type is (nek_dvector)
+                  select type (A)
+                  type is (exptA_linop)
+      ! set integration time
+                     A%tau = tau
+                     if (transpose) then
+                        call A%rmatvec(vec_in, vec_out)
+                     else
+                        call A%matvec(vec_in, vec_out)
+                     end if
+                  end select
+               end select
+            end select
+            return
+         end subroutine apply_exptA
       
       end module neklab_linops

@@ -1,21 +1,37 @@
       module neklab_analysis
-         use LightKrylov, only: dp, eigs, svds, save_eigenspectrum, initialize_krylov_subspace
+         use stdlib_stats_distribution_normal, only: normal => rvs_normal
+         use stdlib_optval, only: optval
+         use stdlib_linalg, only: diag, eye
+         use stdlib_logger, only: information_level, warning_level, debug_level, error_level, all_level, success
+         use LightKrylov, only: atol_dp, dp, eigs, svds, save_eigenspectrum
+         use LightKrylov, only: kexpm, gmres_rdp
+         use LightKrylov, only: initialize_krylov_subspace, zero_basis
+         use LightKrylov, only: linear_combination, innerprod, rand_basis
+         use LightKrylov, only: newton, newton_dp_opts
+         use LightKrylov_Logger
+         use LightKrylov_NewtonKrylov, only: dynamic_tol_dp, constant_atol_dp
          use neklab_vectors
          use neklab_linops
+         use neklab_utils
+         use neklab_systems
+      
          implicit none
          include "SIZE"
          include "TOTAL"
          include "ADJOINT"
       
          private
+         character(len=*), parameter, private :: this_module = 'neklab_analysis'
       
          public :: linear_stability_analysis_fixed_point
          public :: transient_growth_analysis_fixed_point
+         public :: newton_fixed_point_iteration
+         public :: newton_periodic_orbit
       
       contains
       
          subroutine linear_stability_analysis_fixed_point(exptA, kdim, nev, adjoint)
-            type(exptA_linop), intent(in) :: exptA
+            type(exptA_linop), intent(inout) :: exptA
       !! Operator whose stability properties are to be investigated.
             integer, intent(in) :: kdim
       !! Maximum dimension of the Krylov subspace.
@@ -59,15 +75,13 @@
             call save_eigenspectrum(eigvals, residuals, trim(file_prefix)//"_eigenspectrum.npy")
       
       ! Export eigenfunctions to disk.
-            do i = 1, nev
-               call outpost_vec(eigvecs(i), file_prefix)
-            end do
+            call outpost_dnek(eigvecs(:nev), file_prefix)
       
             return
          end subroutine linear_stability_analysis_fixed_point
       
          subroutine transient_growth_analysis_fixed_point(exptA, nsv, kdim)
-            type(exptA_linop), intent(in) :: exptA
+            type(exptA_linop), intent(inout) :: exptA
       !! Operator whose singular value decomposition needs to be computed.
             integer, intent(in) :: nsv
       !! Desired number of singular triplets.
@@ -98,12 +112,70 @@
             end if
       
       ! Export optimal perturbations and optimal responses.
-            do i = 1, nsv
-               file_prefix = "prt"; call outpost_vec(V(i), file_prefix)
-               file_prefix = "rsp"; call outpost_vec(U(i), file_prefix)
-            end do
+            file_prefix = "prt"; call outpost_dnek(V(:nsv), file_prefix)
+            file_prefix = "rsp"; call outpost_dnek(U(:nsv), file_prefix)
       
             return
          end subroutine transient_growth_analysis_fixed_point
+      
+         subroutine newton_fixed_point_iteration(sys, bf, tol)
+            type(nek_system), intent(inout) :: sys
+      !! System for which a fixed point is sought
+            type(nek_dvector), intent(inout) :: bf
+      !! Initial guess for the fixed point
+            real(dp), intent(inout) :: tol
+      !! Absolute tolerance for the Newton solver
+      
+      ! Misc
+            integer :: info
+            type(newton_dp_opts) :: opts
+      !type(gmres_dp_opts)  :: gmres_opts
+            character(len=3) :: file_prefix
+      
+      ! Set up logging
+            call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      
+      ! Define options for the Newton solver
+            opts = newton_dp_opts(maxiter=30, ifbisect=.true.)
+      
+      ! Call to LightKrylov.
+            call newton(sys, bf, gmres_rdp, info, tolerance=tol, options=opts, scheduler=constant_atol_dp)
+      
+      ! Outpost initial condition.
+            file_prefix = 'nwt'
+            call outpost_dnek(bf, file_prefix)
+      
+            return
+         end subroutine newton_fixed_point_iteration
+
+         subroutine newton_periodic_orbit(sys, bf, tol)
+            type(nek_system_upo), intent(inout) :: sys
+      !! System for which a fixed point is sought
+            type(nek_ext_dvector), intent(inout) :: bf
+      !! Initial guess for the fixed point
+            real(dp), intent(inout) :: tol
+      !! Absolute tolerance for the Newton solver
+      
+      ! Misc
+            integer :: info
+            type(newton_dp_opts) :: opts
+      !type(gmres_dp_opts)  :: gmres_opts
+            character(len=3) :: file_prefix
+      
+      ! Set up logging
+            call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      
+      ! Define options for the Newton solver
+            opts = newton_dp_opts(maxiter=30, ifbisect=.true.)
+      
+      ! Call to LightKrylov.
+            call newton(sys, bf, gmres_rdp, info, tolerance=tol, options=opts, scheduler=constant_atol_dp)
+      
+      ! Outpost initial condition.
+            file_prefix = 'nwt'
+            call outpost_ext_dnek(bf, file_prefix)
+      
+            return
+         end subroutine newton_periodic_orbit
       
       end module neklab_analysis
