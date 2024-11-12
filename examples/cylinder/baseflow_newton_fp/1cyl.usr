@@ -24,6 +24,8 @@ c-----------------------------------------------------------------------
           sys%jacobian%X = bf
 
           call newton_fixed_point_iteration(sys, bf, tol)
+          call outpost(bf, "BF_")
+          
 
           call nek_end()
       end if
