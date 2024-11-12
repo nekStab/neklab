@@ -107,6 +107,7 @@ USR+=" neklab_linops.o"
 USR+=" neklab_systems.o"
 USR+=" neklab_analysis.o"
 USR+=" neklab.o"
+USR+=" real_vectors.o"
 export USR
 
 # Output summary of settings

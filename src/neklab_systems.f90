@@ -197,7 +197,7 @@
             class(abstract_vector_rdp), intent(out) :: vec_out
       ! Solver tolerances if needed
             real(dp), intent(in) :: atol
-            ! internal
+      ! internal
             character(len=128) :: msg
       
             select type (vec_in)
@@ -208,10 +208,10 @@
                   call ext_vec2nek(vx, vy, vz, pr, t, vec_in)
       
       ! Set appropriate tolerances and Nek status
-                  call setup_nonlinear_solver(recompute_dt=.true., endtime=vec_in%T, 
-     $   cfl_limit=0.4_dp, vtol = atol/10.0, ptol = atol/10.0)
-
-                  write(msg,'(A,F9.6)') 'Current period estimate, T = ', vec_in%T
+                  call setup_nonlinear_solver(recompute_dt=.true., endtime=vec_in%T,
+     $   cfl_limit = 0.4_dp, vtol = atol/10.0, ptol = atol/10.0)
+      
+                  write (msg, '(A,F9.6)') 'Current period estimate, T = ', vec_in%T
                   if (nid == 0) print *, msg
                   call logger%log_message(msg, module=this_module, procedure='nonlinear_map_UPO')
       
@@ -256,7 +256,7 @@
       
       ! Ensure correct nek status -> set end time
                   call setup_linear_solver(solve_baseflow=.true., transpose=.false.,
-     $   recompute_dt=.true., endtime=get_period_abs(self%X), cfl_limit=0.4_dp)
+     $   recompute_dt = .true., endtime = get_period_abs(self%X), cfl_limit = 0.4_dp)
       
       ! Set the perturbation initial condition
                   call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
@@ -305,7 +305,7 @@
       
       ! Ensure correct nek status -> set end time
                   call setup_linear_solver(solve_baseflow=.true., transpose=.true.,
-     $   recompute_dt=.true., endtime=get_period_abs(self%X), cfl_limit=0.4_dp)
+     $   recompute_dt = .true., endtime = get_period_abs(self%X), cfl_limit = 0.4_dp)
       
       ! Set the perturbation initial condition
                   call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
