@@ -14,6 +14,8 @@
          complex(kind=dp), parameter :: zero_cdp = cmplx(0.0_dp, 0.0_dp, kind=dp)
          complex(kind=dp), parameter :: one_cdp = cmplx(1.0_dp, 0.0_dp, kind=dp)
          complex(kind=dp), parameter :: im_cdp = cmplx(0.0_dp, 1.0_dp, kind=dp)
+
+         public :: mth_rand
       
       !----------------------------------------
       !-----     NEK REAL VECTOR TYPE     -----
@@ -75,6 +77,64 @@
       
             integer pure module function nek_dsize(self) result(n)
                class(nek_dvector), intent(in) :: self
+            end function
+         end interface
+
+      !--------------------------------------------
+      !-----     NEK PRESSURE VECTOR TYPE     -----
+      !--------------------------------------------
+      
+      ! --> Type.
+         type, extends(abstract_vector_rdp), public :: nek_pr_dvector
+            real(kind=dp), dimension(lp) :: pr
+         contains
+            private
+            procedure, pass(self), public :: zero => nek_pr_dzero
+            procedure, pass(self), public :: rand => nek_pr_drand
+            procedure, pass(self), public :: scal => nek_pr_dscal
+            procedure, pass(self), public :: axpby => nek_pr_daxpby
+            procedure, pass(self), public :: dot => nek_pr_ddot
+            procedure, pass(self), public :: get_size => nek_pr_dsize
+         end type nek_pr_dvector
+      
+      ! --> Constructor.
+         interface nek_pr_dvector
+            pure module function construct_nek_pr_dvector(pr) result(out)
+               real(kind=dp), dimension(lp), optional, intent(in) :: pr
+               type(nek_pr_dvector) :: out
+            end function
+         end interface
+      
+      ! --> Type-bound procedures.
+         interface
+            module subroutine nek_pr_dzero(self)
+               class(nek_pr_dvector), intent(inout) :: self
+            end subroutine
+      
+            module subroutine nek_pr_drand(self, ifnorm)
+               class(nek_pr_dvector), intent(inout) :: self
+               logical, optional, intent(in) :: ifnorm
+            end subroutine
+      
+            module subroutine nek_pr_dscal(self, alpha)
+               class(nek_pr_dvector), intent(inout) :: self
+               real(kind=dp), intent(in) :: alpha
+            end subroutine
+      
+            module subroutine nek_pr_daxpby(self, alpha, vec, beta)
+               class(nek_pr_dvector), intent(inout) :: self
+               real(kind=dp), intent(in) :: alpha
+               class(abstract_vector_rdp), intent(in) :: vec
+               real(kind=dp), intent(in) :: beta
+            end subroutine
+      
+            real(kind=dp) module function nek_pr_ddot(self, vec) result(alpha)
+               class(nek_pr_dvector), intent(in) :: self
+               class(abstract_vector_rdp), intent(in) :: vec
+            end function
+      
+            integer pure module function nek_pr_dsize(self) result(n)
+               class(nek_pr_dvector), intent(in) :: self
             end function
          end interface
       
@@ -204,6 +264,7 @@
                class(nek_zvector), intent(in) :: self
             end function
          end interface
+
       contains
       
          real(kind=dp) function mth_rand(ix, iy, iz, ieg, xl, fcoeff) !generate random number

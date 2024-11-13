@@ -40,10 +40,8 @@
       
          module procedure nek_drand
          logical :: normalize
-         integer :: i, n, ieg, iel
+         integer :: i, ieg, iel
          real(kind=dp) :: xl(ldim), fcoeff(3), alpha
-      
-         n = nx1*ny1*nz1*nelv
       
          call random_number(self%vx)
          call random_number(self%vy)
