@@ -14,8 +14,9 @@
          private
          character(len=*), parameter, private :: this_module = 'neklab_linops'
       
-         integer, parameter :: lv = lx1*ly1*lz1*lelv
-         integer, parameter :: lp = lx2*ly2*lz2*lelv
+         integer, parameter :: lv    = lx1*ly1*lz1*lelv
+         integer, parameter :: lp    = lx2*ly2*lz2*lelv
+         integer, parameter :: lvxyz = lx1*ly1*lz1
       
          public :: apply_exptA
          public :: compute_LNS_conv
@@ -233,14 +234,60 @@
             real(dp), dimension(lv,1), intent(in)  :: uyp
             real(dp), dimension(lv,1), intent(in)  :: uzp
             ! internals
-            real(dp), dimension(lv) :: h1, h2
             ifield = 1
-            call copy(h1, vdiff(1,1,1,1,ifield), lv)
-            call rzero(h2, lv)
-            ! and apply to the velocity field to compute the diffusion term
-            call ophx(d_x, d_y, d_z, uxp, uyp, uzp, h1, h2)
+            call laplacian(d_x,uxp)
+            call laplacian(d_y,uyp)
+            if (if3d) call laplacian(d_z,uzp) 
+            ! multiply by 1/Re
+            call col2(d_x,vdiff(1,1,1,1,ifield),lv) 
+            call col2(d_y,vdiff(1,1,1,1,ifield),lv) 
+            if (if3d) call col2(d_z,vdiff(1,1,1,1,ifield),lv) 
             return
          end subroutine compute_LNS_laplacian
+
+         subroutine laplacian(nabla_u,u)
+   	      real(dp), dimension(lv,      1), intent(in)  :: u ! perturbation velocity component
+   		   real(dp), dimension(lvxyz,lelv), intent(out) :: nabla_u
+   		   ! internals
+   		   real(dp), dimension(lv)    :: ux, uy, uz
+   		   real(dp), dimension(lvxyz) :: ur, us, ut	      !	   
+   		   integer :: e, i, nel
+   		   nel = nx1-1
+   		   call gradm1(ux,uy,uz,u)
+   		   do e = 1, lelv
+   		      if (if3d) then
+   		   	   call local_grad3(ur,us,ut,ux,nel,e,dxm1,dxtm1)
+   		   	   do i=1, lvxyz
+   		   		   nabla_u(i,e) = jacmi(i,e)*(  ur(i)*rxm1(i,1,1,e)
+     $	                                       + us(i)*sxm1(i,1,1,e)
+     $	                                       + ut(i)*txm1(i,1,1,e) )
+   		   	   enddo
+   		   	   call local_grad3(ur,us,ut,uy,nel,e,dxm1,dxtm1)
+   		   	   do i = 1, lvxyz
+   		   	   	nabla_u(i,e) = nabla_u(i,e) + jacmi(i,e)*(  ur(i)*rym1(i,1,1,e)
+     $	                                                      + us(i)*sym1(i,1,1,e)
+     $	                                                      + ut(i)*tym1(i,1,1,e) )
+   		   	   enddo
+   		   	   call local_grad3(ur,us,ut,uz,nel,e,dxm1,dxtm1)
+   		   	   do i = 1, lvxyz   
+   		   	   	nabla_u(i,e) = nabla_u(i,e) + jacmi(i,e)*(  ur(i)*rzm1(i,1,1,e)
+     $	                                                      + us(i)*szm1(i,1,1,e)
+     $	                                                      + ut(i)*tzm1(i,1,1,e) )
+   		   	   enddo
+   		      else ! 2D
+   		   	   call local_grad2(ur,us,ux,nel,e,dxm1,dytm1)
+   		   	   do i = 1, lvxyz
+   		   	      nabla_u(i,e) = jacmi(i,e)*(ur(i)*rxm1(i,1,1,e)
+     $	                                     + us(i)*sxm1(i,1,1,e) )
+   		   	   enddo
+   		   	   call local_grad2(ur,us,uy,nel,e,dxm1,dytm1)
+   		   	   do i = 1, lvxyz
+   		   	   	nabla_u(i,e) = nabla_u(i,e) + jacmi(i,e)*(  ur(i)*rym1(i,1,1,e)
+     $	                                                      + us(i)*sym1(i,1,1,e) )
+   		   	   enddo
+   		      endif ! if3d
+   		   enddo
+   		end subroutine laplacian
 
          subroutine compute_LNS_gradp(gp_x, gp_y, gp_z, pp)
             ! compute the laplacian of the input field
@@ -271,8 +318,6 @@
             !! adjoint?
             ! internal
             real(dp), dimension(lv) :: utmpx, utmpy, utmpz
-      
-            ifield = 1
             ! apply BCs
             call bcdirvc(ux,uy,uz,v1mask,v2mask,v3mask)
             
@@ -282,16 +327,12 @@
 
             ! Pressure gradient
             call logger%log_information('pressure gradient', module=this_module, procedure='compute_LNS')
-            call opgradt(utmpx,utmpy,utmpz,pres)
-
-            ! subtract from output terms
+            call compute_LNS_gradp(utmpx,utmpy,utmpz,pres)
             call opsub2(Lux,Luy,Luz,utmpx,utmpy,utmpz)
 
             ! Convective terms
             call logger%log_information('convective term', module=this_module, procedure='compute_LNS')
             call compute_LNS_conv(utmpx,utmpy,utmpz,ux,uy,uz,trans)
-            
-            ! subtract from output terms
             call opsub2(Lux,Luy,Luz,utmpx,utmpy,utmpz)
             
             return

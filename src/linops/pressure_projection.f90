@@ -9,8 +9,8 @@
                select type (vec_out)
                type is (nek_pr_dvector)
                   ! compute wp = D^T @ D @ dpr
-                  !call compute_LNS_gradp(vxtmp, vytmp, vztmp, vec_in%pr)
-                  call opgradt(vxtmp, vytmp, vztmp, vec_in%pr)
+                  call compute_LNS_gradp(vxtmp, vytmp, vztmp, vec_in%pr)
+                  !call opgradt(vxtmp, vytmp, vztmp, vec_in%pr)
                   call bcdirvc(vxtmp, vytmp, vztmp, v1mask, v2mask, v3mask)
                   call opdiv(vec_out%pr, vxtmp, vytmp, vztmp)
                end select

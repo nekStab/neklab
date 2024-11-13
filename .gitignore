@@ -34,6 +34,8 @@ LightKrylov/
 Nek5000/
 
 # Build files, executables etc.
+*0.f*
+*.nek5000
 examples/*/*.log
 examples/*/.state
 examples/*/.usr

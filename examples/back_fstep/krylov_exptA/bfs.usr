@@ -127,7 +127,6 @@ c-----------------------------------------------------------------------
             call opgradt(utmpx, utmpy, utmpz, prp)
             call outpost(utmpx,utmpy,utmpz, prp, tp, 'pgr')
 
-            STOP 8
             ! subtract from output terms
             call opsub2(Lux,Luy,Luz,utmpx,utmpy,utmpz)
 
@@ -149,6 +148,41 @@ c-----------------------------------------------------------------------
             print *, 'rnorm1 =', sqrt(glsc3(prp, bm2inv, prp, lp)/volvm2)
             print *, 'rnorm2 =', glsc2(prp, prp, lp)
 
+
+            ! CG_ : compute_LNS with BC
+            ! CGn : compute_LNS without BC
+            ! CGo : opgradt with BC
+            ! CGu : opgradt without BC
+      
+            call outpost(Lux,Luy,Luz, prp, tp, 'CGu')
+            !call compute_LNS_gradp(Lux,Luy,Luz, prp)
+            call opgradt(Lux,Luy,Luz, prp)
+            !call bcdirvc(Lux,Luy,Luz, v1mask, v2mask, v3mask)
+            call opdiv(prp,Lux,Luy,Luz)
+
+            call outpost(Lux,Luy,Luz, prp, tp, 'CGu')
+            
+            !call compute_LNS_gradp(Lux,Luy,Luz, prp)
+            call opgradt(Lux,Luy,Luz, prp)
+            !call bcdirvc(Lux,Luy,Luz, v1mask, v2mask, v3mask)
+            call opdiv(prp,Lux,Luy,Luz)
+            
+            call outpost(Lux,Luy,Luz, prp, tp, 'CGu')
+            
+            !call compute_LNS_gradp(Lux,Luy,Luz, prp)
+            call opgradt(Lux,Luy,Luz, prp)
+            !call bcdirvc(Lux,Luy,Luz, v1mask, v2mask, v3mask)
+            call opdiv(prp,Lux,Luy,Luz)
+            
+            call outpost(Lux,Luy,Luz, prp, tp, 'CGu')
+            
+            !call compute_LNS_gradp(Lux,Luy,Luz, prp)
+            call opgradt(Lux,Luy,Luz, prp)
+            !call bcdirvc(Lux,Luy,Luz, v1mask, v2mask, v3mask)
+            call opdiv(prp,Lux,Luy,Luz)
+            
+            call outpost(Lux,Luy,Luz, prp, tp, 'CGu')
+            STOP 8
             DTD = DTD_linop()
 
             ! Copy from nek to nek_pdvector

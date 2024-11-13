@@ -57,11 +57,15 @@ c
       data    icalld /0/
 
       real, dimension(lx1*ly1*lz1*lelv,1) :: dudx, dudy, dvdx, dvdy
+      real, dimension(lx1*ly1*lz1*lelv,1) :: d2udx2, d2udy2, d2vdx2, d2vdy2
       real, dimension(lx1*ly1*lz1*lelv,1) :: cx, cy
+		real, dimension(lx1*ly1*lz1*lelv) :: ta1, ta2, wrk
+		real, dimension(lx1*ly1*lz1*lelv) :: hop1, hop2
 
-      real xp(ldim,10), xb, yb
+      real xp(ldim,10), x, y, pih
 
       ntot=nx1*ny1*nz1*nelv
+      ntot2=nx2*ny2*nz2*nelv
 
       a1=1.0
       if (icalld.eq.0) then
@@ -71,6 +75,7 @@ c
          if (vis.lt.0) vis = 1./abs(vis)
          one  =1.0
          twopi=8.0*atan(one)
+         pih=2.0*atan(one)
          reyn=1.0/vis
          ccc = 0.25*reyn**2 + twopi*twopi
          rlam=reyn/2.0 - sqrt( ccc )
@@ -117,23 +122,60 @@ c
   301   format(i6,i3,1p5e13.5,' err')
 c     endif
 
+      ifxyo = .true.
+
       if (lastep .eq. 1) then
-      	call outpost(vx,vy,vz,pr,t,'   ')
-	      do i = 1, ntot
-            xb = xm1(i,1,1,1) + 0.5d0
-            yb = ym1(i,1,1,1) + 0.5d0
-            vxp(i,1) = sin(twopi/3.*xb)*sin(twopi/4.*yb)
-            vyp(i,1) = sin(2.*twopi/3.*xb)*sin(2*twopi/4.*yb)
-            dudx(i,1) =    twopi/3.*cos(   twopi/3.*xb)*sin(   twopi/4.*yb)
-            dudy(i,1) =    twopi/4.*sin(   twopi/3.*xb)*cos(   twopi/4.*yb)
-            dvdx(i,1) = 2.*twopi/3.*cos(2.*twopi/3.*xb)*sin(2.*twopi/4.*yb)
-            dvdy(i,1) = 2.*twopi/4.*sin(2.*twopi/3.*xb)*cos(2.*twopi/4.*yb)
+         call outpost(vx,vy,vz,pr,t,'   ')
+			do i = 1, ntot
+            x = xm1(i,1,1,1)
+            y = ym1(i,1,1,1)
+            vxp(i,1) = cos(pih*x)*cos(pih*y)
+            vyp(i,1) = cos(pih*x)*cos(pih*y)
+            dudx(i,1) =   -pih*sin(pih*x)*cos(pih*y)
+            dudy(i,1) =   -pih*cos(pih*x)*sin(pih*y)
+            dvdx(i,1) =   -pih*sin(pih*x)*cos(pih*y)
+            dvdy(i,1) =   -pih*cos(pih*x)*sin(pih*y)
+            d2udx2(i,1) = -pih**2*cos(pih*x)*cos(pih*y)
+            d2udy2(i,1) = -pih**2*cos(pih*x)*cos(pih*y)
+            d2vdx2(i,1) = -pih**2*cos(pih*x)*cos(pih*y)
+            d2vdy2(i,1) = -pih**2*cos(pih*x)*cos(pih*y)
             cx(i,1) = vx(i,1,1,1)*dudx(i,1) + vy(i,1,1,1)*dudy(i,1)
             cx(i,1) = vx(i,1,1,1)*dvdx(i,1) + vy(i,1,1,1)*dvdy(i,1)
 	      end do
-      	call outpost(vxp,vyp,vzp,prp,tp,'   ')
-      	call outpost(cx,cy,vzp,prp,tp,'   ')
-      end if
+			! check pressure gradient
+			do i = 1, ntot2
+           	x = xm2(i,1,1,1)
+           	y = ym2(i,1,1,1)
+           	prp(i,1) = cos(pih*x)*cos(pih*y)
+         end do
+      	call outpost(vxp,vyp,vzp,prp,tp,'gdp')
+      	call outpost(dudx,dvdy,vzp,prp,tp,'gdp')
+			call opgradt(cx,cy,vzp, prp)
+			call outpost(cx,cy,vzp,prp,tp,'gdp')
+			call mappr(wrk,prp,ta1,ta2)
+			call gradm1(cx,cy,vzp,wrk)
+			call outpost(cx,cy,vzp,prp,tp,'gdp')
+			! check laplace operator
+			call outpost(vxp,vyp,vzp,prp,tp,'lap')
+			call add2(d2udx2,d2udy2,ntot)
+			call add2(d2vdx2,d2vdy2,ntot)
+      	call outpost(d2udx2,d2vdx2,vzp,prp,tp,'lap')
+			ifield = 1
+         call copy(hop1, vdiff(1,1,1,1,ifield), ntot)
+         call rzero(hop2, ntot)
+         ! and apply to the velocity field to compute the diffusion term
+         call ophx(cx, cy, vzp, vxp, vyp, vzp, hop1, hop2)
+			call outpost(cx,cy,vzp,prp,tp,'lap')
+			!call ophx(cx, cy, vzp, vxp, vyp, vzp, hop2, hop1)
+			!call outpost(cx,cy,vzp,prp,tp,'lap')
+			call outpost(vxp,vyp,vzp,prp,tp,'lap')
+			call laplacian(cx,vxp)
+      	call laplacian(cy,vyp)
+      	! multiply by 1/Re                > remove for operator diagnostics
+      	!call col2(cx,vdiff,ntot) 
+      	!call col2(cy,vdiff,ntot) 
+			call outpost(cx,cy,vzp,prp,tp,'lap')
+      	end if
 
       return
       end
@@ -199,3 +241,74 @@ c
       return
       end
 c-----------------------------------------------------------------------
+
+!======================================================================
+!> @brief Construct the diffusion term (laplacian of u) for direction i
+!
+      subroutine laplacian(lapu,up)
+   	   implicit none
+   !	
+   		include 'SIZE'
+   		include 'INPUT'           ! if3d
+   		include 'DXYZ'            ! dxm1,d[xy]tm1
+   		include 'GEOM'            ! r[xy]m1,s[xy]m1,t[xy]m1,jacmi
+   !	
+   		! argument list
+   		real up (lx1*ly1*lz1*lelv,1)       ! perturbation velocity component
+   !	
+   		! output
+   		real lapu (lx1*ly1*lz1,lelv)
+   !	
+   		! local variables
+   		real ux  (lx1*ly1*lz1,lelv)
+     $	 ,   uy  (lx1*ly1*lz1,lelv)
+     $ 	 ,   uz  (lx1*ly1*lz1,lelv)
+     $ 	 ,   ur  (lx1*ly1*lz1)
+     $ 	 ,   us  (lx1*ly1*lz1)
+     $ 	 ,   ut  (lx1*ly1*lz1)
+   !	 
+   		common /ctmp1/ ur,us,ut
+   !	
+   		integer e,i,lxyz,nel,N
+   !-----------------------------------------------------------------------
+   
+   		lxyz = lx1*ly1*lz1
+   		nel = nx1-1
+   		call gradm1(ux,uy,uz,up)
+   		do e=1,lelt
+   		  if (if3d) then
+   			 call local_grad3(ur,us,ut,ux,nel,e,dxm1,dxtm1)
+   			 do i=1,lxyz
+   				lapu(i,e) = jacmi(i,e)*(  ur(i)*rxm1(i,1,1,e)
+     $	                              + us(i)*sxm1(i,1,1,e)
+     $	                              + ut(i)*txm1(i,1,1,e) )
+   			 enddo
+   			 call local_grad3(ur,us,ut,uy,nel,e,dxm1,dxtm1)
+   			 do i=1,lxyz
+   				lapu(i,e) = lapu(i,e) + jacmi(i,e)*(  ur(i)*rym1(i,1,1,e)
+     $	                                          + us(i)*sym1(i,1,1,e)
+     $	                                          + ut(i)*tym1(i,1,1,e) )
+   			 enddo
+   			 call local_grad3(ur,us,ut,uz,nel,e,dxm1,dxtm1)
+   			 do i=1,lxyz   
+   				lapu(i,e) = lapu(i,e) + jacmi(i,e)*(  ur(i)*rzm1(i,1,1,e)
+     $	                                          + us(i)*szm1(i,1,1,e)
+     $	                                          + ut(i)*tzm1(i,1,1,e) )
+   			 enddo
+   		  else ! 2D
+   			 call local_grad2(ur,us,ux,nel,e,dxm1,dytm1)
+   			 do i=1,lxyz
+   				lapu(i,e) = jacmi(i,e)*(ur(i)*rxm1(i,1,1,e)
+     $	                            + us(i)*sxm1(i,1,1,e) )
+   			 enddo
+   			 call local_grad2(ur,us,uy,nel,e,dxm1,dytm1)
+   			 do i=1,lxyz
+   				lapu(i,e) = lapu(i,e)
+     $	                  + jacmi(i,e)*(ur(i)*rym1(i,1,1,e)
+     $	                              + us(i)*sym1(i,1,1,e) )
+   			 enddo
+   		  endif ! if3d
+   		enddo
+   !  	    
+   		return
+   		end subroutine laplacian
