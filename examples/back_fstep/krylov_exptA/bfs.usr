@@ -11,7 +11,7 @@ c-----------------------------------------------------------------------
       type(DTD_linop)   :: DTD
       real(dp) :: tau, rnorm
 
-      type(nek_pdvector) :: dpr, xCG
+      type(nek_pr_dvector) :: dpr, xCG
       real(dp), dimension(lx2, ly2, lz2, lelv) :: ptmp
       type(cg_dp_opts) :: opts
       type(cg_dp_metadata) :: meta
@@ -152,7 +152,7 @@ c-----------------------------------------------------------------------
             DTD = DTD_linop()
 
             ! Copy from nek to nek_pdvector
-            call nek2pvec(dpr, prp)
+            call nek2pr_vec(dpr, prp)
             call xCG%zero()
             ! Solve linear system D^T @ D x = dpr
             opts = cg_dp_opts(maxiter = 300, if_print_metadata = .true.)

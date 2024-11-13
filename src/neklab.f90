@@ -41,7 +41,7 @@
       
       ! Definition of the abstract vectors in the Nek framework.
          public :: nek_dvector
-         public :: nek_pdvector
+         public :: nek_pr_dvector
          public :: nek_ext_dvector
       
       ! Implementation of the standard linear operators.
