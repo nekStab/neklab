@@ -11,13 +11,6 @@
          use neklab_systems
       ! --> Stability analysis routines
          use neklab_analysis
-
-         !use otd_tools
-
-         ! skern
-         use neklab_pvectors
-         use neklab_plinops
-         use neklab_LNS_utils
       
          private
       
@@ -52,7 +45,8 @@
          public :: nek_ext_dvector
       
       ! Implementation of the standard linear operators.
-         public :: exptA_linop, LNS_linop, DTD_linop
+         public :: exptA_linop
+         public :: LNS_linop, DTD_linop
       
       ! Implementation of the abstract systems and Jacobians
          public :: nek_system, nek_system_upo
@@ -71,13 +65,14 @@
          public :: compute_LNS_gradp
          public :: compute_LNS_laplacian
          public :: apply_L
+         public :: pressure_projection
 
       ! Miscellaneous.
          public :: compare_nek_arnoldi
       
       ! Various utilities.
          public :: nek2vec, vec2nek
-         public :: nek2pvec, pvec2nek
+         public :: nek2pr_vec, pr_vec2nek
          public :: nek2ext_vec, ext_vec2nek
          public :: setup_nonlinear_solver, setup_linear_solver
 
