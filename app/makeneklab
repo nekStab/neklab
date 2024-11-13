@@ -109,6 +109,7 @@ USR+=" neklab_analysis.o"
 USR+=" neklab.o"
 USR+=" real_vectors.o"
 USR+=" real_extended_vectors.o"
+USR+=" complex_vectors.o"
 export USR
 
 # Output summary of settings

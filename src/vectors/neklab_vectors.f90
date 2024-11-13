@@ -1,7 +1,7 @@
       module neklab_vectors
          use stdlib_optval, only: optval
          use LightKrylov, only: dp
-         use LightKrylov, only: abstract_vector_rdp
+         use LightKrylov, only: abstract_vector_rdp, abstract_vector_cdp
       
          implicit none
          include "SIZE"
@@ -11,6 +11,9 @@
       
          integer, parameter :: lv = lx1*ly1*lz1*lelv
          integer, parameter :: lp = lx2*ly2*lz2*lelv
+         complex(kind=dp), parameter :: zero_cdp = cmplx(0.0_dp, 0.0_dp, kind=dp)
+         complex(kind=dp), parameter :: one_cdp  = cmplx(1.0_dp, 0.0_dp, kind=dp)
+         complex(kind=dp), parameter :: im_cdp   = cmplx(0.0_dp, 1.0_dp, kind=dp)
       
          !----------------------------------------
          !-----     NEK REAL VECTOR TYPE     -----
@@ -34,10 +37,10 @@
          ! --> Constructor.
          interface nek_dvector
             pure module function construct_nek_dvector(vx, vy, vz, pr, theta) result(out)
-               real(dp), dimension(lv), intent(in) :: vx, vy
-               real(dp), dimension(lv), optional, intent(in) :: vz
-               real(dp), dimension(lp), optional, intent(in) :: pr
-               real(dp), dimension(lv, ldimt), optional, intent(in) :: theta
+               real(kind=dp), dimension(lv), intent(in) :: vx, vy
+               real(kind=dp), dimension(lv), optional, intent(in) :: vz
+               real(kind=dp), dimension(lp), optional, intent(in) :: pr
+               real(kind=dp), dimension(lv, ldimt), optional, intent(in) :: theta
                type(nek_dvector) :: out
             end function
          end interface
@@ -98,11 +101,11 @@
          ! --> Constructor.
          interface nek_ext_dvector
             pure module function construct_nek_ext_dvector(vx, vy, vz, pr, theta, time) result(out)
-               real(dp), dimension(lv), intent(in) :: vx, vy
-               real(dp), dimension(lv), optional, intent(in) :: vz
-               real(dp), dimension(lp), optional, intent(in) :: pr
-               real(dp), dimension(lv, ldimt), optional, intent(in) :: theta
-               real(dp), optional, intent(in) :: time
+               real(kind=dp), dimension(lv), intent(in) :: vx, vy
+               real(kind=dp), dimension(lv), optional, intent(in) :: vz
+               real(kind=dp), dimension(lp), optional, intent(in) :: pr
+               real(kind=dp), dimension(lv, ldimt), optional, intent(in) :: theta
+               real(kind=dp), optional, intent(in) :: time
                type(nek_ext_dvector) :: out
             end function
          end interface
@@ -140,6 +143,67 @@
             end function
          end interface
 
+         !-------------------------------------------
+         !-----     NEK COMPLEX VECTOR TYPE     -----
+         !-------------------------------------------
+      
+         ! --> Type.
+         type, extends(abstract_vector_cdp), public :: nek_zvector
+            type(nek_dvector) :: re
+            type(nek_dvector) :: im
+         contains
+            private
+            procedure, pass(self), public :: zero => nek_zzero
+            procedure, pass(self), public :: rand => nek_zrand
+            procedure, pass(self), public :: scal => nek_zscal
+            procedure, pass(self), public :: axpby => nek_zaxpby
+            procedure, pass(self), public :: dot => nek_zdot
+            procedure, pass(self), public :: get_size => nek_zsize
+         end type nek_zvector
+
+         ! --> Constructor.
+         ! interface nek_zvector
+         !    pure module function construct_nek_zvector(vx, vy, vz, pr, theta) result(out)
+         !       real(kind=dp), dimension(lv, 2), intent(in) :: vx, vy
+         !       real(kind=dp), dimension(lv, 2), optional, intent(in) :: vz
+         !       real(kind=dp), dimension(lp, 2), optional, intent(in) :: pr
+         !       real(kind=dp), dimension(lv, ldimt, 2), optional, intent(in) :: theta
+         !       type(nek_zvector) :: out
+         !    end function
+         ! end interface
+      
+         ! --> Type-bound procedures.
+         interface
+            module subroutine nek_zzero(self)
+               class(nek_zvector), intent(inout) :: self
+            end subroutine
+      
+            module subroutine nek_zrand(self, ifnorm)
+               class(nek_zvector), intent(inout) :: self
+               logical, optional, intent(in) :: ifnorm
+            end subroutine
+      
+            module subroutine nek_zscal(self, alpha)
+               class(nek_zvector), intent(inout) :: self
+               complex(kind=dp), intent(in) :: alpha
+            end subroutine
+      
+            module subroutine nek_zaxpby(self, alpha, vec, beta)
+               class(nek_zvector), intent(inout) :: self
+               complex(kind=dp), intent(in) :: alpha
+               class(abstract_vector_cdp), intent(in) :: vec
+               complex(kind=dp), intent(in) :: beta
+            end subroutine
+      
+            complex(kind=dp) module function nek_zdot(self, vec) result(alpha)
+               class(nek_zvector), intent(in) :: self
+               class(abstract_vector_cdp), intent(in) :: vec
+            end function
+      
+            integer pure module function nek_zsize(self) result(n)
+               class(nek_zvector), intent(in) :: self
+            end function
+         end interface
       contains
       
          real(kind=dp) function mth_rand(ix, iy, iz, ieg, xl, fcoeff) !generate random number

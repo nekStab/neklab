@@ -6,3 +6,4 @@ $(OBJDIR)/neklab_analysis.o	:$(NEKLAB_SOURCE_ROOT)/src/neklab_analysis.f90	;$(FC
 $(OBJDIR)/neklab.o		:$(NEKLAB_SOURCE_ROOT)/src/neklab.f90		;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/real_vectors.o	:$(NEKLAB_SOURCE_ROOT)/src/vectors/real_vectors.f90	;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/real_extended_vectors.o	:$(NEKLAB_SOURCE_ROOT)/src/vectors/real_extended_vectors.f90	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/complex_vectors.o	:$(NEKLAB_SOURCE_ROOT)/src/vectors/complex_vectors.f90	;$(FC) -c $(FL2) $< -o $@
