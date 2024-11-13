@@ -154,7 +154,7 @@
       
             return
          end subroutine newton_fixed_point_iteration
-
+      
          subroutine newton_periodic_orbit(sys, bf, tol)
             type(nek_system_upo), intent(inout) :: sys
       !! System for which a fixed point is sought
@@ -195,7 +195,8 @@
       ! time
             real(dp) :: tol
             integer :: kdim, info
-      ! I/O
+      ! I/O 
+            character(len=3) :: file_prefix
 
             kdim = 50
             tol = 1e-12
