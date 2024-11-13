@@ -1,39 +1,38 @@
       submodule(neklab_vectors) real_ext_ended_vectors
          implicit none
       contains
-            
+      
          module procedure construct_nek_ext_dvector
-         ! Velocity arrays.
+      ! Velocity arrays.
          out%vx = vx; out%vy = vy
          if (present(vz)) then
             out%vz = vz
          else
             out%vz = 0.0_dp
-         endif
-
-         ! Pressure.
+         end if
+      
+      ! Pressure.
          if (present(pr)) then
             out%pr = pr
          else
             out%pr = 0.0_dp
-         endif
-
-         ! Temperature and passive scalars.
+         end if
+      
+      ! Temperature and passive scalars.
          if (present(theta)) then
             out%theta = theta
          else
             out%theta = 0.0_dp
-         endif
-
-         ! Time.
+         end if
+      
+      ! Time.
          if (present(time)) then
             out%T = time
          else
             out%T = 0.0_dp
-         endif
+         end if
          end procedure
-
- 
+      
          module procedure nek_ext_dzero
          call self%scal(0.0_dp)
          end procedure
@@ -55,7 +54,7 @@
          if (if3d) call dsavg(self%vz)
       
          call bcdirvc(self%vx, self%vy, self%vz, v1mask, v2mask, v3mask)
-
+      
          call random_number(self%T)
       
          if (optval(ifnorm, .false.)) then
@@ -101,7 +100,7 @@
                if (ifpsco(i - 1)) alpha = alpha + glsc3(self%theta(:, i), vec%theta(:, i), bm1, lv)
             end do
             end if
-            alpha = alpha + self%T * vec%T
+            alpha = alpha + self%T*vec%T
          end select
          end procedure
       

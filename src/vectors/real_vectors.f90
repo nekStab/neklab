@@ -1,38 +1,38 @@
       submodule(neklab_vectors) real_vectors
          implicit none
       contains
-
-         !-------------------------------
-         !-----     CONSTRUCTOR     -----
-         !-------------------------------
-
+      
+      !-------------------------------
+      !-----     CONSTRUCTOR     -----
+      !-------------------------------
+      
          module procedure construct_nek_dvector
-         ! Velocity arrays.
+      ! Velocity arrays.
          out%vx = vx; out%vy = vy
          if (present(vz)) then
             out%vz = vz
          else
             out%vz = 0.0_dp
-         endif
-
-         ! Pressure.
+         end if
+      
+      ! Pressure.
          if (present(pr)) then
             out%pr = pr
          else
             out%pr = 0.0_dp
-         endif
-
-         ! Temperature and passive scalars.
+         end if
+      
+      ! Temperature and passive scalars.
          if (present(theta)) then
             out%theta = theta
          else
             out%theta = 0.0_dp
-         endif
+         end if
          end procedure
-
-         !-----------------------------------------
-         !-----     TYPE-BOUND PROCEDURES     -----
-         !-----------------------------------------
+      
+      !-----------------------------------------
+      !-----     TYPE-BOUND PROCEDURES     -----
+      !-----------------------------------------
       
          module procedure nek_dzero
          call self%scal(0.0_dp)

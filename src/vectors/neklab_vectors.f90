@@ -12,14 +12,14 @@
          integer, parameter :: lv = lx1*ly1*lz1*lelv
          integer, parameter :: lp = lx2*ly2*lz2*lelv
          complex(kind=dp), parameter :: zero_cdp = cmplx(0.0_dp, 0.0_dp, kind=dp)
-         complex(kind=dp), parameter :: one_cdp  = cmplx(1.0_dp, 0.0_dp, kind=dp)
-         complex(kind=dp), parameter :: im_cdp   = cmplx(0.0_dp, 1.0_dp, kind=dp)
+         complex(kind=dp), parameter :: one_cdp = cmplx(1.0_dp, 0.0_dp, kind=dp)
+         complex(kind=dp), parameter :: im_cdp = cmplx(0.0_dp, 1.0_dp, kind=dp)
       
-         !----------------------------------------
-         !-----     NEK REAL VECTOR TYPE     -----
-         !----------------------------------------
+      !----------------------------------------
+      !-----     NEK REAL VECTOR TYPE     -----
+      !----------------------------------------
       
-         ! --> Type.
+      ! --> Type.
          type, extends(abstract_vector_rdp), public :: nek_dvector
             real(kind=dp), dimension(lv) :: vx, vy, vz
             real(kind=dp), dimension(lp) :: pr
@@ -33,8 +33,8 @@
             procedure, pass(self), public :: dot => nek_ddot
             procedure, pass(self), public :: get_size => nek_dsize
          end type nek_dvector
-
-         ! --> Constructor.
+      
+      ! --> Constructor.
          interface nek_dvector
             pure module function construct_nek_dvector(vx, vy, vz, pr, theta) result(out)
                real(kind=dp), dimension(lv), intent(in) :: vx, vy
@@ -45,7 +45,7 @@
             end function
          end interface
       
-         ! --> Type-bound procedures.
+      ! --> Type-bound procedures.
          interface
             module subroutine nek_dzero(self)
                class(nek_dvector), intent(inout) :: self
@@ -77,12 +77,12 @@
                class(nek_dvector), intent(in) :: self
             end function
          end interface
-
-         !-------------------------------------------------
-         !-----     NEK EXTENDED REAL VECTOR TYPE     -----
-         !-------------------------------------------------
-
-         ! --> Type.
+      
+      !-------------------------------------------------
+      !-----     NEK EXTENDED REAL VECTOR TYPE     -----
+      !-------------------------------------------------
+      
+      ! --> Type.
          type, extends(abstract_vector_rdp), public :: nek_ext_dvector
             real(kind=dp), dimension(lv) :: vx, vy, vz
             real(kind=dp), dimension(lp) :: pr
@@ -97,8 +97,8 @@
             procedure, pass(self), public :: dot => nek_ext_ddot
             procedure, pass(self), public :: get_size => nek_ext_dsize
          end type nek_ext_dvector
-
-         ! --> Constructor.
+      
+      ! --> Constructor.
          interface nek_ext_dvector
             pure module function construct_nek_ext_dvector(vx, vy, vz, pr, theta, time) result(out)
                real(kind=dp), dimension(lv), intent(in) :: vx, vy
@@ -109,8 +109,8 @@
                type(nek_ext_dvector) :: out
             end function
          end interface
-
-         ! --> Type-bound procedures.
+      
+      ! --> Type-bound procedures.
          interface
             module subroutine nek_ext_dzero(self)
                class(nek_ext_dvector), intent(inout) :: self
@@ -142,12 +142,12 @@
                class(nek_ext_dvector), intent(in) :: self
             end function
          end interface
-
-         !-------------------------------------------
-         !-----     NEK COMPLEX VECTOR TYPE     -----
-         !-------------------------------------------
       
-         ! --> Type.
+      !-------------------------------------------
+      !-----     NEK COMPLEX VECTOR TYPE     -----
+      !-------------------------------------------
+      
+      ! --> Type.
          type, extends(abstract_vector_cdp), public :: nek_zvector
             type(nek_dvector) :: re
             type(nek_dvector) :: im
@@ -160,8 +160,8 @@
             procedure, pass(self), public :: dot => nek_zdot
             procedure, pass(self), public :: get_size => nek_zsize
          end type nek_zvector
-
-         ! --> Constructor.
+      
+      ! --> Constructor.
          interface nek_zvector
             pure module function construct_nek_zvector(vx, vy, vz, pr, theta) result(out)
                real(kind=dp), dimension(lv, 2), intent(in) :: vx, vy
@@ -172,7 +172,7 @@
             end function
          end interface
       
-         ! --> Type-bound procedures.
+      ! --> Type-bound procedures.
          interface
             module subroutine nek_zzero(self)
                class(nek_zvector), intent(inout) :: self
