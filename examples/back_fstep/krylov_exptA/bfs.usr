@@ -122,10 +122,12 @@ c-----------------------------------------------------------------------
             call outpost(Lux,Luy,Luz, prp, tp, 'dif')
 
             ! Pressure gradient
+            call compute_LNS_gradp(utmpx,utmpy,utmpz,prp)
+            call outpost(utmpx,utmpy,utmpz, prp, tp, 'pgr')
             call opgradt(utmpx, utmpy, utmpz, prp)
-            !all compute_LNS_gradp(utmpx,utmpy,utmpz,prp)
             call outpost(utmpx,utmpy,utmpz, prp, tp, 'pgr')
 
+            STOP 8
             ! subtract from output terms
             call opsub2(Lux,Luy,Luz,utmpx,utmpy,utmpz)
 
