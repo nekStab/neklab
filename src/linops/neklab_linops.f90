@@ -6,7 +6,7 @@
          use LightKrylov_Logger
          use neklab_vectors
          use neklab_utils, only: nek2vec, vec2nek, nek2pr_vec, pr_vec2nek
-         use neklab_utils, only: setup_nonlinear_solver, setup_linear_solver
+         use neklab_nek_setup, only: setup_nonlinear_solver, setup_linear_solver
          implicit none
          include "SIZE"
          include "TOTAL"
