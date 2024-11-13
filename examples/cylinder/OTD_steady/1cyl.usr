@@ -1,4 +1,7 @@
 c-----------------------------------------------------------------------
+
+! Still need to add the forcing implementation from Neklab!
+
       subroutine userchk
       use neklab
       include "SIZE"
