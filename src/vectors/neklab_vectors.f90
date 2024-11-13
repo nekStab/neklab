@@ -162,15 +162,15 @@
          end type nek_zvector
 
          ! --> Constructor.
-         ! interface nek_zvector
-         !    pure module function construct_nek_zvector(vx, vy, vz, pr, theta) result(out)
-         !       real(kind=dp), dimension(lv, 2), intent(in) :: vx, vy
-         !       real(kind=dp), dimension(lv, 2), optional, intent(in) :: vz
-         !       real(kind=dp), dimension(lp, 2), optional, intent(in) :: pr
-         !       real(kind=dp), dimension(lv, ldimt, 2), optional, intent(in) :: theta
-         !       type(nek_zvector) :: out
-         !    end function
-         ! end interface
+         interface nek_zvector
+            pure module function construct_nek_zvector(vx, vy, vz, pr, theta) result(out)
+               real(kind=dp), dimension(lv, 2), intent(in) :: vx, vy
+               real(kind=dp), dimension(lv, 2), optional, intent(in) :: vz
+               real(kind=dp), dimension(lp, 2), optional, intent(in) :: pr
+               real(kind=dp), dimension(lv, ldimt, 2), optional, intent(in) :: theta
+               type(nek_zvector) :: out
+            end function
+         end interface
       
          ! --> Type-bound procedures.
          interface

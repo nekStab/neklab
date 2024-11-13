@@ -6,10 +6,27 @@
          !-----     CONSTRUCTOR     -----
          !-------------------------------
 
-         ! module procedure construct_nek_zvector
-         ! ! Definition of the constructor cause an Internal Compiler Error.
-         ! ! Implementation is delayed for now.
-         ! end procedure
+         module procedure construct_nek_zvector
+         ! Definition of the constructor cause an Internal Compiler Error.
+         ! Implementation is delayed for now.
+         out%re%vx = vx(:, 1); out%im%vx = vx(:, 2)
+         out%re%vy = vy(:, 1); out%im%vy = vy(:, 2)
+         if (present(vz)) then
+            out%re%vz = vz(:, 1); out%im%vz = vz(:, 2)
+         else
+            out%re%vz = 0.0_dp; out%im%vz = 0.0_dp
+         endif
+         if (present(pr)) then
+            out%re%pr = pr(:, 1); out%im%pr = pr(:, 2)
+         else
+            out%re%pr = 0.0_dp; out%im%pr = 0.0_dp
+         endif
+         if (present(theta)) then
+            out%re%theta = theta(:, :, 1); out%im%theta = theta(:, :, 2)
+         else
+            out%re%theta = 0.0_dp; out%im%theta = 0.0_dp
+         endif
+         end procedure
 
          !-----------------------------------------
          !-----     TYPE-BOUND PROCEDURES     -----
