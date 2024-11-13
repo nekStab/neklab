@@ -154,7 +154,7 @@
       
             return
          end subroutine newton_fixed_point_iteration
-
+      
          subroutine newton_periodic_orbit(sys, bf, tol)
             type(nek_system_upo), intent(inout) :: sys
       !! System for which a fixed point is sought
