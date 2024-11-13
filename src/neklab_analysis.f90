@@ -5,14 +5,15 @@
          use stdlib_logger, only: information_level, warning_level, debug_level, error_level, all_level, success
          use LightKrylov, only: atol_dp, dp, eigs, svds, save_eigenspectrum
          use LightKrylov, only: kexpm, gmres_rdp
-         use LightKrylov, only: initialize_krylov_subspace, zero_basis
-         use LightKrylov, only: linear_combination, innerprod, rand_basis
+         use LightKrylov, only: initialize_krylov_subspace, orthonormalize_basis, zero_basis, rand_basis
+         use LightKrylov, only: linear_combination, innerprod
          use LightKrylov, only: newton, newton_dp_opts
          use LightKrylov_Logger
          use LightKrylov_NewtonKrylov, only: dynamic_tol_dp, constant_atol_dp
          use neklab_vectors
          use neklab_linops
          use neklab_utils
+         use neklab_otd
          use neklab_systems
       
          implicit none
@@ -27,6 +28,7 @@
          public :: transient_growth_analysis_fixed_point
          public :: newton_fixed_point_iteration
          public :: newton_periodic_orbit
+         public :: otd_analysis
          public :: compare_nek_arnoldi
       
       contains
@@ -52,7 +54,7 @@
             integer :: i
             logical :: adjoint_
             character(len=3) :: file_prefix
-
+      
       ! Set up logging
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
       
@@ -100,7 +102,7 @@
       ! Miscellaneous.
             integer :: i, j
             character(len=3) :: file_prefix
-
+      
       ! Set up logging
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
       
@@ -184,7 +186,96 @@
       
             return
          end subroutine newton_periodic_orbit
-
+      
+         subroutine otd_analysis(OTD)
+            type(nek_otd), intent(inout) :: OTD
+      ! internal
+            real(dp), dimension(:), allocatable :: sigma
+            real(dp), dimension(:, :), allocatable :: Lr, Phi, svec
+            complex(dp), dimension(:), allocatable :: lambda
+            complex(dp), dimension(:, :), allocatable :: eigvec
+            type(nek_dvector), allocatable :: Lu(:)
+      ! Misc
+            integer :: i, j, r
+            character(len=3) :: file_prefix
+      
+      ! Set up logging
+            call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      
+      ! Allocate memory
+            r = OTD%r
+            allocate (sigma(r), svec(r, r)); sigma = 0.0_dp; svec = 0.0_dp
+            allocate (lambda(r), eigvec(r, r)); lambda = 0.0_dp; eigvec = 0.0_dp
+            allocate (Lr(r, r), Phi(r, r)); Lr = 0.0_dp; Phi = 0.0_dp
+      
+      ! Intgrate the nonlinear equations forward
+            time = 0.0_dp
+            do istep = 1, nsteps
+               call nek_advance()
+      
+               if (istep >= OTD%startstep) then
+      ! load perturbations
+                  do i = 1, r
+                     call nek2vec(OTD%basis(i), vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i))
+                  end do
+      
+      ! orthonormalize
+                  if (mod(istep, OTD%orthostep) == 0) then
+                     call orthonormalize_basis(OTD%basis)
+                  end if
+      
+      ! compute Lu
+                  do i = 1, r
+                  if (OTD%trans) then
+                     call OTD%apply_rmatvec(OTD%basis(i), Lu(i))
+                  else
+                     call OTD%apply_matvec(OTD%basis(i), Lu(i))
+                  end if
+                  end do
+      
+      ! compute reduced operator
+                  call innerprod(Lr, OTD%basis, Lu)
+      
+      ! compute internal rotation matrix
+                  Phi = 0.0_dp
+                  do i = 1, r
+                  do j = i + 1, r
+                     Phi(i, j) = Lr(i, j)
+                     Phi(j, 1) = -Lr(i, j)
+                  end do
+                  end do
+      
+      ! output projected modes
+                  if (mod(istep, OTD%printstep) == 0) then
+                     call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec)
+                  end if
+      
+      ! at the end of the step we copy data back to nek2vec
+                  do i = 1, r
+                     call vec2nek(vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i), OTD%basis(i))
+                  end do
+      
+      ! project basis vectors and output modes
+                  if (mod(istep, OTD%iostep) == 0) then
+                  if (mod(istep, OTD%printstep) /= 0) then
+                     call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec)
+                  end if
+                  call OTD%outpost_OTDmodes(eigvec)
+                  end if
+      
+      ! output basis vectors
+                  if (mod(istep, OTD%iorststep) == 0) then
+                     write (file_prefix, '(A)') 'rst'
+                     call outpost_dnek(OTD%basis, file_prefix)
+                  end if
+      
+      ! set the forcing
+                  call OTD%generate_forcing(Lr, Phi)
+               end if
+            end do
+            return
+         end subroutine otd_analysis
+      
          subroutine compare_nek_arnoldi(A, exptA, tau)
             type(LNS_linop), intent(inout) :: A
             type(exptA_linop), intent(inout) :: exptA
@@ -195,9 +286,9 @@
       ! time
             real(dp) :: tol
             integer :: kdim, info
-      ! I/O 
+      ! I/O
             character(len=3) :: file_prefix
-
+      
             kdim = 50
             tol = 1e-12
             time = 0.0_dp
@@ -214,12 +305,12 @@
             call Vts%scal(1.0_dp/tau)
             file_prefix = 'vnk'; call outpost_dnek(Vts, file_prefix)
       
-            !call kexpm(Vkr, A, U, tau, tol, info, kdim=kdim)
+      !call kexpm(Vkr, A, U, tau, tol, info, kdim=kdim)
             call A%matvec(U, Vkr)
             file_prefix = 'vkr'; call outpost_dnek(Vkr, file_prefix)
       
             call Vkr%axpby(1.0_dp, Vts, -1.0_dp)
-            STOP 9
+            stop 9
       !if (Vkr%norm()/Vkr%get_size() > 10*atol_dp) then
       !   if (nid.eq.0) print *, "Solutions do not match!"
       !   if (nid.eq.0) print *, " tol", 10*atol_dp, "delta = ", Vkr%norm()/Vkr%get_size()
