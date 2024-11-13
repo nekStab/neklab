@@ -4,15 +4,12 @@ c-----------------------------------------------------------------------
       include "SIZE"
       include "TOTAL"
 
-      ! System for which we seek a fixed point
+      ! OTD
       type(nek_otd) :: OTD
+      ! OTD opts
+      type(otd_opts) :: opts
       ! State vectors
       type(nek_dvector) :: bf
-      ! OTD forcing
-      real OTDfx (lx1*ly1*lz1*lelv,lpert)       ! x direction
-     $ ,   OTDfy (lx1*ly1*lz1*lelv,lpert)       ! y direction
-     $ ,   OTDfz (lx1*ly1*lz1*lelv,lpert)       ! z direction
-      common /OTD_frc/ OTDfx,OTDfy,OTDfz
       
       if (istep.eq.0) then
          call load_fld('BF.fld')
@@ -20,52 +17,14 @@ c-----------------------------------------------------------------------
 
          ! define OTD structure
          OTD = nek_otd()
-   
-         ! initialize OTD structure
-         call OTD%init(bf, startstep = 1, nIC = 0)
-      else
-         if (istep >= OTD%startstep) then
-            ! load perturbations
-            do i = 1, OTD%r
-               nek2vec(OTD%basis(i), vxp(:,i), vyp(:,i), vzp(:,i), 
-     $                  prp(:,i), tp(:,i))
-            end do
+         OTD%baseflow = bf
 
-            ! orthonormalize
-            if (mod(istep, OTD%orthostep) == 0) then
-               call orthonormalize_basis(OTD%basis)
-            end if
+         opts = otd_opts(startstep = 1, n_usrIC = 0)
 
-            ! compute Lu
-            call OTD%generate_Lu()
+         call OTD_analysis(OTD, opts)
 
-            ! compute reduced operator
-            call OTD%compute_Lr()
-
-            ! compute internal rotation matrix
-            call OTD%compute_Phi()
-
-            ! output projected modes
-            if (mod(istep, OTD%printstep) == 0) then
-               OTD%spectral_analysis()
-            end if
-
-            ! at the end of the step we copy data back to nek2vec
-            do i = 1, OTD%r
-               vec2nek(vxp(:,i), vyp(:,i), vzp(:,i), prp(:,i), tp(:,i), OTD%basis(i))
-            end do
-
-            ! project basis vectors and output modes
-            if (mod(istep, OTD%iostep) == 0) then
-               OTD%outpost_OTDmodes()
-            end if
-
-            ! set the forcing
-            call OTD%generate_OTD_forcing(OTDfx, OTDfy, OTDfz)
-         end if
-      end if
-
-      
+         call nek_end()
+      end if      
 
       return
       end
@@ -77,8 +36,6 @@ c----------------------------------------------------------------------
       include 'NEKUSE'
       ! argument list
       integer ix,iy,iz,ieg
-      ! output 
-      real    ffx,ffy,ffz
       ! local variable list
       integer ijke,e
       ! OTD forcing
@@ -100,6 +57,7 @@ c----------------------------------------------------------------------
         FFY = FFY - OTDfy(ijke,jp)
         FFZ = FFZ - OTDfz(ijke,jp)
       endif
+      !call neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
 
       return
       end

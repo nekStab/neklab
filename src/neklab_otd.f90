@@ -10,6 +10,7 @@
       ! Abstract types for real-valued linear operators and vectors.
          use LightKrylov, only: abstract_linop_rdp, abstract_vector_rdp
          use LightKrylov, only: orthonormalize_basis, zero_basis, rand_basis
+         use LightKrylov_Utils, only: abstract_opts
       ! Logging
          use LightKrylov_Logger
       ! Extensions of the abstract vector types to nek data format.
@@ -23,7 +24,6 @@
          include "ADJOINT"
          private
          character(len=*), parameter, private :: this_module = 'neklab_linops'
-         character(len=*), parameter, private :: OTDIC_basename = 'OTDIC_'
       
          integer, parameter :: lv = lx1*ly1*lz1*lelv
       !! Local number of grid points for the velocity mesh.
@@ -31,17 +31,8 @@
       !! Local number of grid points for the pressure mesh.
       
          type, extends(abstract_linop_rdp), public :: nek_otd
-      ! to be set at definition
-            type(nek_dvector), allocatable :: baseflow
             integer :: r = lpert
-      ! defined in init
-            integer :: startstep = 1
-            integer :: printstep = 5
-            integer :: orthostep = 10
-            integer :: iostep = 100
-            integer :: iorststep = 100
-            real(dp) :: OTDrsttime = 0.0_dp
-            logical :: trans = .false.
+            type(nek_dvector), allocatable :: baseflow
             type(nek_dvector), allocatable :: basis(:)
       ! Forcing components
             real(dp), dimension(lv, lpert) :: OTDfx = 0.0_dp
@@ -56,6 +47,25 @@
             procedure, pass(self), public :: outpost_OTDmodes
             procedure, pass(self), public :: generate_forcing
          end type nek_otd
+
+         type, extends(abstract_opts), public :: otd_opts
+            integer :: startstep = 1
+            !! Timestep at which to start OTD computation
+            integer :: printstep = 5
+            !! Output frequency for spectral analysis
+            integer :: orthostep = 10
+            !! Reorthogonalization frequency
+            integer :: iostep    = 100
+            !! Output frequency for the projected basis vectors
+            integer :: iorststep = 100
+            !! Output frequency for the basis (for restarts)
+            integer :: n_usrIC   = 0
+            !! Number of user-defined initial conditions for the perturbations
+            logical :: trans = .false.
+            !! Direct of adjoint?
+            character(len=128) :: OTDIC_basename = 'OTDIC_'
+            !! Base filename for initial conditions
+         end type
       
       contains
       
@@ -103,13 +113,10 @@
             return
          end subroutine apply_adjLNS
       
-         subroutine init_OTD(self, startstep, nIC)
+         subroutine init_OTD(self, opts)
       ! Linear Operator.
             class(nek_otd), intent(inout) :: self
-      ! When to start computing OTD modes
-            integer, optional, intent(in) :: startstep
-            integer, optional, intent(in) :: nIC
-            integer :: nICflds
+            type(otd_opts), intent(in)    :: opts
       ! internal
             character(len=128) :: msg
             character(len=128) :: ifile
@@ -118,23 +125,17 @@
       
             r = self%r
       
-      ! set fields to read
-            nICflds = optval(nIC, 0)
-      
-      ! set startstep
-            self%startstep = optval(startstep, 1)
-      
       ! set number of modes and allocate data
             call zero_basis(self%basis)
       
             loadIC = .false.
-            if (nICflds < 0) then
-               write (msg, *) 'Incorrect number of IC fields to load. nIC=', nICflds
+            if (opts%n_usrIC < 0) then
+               write (msg, *) 'Incorrect number of IC fields to load. nIC=', opts%n_usrIC
                call logger%log_message(msg, module=this_module, procedure='init_OTD')
                if (nid == 0) print *, trim(msg)
                call nek_end()
-            else if (nICflds > r) then
-               write (msg, *) 'Inconsistent number of IC fields to load. nIC=', nICflds, ' r=', self%r
+            else if (opts%n_usrIC > r) then
+               write (msg, *) 'Inconsistent number of IC fields to load. nIC=', opts%n_usrIC, ' r=', self%r
                call logger%log_message(msg, module=this_module, procedure='init_OTD')
                if (nid == 0) print *, trim(msg)
                call nek_end()
@@ -145,22 +146,22 @@
             call rand_basis(self%basis)
       
             if (loadIC) then
-            do i = 1, nICflds
-               write (ifile, '(A,I2.2,".fld")') OTDIC_basename, i
-               inquire (file=ifile, exist=exist_IC)
-               if (exist_IC) then
-                  write (msg, *) 'Loading IC file', ifile
-                  call logger%log_message(msg, module=this_module, procedure='init_OTD')
-                  call load_fld(ifile)
-                  call nek2vec(self%basis(i), vx, vy, vz, pr, t)
-                  self%OTDrsttime = time
-               else
-                  write (msg, *) 'Cannot find IC file', ifile
-                  call logger%log_message(msg, module=this_module, procedure='init_OTD')
-                  if (nid == 0) print *, trim(msg)
-                  call nek_end()
-               end if
-            end do
+               do i = 1, opts%n_usrIC
+                  write (ifile, '(A,I2.2,".fld")') opts%OTDIC_basename, i
+                  inquire (file=ifile, exist=exist_IC)
+                  if (exist_IC) then
+                     write (msg, *) 'Loading IC file', ifile
+                     call logger%log_message(msg, module=this_module, procedure='init_OTD')
+                     call load_fld(ifile)
+                     call nek2vec(self%basis(i), vx, vy, vz, pr, t)
+                     !self%OTDrsttime = time
+                  else
+                     write (msg, *) 'Cannot find IC file', ifile
+                     call logger%log_message(msg, module=this_module, procedure='init_OTD')
+                     if (nid == 0) print *, trim(msg)
+                     call nek_end()
+                  end if
+               end do
             end if
       
       ! orthonormalize
@@ -179,7 +180,7 @@
             return
          end subroutine init_OTD
       
-         subroutine spectral_analysis(self, Lr, sigma, svec, lambda, eigvec)
+         subroutine spectral_analysis(self, Lr, sigma, svec, lambda, eigvec, ifprint)
       ! Linear Operator.
             class(nek_otd), intent(in) :: self
             real(dp), dimension(self%r, self%r), intent(out) :: Lr
@@ -187,6 +188,7 @@
             real(dp), dimension(self%r, self%r), intent(out) :: svec
             complex(dp), dimension(self%r), intent(out) :: lambda
             complex(dp), dimension(self%r, self%r), intent(out) :: eigvec
+            logical, intent(in) :: ifprint
       ! internals
             real(dp), dimension(self%r) :: s
             real(dp), dimension(self%r, self%r) :: Lsym
@@ -207,7 +209,7 @@
                svec(:, i) = v(:, idx(i))
             end do
             call sort(sigma, reverse=.true.)
-            if (mod(istep, self%printstep) == 0) then
+            if (ifprint) then
                write (msg, '(I7,1X,F15.8,*(1X,E15.8))') istep, time, sigma
                call logger%log_message(msg, module=this_module, procedure='OTD Ls')
             end if
@@ -221,7 +223,7 @@
                lambda(i) = l(idx(i))
                eigvec(:, i) = v(:, idx(i))
             end do
-            if (mod(istep, self%printstep) == 0) then
+            if (ifprint) then
                write (msg, '(I7,1X,F15.8,*(1X,E15.8))') istep, time, real(lambda)
                call logger%log_message(msg, module=this_module, procedure='OTD Lr Re')
                write (msg, '(I7,1X,F15.8,*(1X,E15.8))') istep, time, aimag(lambda)

@@ -65,7 +65,7 @@
          public :: transient_growth_analysis_fixed_point
       
       ! OTD exports.
-         public :: nek_otd
+         public :: nek_otd, otd_opts
          public :: otd_analysis
       
       ! LNS utilities.
