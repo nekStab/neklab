@@ -252,18 +252,18 @@
             end select
             return
          end subroutine abstract_ext_vec2nek_prt
-
+      
          pure real(dp) function get_period_abs(vec) result(period)
             class(abstract_vector_rdp), intent(in) :: vec
             select type (vec)
             type is (nek_ext_dvector)
-               period = vec%T 
+               period = vec%T
             end select
          end function get_period_abs
-
+      
          pure real(dp) function get_period(vec) result(period)
             class(nek_ext_dvector), intent(in) :: vec
-            period = vec%T 
+            period = vec%T
          end function get_period
       
          subroutine nopcopy(a1, a2, a3, a4, a5, b1, b2, b3, b4, b5)

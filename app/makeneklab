@@ -107,6 +107,10 @@ USR+=" neklab_linops.o"
 USR+=" neklab_systems.o"
 USR+=" neklab_analysis.o"
 USR+=" neklab.o"
+USR+=" real_vectors.o"
+USR+=" real_extended_vectors.o"
+USR+=" complex_vectors.o"
+USR+=" exponential_propagator.o"
 export USR
 
 # Output summary of settings
