@@ -24,11 +24,11 @@
          public :: apply_L
          public :: project_perturbation
       
-         !------------------------------------------
-         !-----     EXPONENTIAL PROPAGATOR     -----
-         !------------------------------------------
+      !------------------------------------------
+      !-----     EXPONENTIAL PROPAGATOR     -----
+      !------------------------------------------
       
-         ! --> Type.
+      ! --> Type.
          type, extends(abstract_linop_rdp), public :: exptA_linop
             real(kind=dp) :: tau
             type(nek_dvector) :: baseflow
@@ -38,8 +38,8 @@
             procedure, pass(self), public :: matvec => exptA_matvec
             procedure, pass(self), public :: rmatvec => exptA_rmatvec
          end type exptA_linop
-         
-         ! --> Type-bound procedures: exponential_propagator.f90
+      
+      ! --> Type-bound procedures: exponential_propagator.f90
          interface
             module subroutine init_exptA(self)
                class(exptA_linop), intent(in) :: self
@@ -50,19 +50,19 @@
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
-
+      
             module subroutine exptA_rmatvec(self, vec_in, vec_out)
                class(exptA_linop), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
          end interface
-
-         !-----------------------------------------------------
-         !-----     LINEARIZED NAVIER-STOKES OPERATOR     -----
-         !-----------------------------------------------------
       
-         ! --> Type.
+      !-----------------------------------------------------
+      !-----     LINEARIZED NAVIER-STOKES OPERATOR     -----
+      !-----------------------------------------------------
+      
+      ! --> Type.
          type, extends(abstract_linop_rdp), public :: LNS_linop
             type(nek_dvector) :: baseflow
          contains
@@ -71,8 +71,8 @@
             procedure, pass(self), public :: matvec => LNS_matvec
             procedure, pass(self), public :: rmatvec => LNS_rmatvec
          end type LNS_linop
-
-         ! --> Type-bound procedures: LNS_operator.f90
+      
+      ! --> Type-bound procedures: LNS_operator.f90
          interface
             module subroutine init_LNS(self)
                class(LNS_linop), intent(in) :: self
@@ -83,27 +83,27 @@
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
-
+      
             module subroutine LNS_rmatvec(self, vec_in, vec_out)
                class(LNS_linop), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
          end interface
-
-         !---------------------------
-         !-----     D^T @ D     -----
-         !---------------------------
       
-         ! --> Type.
+      !---------------------------
+      !-----     D^T @ D     -----
+      !---------------------------
+      
+      ! --> Type.
          type, extends(abstract_sym_linop_rdp), public :: DTD_linop
          contains
             private
-            procedure, pass(self), public :: matvec  => apply_DTD
+            procedure, pass(self), public :: matvec => apply_DTD
             procedure, pass(self), public :: rmatvec => apply_DTD
          end type DTD_linop
-
-         ! --> Type-bound procedures: pressure_projection.f90
+      
+      ! --> Type-bound procedures: pressure_projection.f90
          interface
             module subroutine apply_DTD(self, vec_in, vec_out)
                class(DTD_linop), intent(inout) :: self
@@ -111,21 +111,21 @@
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
          end interface
-
-         !--------------------------------------------------
-         !-----     Projection onto div-free space     -----
-         !--------------------------------------------------
       
-         ! --> Type.
+      !--------------------------------------------------
+      !-----     Projection onto div-free space     -----
+      !--------------------------------------------------
+      
+      ! --> Type.
          type, extends(abstract_sym_linop_rdp), public :: P_div0_linop
             type(DTD_linop) :: DTD
          contains
             private
-            procedure, pass(self), public :: matvec  => project_div0
+            procedure, pass(self), public :: matvec => project_div0
             procedure, pass(self), public :: rmatvec => project_div0
          end type P_div0_linop
-
-         ! --> Type-bound procedures: pressure_projection.f90
+      
+      ! --> Type-bound procedures: pressure_projection.f90
          interface
             module subroutine project_div0(self, vec_in, vec_out)
                class(P_div0_linop), intent(inout) :: self
@@ -135,35 +135,35 @@
          end interface
       
       contains
-
+      
          subroutine apply_exptA(vec_out, A, vec_in, tau, info, trans)
-            !! Subroutine for the exponential propagator that conforms with the abstract interface
-            !! defined in expmlib.f90
+      !! Subroutine for the exponential propagator that conforms with the abstract interface
+      !! defined in expmlib.f90
             class(abstract_vector_rdp), intent(out) :: vec_out
-            !! Output vector
+      !! Output vector
             class(abstract_linop_rdp), intent(inout) :: A
-            !! Linear operator
+      !! Linear operator
             class(abstract_vector_rdp), intent(in) :: vec_in
-            !! Input vector.
+      !! Input vector.
             real(dp), intent(in) :: tau
-            !! Integration horizon
+      !! Integration horizon
             integer, intent(out) :: info
-            !! Information flag
+      !! Information flag
             logical, optional, intent(in) :: trans
             logical :: transpose
-            !! Direct or Adjoint?
+      !! Direct or Adjoint?
       
-            ! optional argument
+      ! optional argument
             transpose = optval(trans, .false.)
       
-            ! time integrator
+      ! time integrator
             select type (vec_in)
             type is (nek_dvector)
                select type (vec_out)
                type is (nek_dvector)
                   select type (A)
                   type is (exptA_linop)
-                     ! set integration time
+      ! set integration time
                      A%tau = tau
                      if (transpose) then
                         call A%rmatvec(vec_in, vec_out)
@@ -175,128 +175,128 @@
             end select
             return
          end subroutine apply_exptA
-
+      
          subroutine compute_LNS_conv(c_x, c_y, c_z, uxp, uyp, uzp, trans)
-            ! Compute the linearized convective terms
-            ! We assume that the baseflow is set in vx, vy, vz
-            real(dp), dimension(lv,1), intent(out) :: c_x
-            real(dp), dimension(lv,1), intent(out) :: c_y
-            real(dp), dimension(lv,1), intent(out) :: c_z
-            real(dp), dimension(lv,1), intent(in)  :: uxp
-            real(dp), dimension(lv,1), intent(in)  :: uyp
-            real(dp), dimension(lv,1), intent(in)  :: uzp
+      ! Compute the linearized convective terms
+      ! We assume that the baseflow is set in vx, vy, vz
+            real(dp), dimension(lv, 1), intent(out) :: c_x
+            real(dp), dimension(lv, 1), intent(out) :: c_y
+            real(dp), dimension(lv, 1), intent(out) :: c_z
+            real(dp), dimension(lv, 1), intent(in) :: uxp
+            real(dp), dimension(lv, 1), intent(in) :: uyp
+            real(dp), dimension(lv, 1), intent(in) :: uzp
             logical, optional :: trans
-            ! internals
+      ! internals
             integer :: i
             logical :: transpose
-            ! scratch arrays
+      ! scratch arrays
             real(dp), dimension(lv) :: ta1, ta2, ta3, tb1, tb2, tb3
             transpose = optval(trans, .false.)
-            ! (u.grad) Ub
-            call opcopy       (tb1,tb2,tb3,vx,vy,vz)          ! Save velocity
-            call opcopy       (vx,vy,vz,uxp,uyp,uzp)          ! U <-- u
+      ! (u.grad) Ub
+            call opcopy(tb1, tb2, tb3, vx, vy, vz)          ! Save velocity
+            call opcopy(vx, vy, vz, uxp, uyp, uzp)          ! U <-- u
             if (transpose) then
-               call convop_adj(ta1,ta2,ta3,tb1,tb2,tb3,vx,vy,vz)
+               call convop_adj(ta1, ta2, ta3, tb1, tb2, tb3, vx, vy, vz)
             else
-               call convop    (ta1,tb1)
-               call convop    (ta2,tb2)
+               call convop(ta1, tb1)
+               call convop(ta2, tb2)
                if (if3d) then
-                  call convop (ta3,tb3)
+                  call convop(ta3, tb3)
                else
-                  call rzero  (ta3,lv)
+                  call rzero(ta3, lv)
                end if
             end if
-            call opcopy       (c_x,c_y,c_z,ta1,ta2,ta3) ! copy to output
-            ! (Ub.grad) u
-            call opcopy       (vx,vy,vz,tb1,tb2,tb3)          ! Restore velocity
+            call opcopy(c_x, c_y, c_z, ta1, ta2, ta3) ! copy to output
+      ! (Ub.grad) u
+            call opcopy(vx, vy, vz, tb1, tb2, tb3)          ! Restore velocity
             if (transpose) then
-               call convop_adj(ta1,ta2,ta3,tb1,tb2,tb3,vx,vy,vz)
+               call convop_adj(ta1, ta2, ta3, tb1, tb2, tb3, vx, vy, vz)
             else
-               call convop    (tb1,uxp)
-               call convop    (tb2,uyp)
+               call convop(tb1, uxp)
+               call convop(tb2, uyp)
                if (if3d) then
-                  call convop (tb3,uzp)
+                  call convop(tb3, uzp)
                else
-                  call rzero  (tb3,lv)
+                  call rzero(tb3, lv)
                end if
             end if
-            call opadd2       (c_x,c_y,c_z,tb1,tb2,tb3) ! add to output
+            call opadd2(c_x, c_y, c_z, tb1, tb2, tb3) ! add to output
             return
          end subroutine compute_LNS_conv
-
+      
          subroutine compute_LNS_laplacian(d_x, d_y, d_z, uxp, uyp, uzp)
-            ! compute the laplacian of the input field
-            real(dp), dimension(lv,1), intent(out) :: d_x
-            real(dp), dimension(lv,1), intent(out) :: d_y
-            real(dp), dimension(lv,1), intent(out) :: d_z
-            real(dp), dimension(lv,1), intent(in)  :: uxp
-            real(dp), dimension(lv,1), intent(in)  :: uyp
-            real(dp), dimension(lv,1), intent(in)  :: uzp
-            ! internals
+      ! compute the laplacian of the input field
+            real(dp), dimension(lv, 1), intent(out) :: d_x
+            real(dp), dimension(lv, 1), intent(out) :: d_y
+            real(dp), dimension(lv, 1), intent(out) :: d_z
+            real(dp), dimension(lv, 1), intent(in) :: uxp
+            real(dp), dimension(lv, 1), intent(in) :: uyp
+            real(dp), dimension(lv, 1), intent(in) :: uzp
+      ! internals
             real(dp), dimension(lv) :: h1, h2
             ifield = 1
-            call copy(h1, vdiff(1,1,1,1,ifield), lv)
+            call copy(h1, vdiff(1, 1, 1, 1, ifield), lv)
             call rzero(h2, lv)
-            ! and apply to the velocity field to compute the diffusion term
+      ! and apply to the velocity field to compute the diffusion term
             call ophx(d_x, d_y, d_z, uxp, uyp, uzp, h1, h2)
             return
          end subroutine compute_LNS_laplacian
-
+      
          subroutine compute_LNS_gradp(gp_x, gp_y, gp_z, pp)
-            ! compute the laplacian of the input field
-            real(dp), dimension(lv,1), intent(out) :: gp_x
-            real(dp), dimension(lv,1), intent(out) :: gp_y
-            real(dp), dimension(lv,1), intent(out) :: gp_z
-            real(dp), dimension(lp,1), intent(in)  :: pp
-            ! internals
+      ! compute the laplacian of the input field
+            real(dp), dimension(lv, 1), intent(out) :: gp_x
+            real(dp), dimension(lv, 1), intent(out) :: gp_y
+            real(dp), dimension(lv, 1), intent(out) :: gp_z
+            real(dp), dimension(lp, 1), intent(in) :: pp
+      ! internals
             real(dp), dimension(lv) :: ta1, ta2, wrk
-            ! map the perturbation pressure to the velocity mesh
-            call mappr(wrk,pp,ta1,ta2)
-            ! compute the gradient on the velocity mesh direclty
-            call gradm1(gp_x,gp_y,gp_z,wrk)
+      ! map the perturbation pressure to the velocity mesh
+            call mappr(wrk, pp, ta1, ta2)
+      ! compute the gradient on the velocity mesh direclty
+            call gradm1(gp_x, gp_y, gp_z, wrk)
             return
          end subroutine compute_LNS_gradp
-
+      
          subroutine apply_L(Lux, Luy, Luz, ux, uy, uz, pres, trans)
-            !! Apply LNS operator (before the projection onto the divergence-free space)
-            !! This function assumes that the input vector has already been loaded into v[xyz]p
-            real(dp), dimension(lv,1), intent(out) :: Lux
-            real(dp), dimension(lv,1), intent(out) :: Luy
-            real(dp), dimension(lv,1), intent(out) :: Luz
-            real(dp), dimension(lv,1), intent(in)  :: ux
-            real(dp), dimension(lv,1), intent(in)  :: uy
-            real(dp), dimension(lv,1), intent(in)  :: uz
-            real(dp), dimension(lp,1), intent(in)  :: pres
+      !! Apply LNS operator (before the projection onto the divergence-free space)
+      !! This function assumes that the input vector has already been loaded into v[xyz]p
+            real(dp), dimension(lv, 1), intent(out) :: Lux
+            real(dp), dimension(lv, 1), intent(out) :: Luy
+            real(dp), dimension(lv, 1), intent(out) :: Luz
+            real(dp), dimension(lv, 1), intent(in) :: ux
+            real(dp), dimension(lv, 1), intent(in) :: uy
+            real(dp), dimension(lv, 1), intent(in) :: uz
+            real(dp), dimension(lp, 1), intent(in) :: pres
             logical, optional, intent(in) :: trans
-            !! adjoint?
-            ! internal
+      !! adjoint?
+      ! internal
             real(dp), dimension(lv) :: utmpx, utmpy, utmpz
       
             ifield = 1
-            ! apply BCs
-            call bcdirvc(ux,uy,uz,v1mask,v2mask,v3mask)
-            
-            ! Diffusion term
+      ! apply BCs
+            call bcdirvc(ux, uy, uz, v1mask, v2mask, v3mask)
+      
+      ! Diffusion term
             call logger%log_information('diffusion term', module=this_module, procedure='compute_LNS')
-            call compute_LNS_laplacian(Lux,Luy,Luz,ux,uy,uz)
-
-            ! Pressure gradient
+            call compute_LNS_laplacian(Lux, Luy, Luz, ux, uy, uz)
+      
+      ! Pressure gradient
             call logger%log_information('pressure gradient', module=this_module, procedure='compute_LNS')
-            call opgradt(utmpx,utmpy,utmpz,pres)
-
-            ! subtract from output terms
-            call opsub2(Lux,Luy,Luz,utmpx,utmpy,utmpz)
-
-            ! Convective terms
+            call opgradt(utmpx, utmpy, utmpz, pres)
+      
+      ! subtract from output terms
+            call opsub2(Lux, Luy, Luz, utmpx, utmpy, utmpz)
+      
+      ! Convective terms
             call logger%log_information('convective term', module=this_module, procedure='compute_LNS')
-            call compute_LNS_conv(utmpx,utmpy,utmpz,ux,uy,uz,trans)
-            
-            ! subtract from output terms
-            call opsub2(Lux,Luy,Luz,utmpx,utmpy,utmpz)
-            
+            call compute_LNS_conv(utmpx, utmpy, utmpz, ux, uy, uz, trans)
+      
+      ! subtract from output terms
+            call opsub2(Lux, Luy, Luz, utmpx, utmpy, utmpz)
+      
             return
          end subroutine apply_L
-
+      
          subroutine project_perturbation(dpr)
       !! Project perturbation velocity fields onto closest solenoidal space
       !! with div u = 0

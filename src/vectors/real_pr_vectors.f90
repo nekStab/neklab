@@ -58,8 +58,8 @@
          real(kind=dp), external :: glsc2
          select type (vec)
          type is (nek_pr_dvector)
-            !alpha = glsc3(self%pr, vec%pr, bm2, lp)
-            !alpha = glsc3(self%pr, bm2inv, vec%pr, lp)/volvm2    ! rnorm from convprn in navier1.f
+      !alpha = glsc3(self%pr, vec%pr, bm2, lp)
+      !alpha = glsc3(self%pr, bm2inv, vec%pr, lp)/volvm2    ! rnorm from convprn in navier1.f
             alpha = glsc2(self%pr, vec%pr, lp)                    ! convprn in navier1.f
          end select
          end procedure
