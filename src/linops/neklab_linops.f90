@@ -21,7 +21,7 @@
          public :: compute_LNS_conv
          public :: compute_LNS_gradp
          public :: compute_LNS_laplacian
-         public :: apply_L
+         public :: apply_Lv, apply_L
          public :: project_perturbation
       
       !------------------------------------------
@@ -258,8 +258,8 @@
          end subroutine compute_LNS_gradp
       
          subroutine apply_L(Lux, Luy, Luz, ux, uy, uz, pres, trans)
-      !! Apply LNS operator (before the projection onto the divergence-free space)
-      !! This function assumes that the input vector has already been loaded into v[xyz]p
+      !! Apply LNS operator including the subtraction of the pressure gradient 
+      !! (but without the projection onto the divergence-free space)
             real(dp), dimension(lv, 1), intent(out) :: Lux
             real(dp), dimension(lv, 1), intent(out) :: Luy
             real(dp), dimension(lv, 1), intent(out) :: Luz
@@ -272,30 +272,46 @@
       ! internal
             real(dp), dimension(lv) :: utmpx, utmpy, utmpz
       
-            ifield = 1
-      ! apply BCs
-            call bcdirvc(ux, uy, uz, v1mask, v2mask, v3mask)
+      ! Apply the linear operator to the velocity components
+            call apply_Lv(Lux, Luy, Luz, ux, uy, uz, trans)
       
-      ! Diffusion term
-            call logger%log_information('diffusion term', module=this_module, procedure='compute_LNS')
-            call compute_LNS_laplacian(Lux, Luy, Luz, ux, uy, uz)
-      
-      ! Pressure gradient
-            call logger%log_information('pressure gradient', module=this_module, procedure='compute_LNS')
-            call opgradt(utmpx, utmpy, utmpz, pres)
-      
-      ! subtract from output terms
+      ! and subtract the pressure gradient term
+            call logger%log_debug(' pressure gradient', module=this_module, procedure='compute_L')
+            call compute_LNS_gradp(utmpx, utmpy, utmpz, pres)
             call opsub2(Lux, Luy, Luz, utmpx, utmpy, utmpz)
-      
-      ! Convective terms
-            call logger%log_information('convective term', module=this_module, procedure='compute_LNS')
-            call compute_LNS_conv(utmpx, utmpy, utmpz, ux, uy, uz, trans)
-      
-      ! subtract from output terms
-            call opsub2(Lux, Luy, Luz, utmpx, utmpy, utmpz)
-      
             return
          end subroutine apply_L
+
+         subroutine apply_Lv(Lux, Luy, Luz, ux, uy, uz, trans)
+            !! Apply the convective and diffusive terms of the LNS operator to the velocity perturbation
+                  real(dp), dimension(lv, 1), intent(out) :: Lux
+                  real(dp), dimension(lv, 1), intent(out) :: Luy
+                  real(dp), dimension(lv, 1), intent(out) :: Luz
+                  real(dp), dimension(lv, 1), intent(in) :: ux
+                  real(dp), dimension(lv, 1), intent(in) :: uy
+                  real(dp), dimension(lv, 1), intent(in) :: uz
+                  logical, optional, intent(in) :: trans
+            !! adjoint?
+            ! internal
+                  real(dp), dimension(lv) :: utmpx, utmpy, utmpz
+            
+                  ifield = 1
+            ! apply BCs
+                  call bcdirvc(ux, uy, uz, v1mask, v2mask, v3mask)
+            
+            ! Diffusion term
+                  call logger%log_debug('diffusion term', module=this_module, procedure='compute_Lv')
+                  call compute_LNS_laplacian(Lux, Luy, Luz, ux, uy, uz)
+            
+            ! Convective terms
+                  call logger%log_debug('convective term', module=this_module, procedure='compute_Lv')
+                  call compute_LNS_conv(utmpx, utmpy, utmpz, ux, uy, uz, trans)
+            
+            ! subtract from output terms
+                  call opsub2(Lux, Luy, Luz, utmpx, utmpy, utmpz)
+            
+                  return
+               end subroutine apply_Lv
       
          subroutine project_perturbation(dpr)
       !! Project perturbation velocity fields onto closest solenoidal space

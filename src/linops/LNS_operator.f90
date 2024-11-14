@@ -24,7 +24,7 @@
       ! Sets the initial condition for Nek5000's linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Apply LNS operator
-               call apply_L(Lux, Luy, Luz, vxp, vyp, vzp, prp, trans=.false.)
+               call apply_Lv(Lux, Luy, Luz, vxp, vyp, vzp, trans=.false.)
       ! Compute divergence of velocity dp = D^T @ u
                call opdiv(prp, Lux, Luy, Luz)
       ! Solve for pressure correction to enforce continuity D^T @ D @ dp = D^T @ u
@@ -32,9 +32,9 @@
       ! Compute corresponding velocity correction
                call opgradt(dv1, dv2, dv3, prp)
       ! Compute final velocity
-               call opadd2(Lux, Luy, Luz, dv1, dv2, dv3)
+               call opsub3(vxp, vyp, vzp, Lux, Luy, Luz, dv1, dv2, dv3)
       ! Copy the final solution to vector.
-               call nek2vec(vec_out, Lux, Luy, Luz, prp, tp)
+               call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
             end select
          end select
          end procedure LNS_matvec
@@ -52,7 +52,7 @@
       ! Sets the initial condition for Nek5000's linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Apply adjoint LNS operator
-               call apply_L(Lux, Luy, Luz, vxp, vyp, vzp, prp, trans=.true.)
+               call apply_Lv(Lux, Luy, Luz, vxp, vyp, vzp, trans=.true.)
       ! Compute divergence of velocity dp = D^T @ u
                call opdiv(prp, Lux, Luy, Luz)
       ! Solve for pressure correction to enforce continuity D^T @ D @ dp = D^T @ u
@@ -60,9 +60,9 @@
       ! Compute corresponding velocity correction
                call opgradt(dv1, dv2, dv3, prp)
       ! Compute final velocity
-               call opadd2(Lux, Luy, Luz, dv1, dv2, dv3)
+               call opsub3(vxp, vyp, vzp, Lux, Luy, Luz, dv1, dv2, dv3)
       ! Copy the final solution to vector.
-               call nek2vec(vec_out, Lux, Luy, Luz, prp, tp)
+               call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
             end select
          end select
          end procedure LNS_rmatvec
