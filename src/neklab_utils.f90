@@ -33,6 +33,8 @@
          public :: get_period, get_period_abs
       ! utilities for nek pvectors
          public :: nek2pr_vec, pr_vec2nek
+      ! neklab forcing (called in userf)
+         public :: neklab_forcing
       ! miscellaneous
          public :: nopcopy
       
@@ -78,6 +80,7 @@
             module procedure outpost_ext_dnek_basis
          end interface
       
+      ! Nek pressure vector utilities
          interface nek2pr_vec
             module procedure nek2pr_vec_std
             module procedure nek2pr_vec_prt
@@ -87,6 +90,23 @@
             module procedure pr_vec2nek_std
             module procedure pr_vec2nek_prt
          end interface
+
+      ! Nek forcing function
+         interface 
+				subroutine abstract_neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg, ipert)
+					import dp
+					real(kind=dp), intent(inout) :: ffx
+					real(kind=dp), intent(inout) :: ffy
+					real(kind=dp), intent(inout) :: ffz
+					integer, intent(in) :: ix
+					integer, intent(in) :: iy
+					integer, intent(in) :: iz
+					integer, intent(in) :: ieg
+					integer, intent(in) :: ipert
+				end subroutine abstract_neklab_forcing            
+         end interface
+
+			procedure(abstract_neklab_forcing), pointer :: neklab_forcing => null()
       
       contains
       
