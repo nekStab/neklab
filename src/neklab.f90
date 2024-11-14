@@ -45,6 +45,7 @@
       
       ! Definition of the abstract vectors in the Nek framework.
          public :: nek_dvector
+         public :: nek_zvector
          public :: nek_pr_dvector
          public :: nek_ext_dvector
       
@@ -72,9 +73,12 @@
          public :: compute_LNS_conv
          public :: compute_LNS_gradp
          public :: compute_LNS_laplacian
-         public :: apply_L
+         public :: apply_Lv, apply_L
          public :: pressure_projection
       
+      ! Forcing function export
+         public :: neklab_forcing
+
       ! Miscellaneous.
          public :: compare_nek_arnoldi
       
