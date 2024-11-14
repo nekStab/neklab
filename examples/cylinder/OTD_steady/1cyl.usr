@@ -20,6 +20,7 @@ c-----------------------------------------------------------------------
 
          ! define OTD structure
          OTD = nek_otd()
+         allocate(OTD%baseflow); call OTD%baseflow%zero()
          OTD%baseflow = bf
 
          opts = otd_opts(startstep = 1, n_usrIC = 0)
@@ -33,34 +34,19 @@ c-----------------------------------------------------------------------
       end
 c----------------------------------------------------------------------
       subroutine userf (ix,iy,iz,ieg)
+      use neklab, only: neklab_forcing
       implicit none
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
       ! argument list
       integer ix,iy,iz,ieg
-      ! local variable list
-      integer ijke,e
-      ! OTD forcing
-      real OTDfx (lx1*ly1*lz1*lelv,lpert)       ! x direction
-     $ ,   OTDfy (lx1*ly1*lz1*lelv,lpert)       ! y direction
-     $ ,   OTDfz (lx1*ly1*lz1*lelv,lpert)       ! z direction
-      common /OTD_frc/ OTDfx,OTDfy,OTDfz
-
+      
       ffx = 0.0d0
       ffy = 0.0d0
       ffz = 0.0d0
 
-      e = gllel(ieg)
-
-      ijke = ix + lx1*((iy-1) + ly1*((iz-1) + lz1*(e-1)))
-      if (jp.ne.0) then
-!       only for the perturbations
-        FFX = FFX - OTDfx(ijke,jp)
-        FFY = FFY - OTDfy(ijke,jp)
-        FFZ = FFZ - OTDfz(ijke,jp)
-      endif
-      !call neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
+      call neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg, jp)
 
       return
       end
