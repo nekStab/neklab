@@ -18,6 +18,10 @@ filtering = explicit
 filterWeight = 0.01
 filterCutoffRatio = 0.84
 
+[PROBLEMTYPE]
+equation = incompLinNS
+solveBaseflow = no
+
 [PRESSURE]
 preconditioner = semg_xxt
 residualTol = 1.0E-06

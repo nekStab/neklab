@@ -150,15 +150,15 @@ c     endif
          end do
       	call outpost(vxp,vyp,vzp,prp,tp,'gdp')
       	call outpost(dudx,dvdy,vzp,prp,tp,'gdp')
-			call opgradt(cx,cy,vzp, prp)
-			call outpost(cx,cy,vzp,prp,tp,'gdp')
-			call mappr(wrk,prp,ta1,ta2)
-			call gradm1(cx,cy,vzp,wrk)
-			call outpost(cx,cy,vzp,prp,tp,'gdp')
-			! check laplace operator
-			call outpost(vxp,vyp,vzp,prp,tp,'lap')
-			call add2(d2udx2,d2udy2,ntot)
-			call add2(d2vdx2,d2vdy2,ntot)
+		call opgradt(cx,cy,vzp, prp)
+		call outpost(cx,cy,vzp,prp,tp,'gdp')
+		call mappr(wrk,prp,ta1,ta2)
+		call gradm1(cx,cy,vzp,wrk)
+		call outpost(cx,cy,vzp,prp,tp,'gdp')
+		! check laplace operator
+		call outpost(vxp,vyp,vzp,prp,tp,'lap')
+		call add2(d2udx2,d2udy2,ntot)
+		call add2(d2vdx2,d2vdy2,ntot)
       	call outpost(d2udx2,d2vdx2,vzp,prp,tp,'lap')
 			ifield = 1
          call copy(hop1, vdiff(1,1,1,1,ifield), ntot)
@@ -174,7 +174,7 @@ c     endif
       	! multiply by 1/Re                > remove for operator diagnostics
       	!call col2(cx,vdiff,ntot) 
       	!call col2(cy,vdiff,ntot) 
-			call outpost(cx,cy,vzp,prp,tp,'lap')
+		call outpost(cx,cy,vzp,prp,tp,'lap')
       	end if
 
       return

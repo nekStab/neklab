@@ -46,7 +46,7 @@
       
       ! Implementation of the standard linear operators.
          public :: exptA_linop
-         public :: LNS_linop, DTD_linop
+         public :: LNS_linop, DDT_linop
       
       ! Implementation of the abstract systems and Jacobians
          public :: nek_system, nek_system_upo

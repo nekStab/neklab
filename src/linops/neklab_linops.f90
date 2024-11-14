@@ -97,17 +97,17 @@
          !---------------------------
       
          ! --> Type.
-         type, extends(abstract_sym_linop_rdp), public :: DTD_linop
+         type, extends(abstract_sym_linop_rdp), public :: DDT_linop
          contains
             private
-            procedure, pass(self), public :: matvec  => apply_DTD
-            procedure, pass(self), public :: rmatvec => apply_DTD
-         end type DTD_linop
+            procedure, pass(self), public :: matvec  => apply_DDT
+            procedure, pass(self), public :: rmatvec => apply_DDT
+         end type DDT_linop
 
          ! --> Type-bound procedures: pressure_projection.f90
          interface
-            module subroutine apply_DTD(self, vec_in, vec_out)
-               class(DTD_linop), intent(inout) :: self
+            module subroutine apply_DDT(self, vec_in, vec_out)
+               class(DDT_linop), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
@@ -119,7 +119,7 @@
       
          ! --> Type.
          type, extends(abstract_sym_linop_rdp), public :: P_div0_linop
-            type(DTD_linop) :: DTD
+            type(DDT_linop) :: DDT
          contains
             private
             procedure, pass(self), public :: matvec  => project_div0
@@ -304,7 +304,7 @@
             return
          end subroutine compute_LNS_gradp
 
-         subroutine apply_L(Lux, Luy, Luz, ux, uy, uz, pres, trans)
+         subroutine apply_L(Lux, Luy, Luz, ux, uy, uz, trans)
             !! Apply LNS operator (before the projection onto the divergence-free space)
             !! This function assumes that the input vector has already been loaded into v[xyz]p
             real(dp), dimension(lv,1), intent(out) :: Lux
@@ -313,7 +313,6 @@
             real(dp), dimension(lv,1), intent(in)  :: ux
             real(dp), dimension(lv,1), intent(in)  :: uy
             real(dp), dimension(lv,1), intent(in)  :: uz
-            real(dp), dimension(lp,1), intent(in)  :: pres
             logical, optional, intent(in) :: trans
             !! adjoint?
             ! internal
@@ -324,11 +323,6 @@
             ! Diffusion term
             call logger%log_information('diffusion term', module=this_module, procedure='compute_LNS')
             call compute_LNS_laplacian(Lux,Luy,Luz,ux,uy,uz)
-
-            ! Pressure gradient
-            call logger%log_information('pressure gradient', module=this_module, procedure='compute_LNS')
-            call compute_LNS_gradp(utmpx,utmpy,utmpz,pres)
-            call opsub2(Lux,Luy,Luz,utmpx,utmpy,utmpz)
 
             ! Convective terms
             call logger%log_information('convective term', module=this_module, procedure='compute_LNS')
@@ -342,7 +336,7 @@
       !! Project perturbation velocity fields onto closest solenoidal space
       !! with div u = 0
       !! For this, we solve
-      !!        D^T @ D @ dpr = D^T @ u
+      !!        D @ D^T @ dpr = D @ u
       !! using CG iteration to the recover the corresponding velocity correction
       !!        du = D @ p
       !! that we add to the previously computed velocity field.

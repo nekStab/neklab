@@ -24,10 +24,10 @@
       ! Sets the initial condition for Nek5000's linearized solver.
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_in) 
       ! Apply LNS operator
-                  call apply_L(Lux, Luy, Luz, vxp, vyp, vzp, prp, trans=.false.)
-      ! Compute divergence of velocity dp = D^T @ u
+                  call apply_L(Lux, Luy, Luz, vxp, vyp, vzp, trans=.false.)
+      ! Compute divergence of velocity dp = D @ u
                   call opdiv(prp, Lux, Luy, Luz)
-      ! Solve for pressure correction to enforce continuity D^T @ D @ dp = D^T @ u
+      ! Solve for pressure correction to enforce continuity D @ D^T @ dp = D @ u
                   call project_perturbation(prp) ! in-place
       ! Compute corresponding velocity correction
                   call opgradt(dv1, dv2, dv3, prp)
@@ -52,10 +52,10 @@
       ! Sets the initial condition for Nek5000's linearized solver.
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Apply adjoint LNS operator
-                  call apply_L(Lux, Luy, Luz, vxp, vyp, vzp, prp, trans=.true.)
-      ! Compute divergence of velocity dp = D^T @ u
+                  call apply_L(Lux, Luy, Luz, vxp, vyp, vzp, trans=.true.)
+      ! Compute divergence of velocity dp = D @ u
                   call opdiv(prp, Lux, Luy, Luz)
-      ! Solve for pressure correction to enforce continuity D^T @ D @ dp = D^T @ u
+      ! Solve for pressure correction to enforce continuity D @ D^T @ dp = D @ u
                   call project_perturbation(prp) ! in-place
       ! Compute corresponding velocity correction
                   call opgradt(dv1, dv2, dv3, prp)

@@ -8,7 +8,7 @@ c-----------------------------------------------------------------------
       type(nek_dvector) :: bf
     	type(exptA_linop) :: exptA
       type(LNS_linop)   :: A
-      type(DTD_linop)   :: DTD
+      type(DDT_linop)   :: DDT
       real(dp) :: tau, rnorm
 
       type(nek_pr_dvector) :: dpr, xCG
@@ -23,7 +23,8 @@ c-----------------------------------------------------------------------
       !! Local number of grid points for the pressure mesh.
 
       real(dp), dimension(lv, 1) :: Lux, Luy, Luz, utmpx, utmpy, utmpz, resv1, resv2, resv3, dv1, dv2, dv3
-      real(dp), dimension(lp, 1) :: pref
+      real(dp), dimension(lv, 1) :: h1, h2, h2inv
+      real(dp), dimension(lp, 1) :: pref, wp
       !common /scrns/ resv1, resv2, resv3, dv1, dv2, dv3
       !common /scrvh/ h1, h2
 
@@ -111,7 +112,7 @@ c-----------------------------------------------------------------------
             call opcopy(vxp, vyp, vzp, resv1, resv2, resv3)
             call copy(prp, pref, lp)
 
-            call outpost(vxp, vyp, vzp, prp, tp, 'ref')
+            !call outpost(vxp, vyp, vzp, prp, tp, 'ref')
 
             ifield = 1
             ! apply BCs
@@ -119,26 +120,29 @@ c-----------------------------------------------------------------------
             
             ! Diffusion term
             call compute_LNS_laplacian(Lux,Luy,Luz,vxp, vyp, vzp)
-            call outpost(Lux,Luy,Luz, prp, tp, 'dif')
+            !call outpost(Lux,Luy,Luz, prp, tp, 'dif')
 
             ! Pressure gradient
-            call compute_LNS_gradp(utmpx,utmpy,utmpz,prp)
-            call outpost(utmpx,utmpy,utmpz, prp, tp, 'pgr')
-            call opgradt(utmpx, utmpy, utmpz, prp)
-            call outpost(utmpx,utmpy,utmpz, prp, tp, 'pgr')
+            !call compute_LNS_gradp(utmpx,utmpy,utmpz,prp)
+            !call outpost(utmpx,utmpy,utmpz, prp, tp, 'pgr')
+            !call opgradt(utmpx, utmpy, utmpz, prp)
+            !call outpost(utmpx,utmpy,utmpz, prp, tp, 'pgr')
 
             ! subtract from output terms
-            call opsub2(Lux,Luy,Luz,utmpx,utmpy,utmpz)
+            !call opsub2(Lux,Luy,Luz,utmpx,utmpy,utmpz)
 
             ! Convective terms
             call compute_LNS_conv(utmpx,utmpy,utmpz,vxp, vyp, vzp)
-            call outpost(utmpx,utmpy,utmpz, prp, tp, 'cnv')
+            !call outpost(utmpx,utmpy,utmpz, prp, tp, 'cnv')
             
             ! subtract from output terms
             call opsub2(Lux,Luy,Luz,utmpx,utmpy,utmpz)
 
             call outpost(Lux,Luy,Luz, prp, tp, 'Ax_')
+
+            call opcolv(Lux,Luy,Luz,binvm1)
       
+            call outpost(Lux,Luy,Luz, prp, tp, 'Ax_')
 
       ! compute divergence
             call opdiv(prp, Lux,Luy,Luz)
@@ -153,37 +157,51 @@ c-----------------------------------------------------------------------
             ! CGn : compute_LNS without BC
             ! CGo : opgradt with BC
             ! CGu : opgradt without BC
+            ! CGi : opgradt binvm1
       
-            call outpost(Lux,Luy,Luz, prp, tp, 'CGu')
+				call rzero(h1,lv)
+				call rone(h2,lv)
+				call rone(h2inv,lv)
+            do i = 1, 5
+					call cdabdtp(wp,prp,h1,h2,h2inv,1)
+               call outpost(Lux,Luy,Luz, prp, tp, 'CGi')
+					call copy(prp,wp,lp)
+            end do
+            STOP 89
+            call outpost(Lux,Luy,Luz, prp, tp, 'CGi')
             !call compute_LNS_gradp(Lux,Luy,Luz, prp)
             call opgradt(Lux,Luy,Luz, prp)
-            !call bcdirvc(Lux,Luy,Luz, v1mask, v2mask, v3mask)
+            call opcolv(Lux,Luy,Luz,binvm1)
+            call bcdirvc(Lux,Luy,Luz, v1mask, v2mask, v3mask)
             call opdiv(prp,Lux,Luy,Luz)
 
-            call outpost(Lux,Luy,Luz, prp, tp, 'CGu')
+            call outpost(Lux,Luy,Luz, prp, tp, 'CGi')
             
             !call compute_LNS_gradp(Lux,Luy,Luz, prp)
             call opgradt(Lux,Luy,Luz, prp)
-            !call bcdirvc(Lux,Luy,Luz, v1mask, v2mask, v3mask)
+            call opcolv(Lux,Luy,Luz,binvm1)
+            call bcdirvc(Lux,Luy,Luz, v1mask, v2mask, v3mask)
             call opdiv(prp,Lux,Luy,Luz)
             
-            call outpost(Lux,Luy,Luz, prp, tp, 'CGu')
+            call outpost(Lux,Luy,Luz, prp, tp, 'CGi')
             
             !call compute_LNS_gradp(Lux,Luy,Luz, prp)
             call opgradt(Lux,Luy,Luz, prp)
-            !call bcdirvc(Lux,Luy,Luz, v1mask, v2mask, v3mask)
+            call opcolv(Lux,Luy,Luz,binvm1)
+            call bcdirvc(Lux,Luy,Luz, v1mask, v2mask, v3mask)
             call opdiv(prp,Lux,Luy,Luz)
             
-            call outpost(Lux,Luy,Luz, prp, tp, 'CGu')
+            call outpost(Lux,Luy,Luz, prp, tp, 'CGi')
             
             !call compute_LNS_gradp(Lux,Luy,Luz, prp)
             call opgradt(Lux,Luy,Luz, prp)
-            !call bcdirvc(Lux,Luy,Luz, v1mask, v2mask, v3mask)
+            call opcolv(Lux,Luy,Luz,binvm1)
+            call bcdirvc(Lux,Luy,Luz, v1mask, v2mask, v3mask)
             call opdiv(prp,Lux,Luy,Luz)
             
-            call outpost(Lux,Luy,Luz, prp, tp, 'CGu')
+            call outpost(Lux,Luy,Luz, prp, tp, 'CGi')
             STOP 8
-            DTD = DTD_linop()
+            DDT = DDT_linop()
 
             ! Copy from nek to nek_pdvector
             call nek2pr_vec(dpr, prp)
@@ -191,7 +209,7 @@ c-----------------------------------------------------------------------
             ! Solve linear system D^T @ D x = dpr
             opts = cg_dp_opts(maxiter = 300, if_print_metadata = .true.)
             meta = cg_dp_metadata()
-            call cg(DTD, dpr, xCG, info, rtol=rtol_dp, atol=atol_dp, options=opts, meta=meta)
+            call cg(DDT, dpr, xCG, info, rtol=rtol_dp, atol=atol_dp, options=opts, meta=meta)
 
 
 
