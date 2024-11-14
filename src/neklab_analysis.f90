@@ -218,6 +218,7 @@
             allocate (sigma(r), svec(r, r)); sigma = 0.0_dp; svec = 0.0_dp
             allocate (lambda(r), eigvec(r, r)); lambda = 0.0_dp; eigvec = 0.0_dp
             allocate (Lr(r, r), Phi(r, r)); Lr = 0.0_dp; Phi = 0.0_dp
+            allocate (Lu(r), source=OTD%baseflow); call zero_basis(Lu)
       
       ! Intgrate the nonlinear equations forward
             time = 0.0_dp
