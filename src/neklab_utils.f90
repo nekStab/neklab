@@ -90,23 +90,23 @@
             module procedure pr_vec2nek_std
             module procedure pr_vec2nek_prt
          end interface
-
+      
       ! Nek forcing function
-         interface 
-				subroutine abstract_neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg, ipert)
-					import dp
-					real(kind=dp), intent(inout) :: ffx
-					real(kind=dp), intent(inout) :: ffy
-					real(kind=dp), intent(inout) :: ffz
-					integer, intent(in) :: ix
-					integer, intent(in) :: iy
-					integer, intent(in) :: iz
-					integer, intent(in) :: ieg
-					integer, intent(in) :: ipert
-				end subroutine abstract_neklab_forcing            
+         interface
+            subroutine abstract_neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg, ipert)
+               import dp
+               real(kind=dp), intent(inout) :: ffx
+               real(kind=dp), intent(inout) :: ffy
+               real(kind=dp), intent(inout) :: ffz
+               integer, intent(in) :: ix
+               integer, intent(in) :: iy
+               integer, intent(in) :: iz
+               integer, intent(in) :: ieg
+               integer, intent(in) :: ipert
+            end subroutine abstract_neklab_forcing
          end interface
-
-			procedure(abstract_neklab_forcing), pointer :: neklab_forcing => null()
+      
+         procedure(abstract_neklab_forcing), pointer :: neklab_forcing => null()
       
       contains
       
