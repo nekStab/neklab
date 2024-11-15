@@ -33,6 +33,10 @@
 LightKrylov/
 Nek5000/
 
+# output
+*0.f0*
+*.nek5000
+
 # Build files, executables etc.
 *0.f*
 *.nek5000

@@ -5,10 +5,14 @@
          use neklab_vectors
       ! --> Utility functions for Nek vectors
          use neklab_utils
+      ! --> Utility functions for Nek5000 setup
+         use neklab_nek_setup
       ! --> Definitions of the abstract linops in the Nek framework.
          use neklab_linops
       ! --> Definitions of the abstract systems in the Nek framework.
          use neklab_systems
+      ! --> OTD definition
+         use neklab_otd
       ! --> Stability analysis routines
          use neklab_analysis
       
@@ -29,7 +33,7 @@
       ! Matrix factorizations.
          public :: eigs, eighs, svds
          public :: save_eigenspectrum
-
+      
       ! Linear solvers.
          public :: cg
       ! Auxiliary exports
@@ -41,6 +45,7 @@
       
       ! Definition of the abstract vectors in the Nek framework.
          public :: nek_dvector
+         public :: nek_zvector
          public :: nek_pr_dvector
          public :: nek_ext_dvector
       
@@ -59,14 +64,21 @@
       ! Stability analysis exports.
          public :: linear_stability_analysis_fixed_point
          public :: transient_growth_analysis_fixed_point
-
+      
+      ! OTD exports.
+         public :: nek_otd, otd_opts
+         public :: otd_analysis
+      
       ! LNS utilities.
          public :: compute_LNS_conv
          public :: compute_LNS_gradp
          public :: compute_LNS_laplacian
-         public :: apply_L
+         public :: apply_Lv, apply_L
          public :: pressure_projection
-
+      
+      ! Forcing function export
+         public :: neklab_forcing
+      
       ! Miscellaneous.
          public :: compare_nek_arnoldi
       
@@ -75,5 +87,5 @@
          public :: nek2pr_vec, pr_vec2nek
          public :: nek2ext_vec, ext_vec2nek
          public :: setup_nonlinear_solver, setup_linear_solver
-
+      
       end module neklab

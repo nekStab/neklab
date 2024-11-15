@@ -18,6 +18,7 @@
          use neklab_vectors
          use neklab_linops
          use neklab_utils
+         use neklab_nek_setup
          implicit none
          include "SIZE"
          include "TOTAL"
