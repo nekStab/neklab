@@ -200,19 +200,20 @@
       ! Misc
             integer :: i, j, r
             character(len=3) :: file_prefix
+            character(len=128) :: msg
       
             if (present(opts_)) then
                opts = opts_
             else
                opts = otd_opts()
             end if
-
+      
       ! Set up logging
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
       
       ! initialize OTD structure
             call OTD%init(opts)
-
+      
       ! Allocate memory
             r = OTD%r
             allocate (sigma(r), svec(r, r)); sigma = 0.0_dp; svec = 0.0_dp
@@ -224,63 +225,63 @@
             time = 0.0_dp
             do istep = 1, nsteps
                call nek_advance()
-      
                if (istep >= opts%startstep) then
       ! load perturbations
                   do i = 1, r
                      call nek2vec(OTD%basis(i), vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i))
                   end do
-      
       ! orthonormalize
-                  if (mod(istep, opts%orthostep) == 0) then
+                  if (mod(istep, opts%orthostep) == 0 .or. mod(istep, opts%printstep) == 0 .or. mod(istep, opts%iostep) == 0) then
+                     write(msg,'(A,I5,A,*(E10.3))') 'Step ', istep, ': norm.  err pre: ', ( OTD%basis(i)%dot(OTD%basis(i)) - 1.0_dp, i = 1, r )
+                     call logger%log_information(msg, module=this_module, procedure='OTD main')
+                     write(msg,'(A,I5,A,*(E10.3))') 'Step ', istep, ': ortho. err pre: ', (( OTD%basis(i)%dot(OTD%basis(j)), j = i+1, r ), i = 1, r )
+                     call logger%log_information(msg, module=this_module, procedure='OTD main')
+
                      call orthonormalize_basis(OTD%basis)
-                  end if
-      
+
+                     write(msg,'(A,I5,A,*(E10.3))') 'Step ', istep, ': norm.  err post:', ( OTD%basis(i)%dot(OTD%basis(i)) - 1.0_dp, i = 1, r )
+                     call logger%log_debug(msg, module=this_module, procedure='OTD main')
+                     write(msg,'(A,I5,A,*(E10.3))') 'Step ', istep, ': ortho. err post:', (( OTD%basis(i)%dot(OTD%basis(j)), j = i+1, r ), i = 1, r )
+                     call logger%log_debug(msg, module=this_module, procedure='OTD main')
+                  end if      
       ! compute Lu
                   do i = 1, r
-                     if (opts%trans) then
-                        call OTD%apply_rmatvec(OTD%basis(i), Lu(i))
-                     else
-                        call OTD%apply_matvec(OTD%basis(i), Lu(i))
-                     end if
+                  if (opts%trans) then
+                     call OTD%apply_rmatvec(OTD%basis(i), Lu(i))
+                  else
+                     call OTD%apply_matvec(OTD%basis(i), Lu(i))
+                  end if
                   end do
-      
       ! compute reduced operator
                   call innerprod(Lr, OTD%basis, Lu)
-      
-      ! compute internal rotation matrix
+
                   Phi = 0.0_dp
                   do i = 1, r
-                     do j = i + 1, r
-                        Phi(i, j) = Lr(i, j)
-                        Phi(j, 1) = -Lr(i, j)
-                     end do
+                  do j = i + 1, r
+                     Phi(i, j) = Lr(i, j)
+                     Phi(j, 1) = -Lr(i, j)
                   end do
-      
+                  end do
       ! output projected modes
                   if (mod(istep, opts%printstep) == 0) then
                      call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec, ifprint=.true.)
                   end if
-      
       ! at the end of the step we copy data back to nek2vec
                   do i = 1, r
                      call vec2nek(vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i), OTD%basis(i))
                   end do
-      
       ! project basis vectors and output modes
                   if (mod(istep, opts%iostep) == 0) then
-                     if (mod(istep, opts%printstep) /= 0) then
-                        call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec, ifprint=.false.)
-                     end if
-                     call OTD%outpost_OTDmodes(eigvec)
+                  if (mod(istep, opts%printstep) /= 0) then
+                     call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec, ifprint=.false.)
                   end if
-      
+                  call OTD%outpost_OTDmodes(eigvec)
+                  end if
       ! output basis vectors
                   if (mod(istep, opts%iorststep) == 0) then
                      write (file_prefix, '(A)') 'rst'
                      call outpost_dnek(OTD%basis, file_prefix)
                   end if
-      
       ! set the forcing
                   call OTD%generate_forcing(Lr, Phi)
                end if
