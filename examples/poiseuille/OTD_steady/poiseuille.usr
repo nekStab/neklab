@@ -148,7 +148,13 @@ c-----------------------------------------------------------------------
          allocate(OTD%baseflow); call OTD%baseflow%zero()
          OTD%baseflow = bf
 
-         opts = otd_opts(solve_baseflow=.false., startstep = 1, n_usrIC = 1)
+         opts = otd_opts(solve_baseflow = .false.,
+     $                   startstep = 1,
+     $                   printstep = 5, 
+     $                   orthostep = 10, 
+     $                   iostep    = 500,
+     $                   iorststep = 500, 
+     $                   n_usrIC   = 2)
 
          call OTD_analysis(OTD, opts)
 

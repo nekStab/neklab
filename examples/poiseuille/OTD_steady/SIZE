@@ -23,7 +23,7 @@ c
       parameter (ldimt_proj=1)         ! max auxiliary fields residual projection
       parameter (lhis=1000)            ! max history points
       parameter (maxobj=2)             ! max number of objects
-      parameter (lpert=1)              ! max perturbation modes
+      parameter (lpert=2)              ! max perturbation modes
       parameter (toteq=1)              ! max number of conserved scalars in cmt
       parameter (nsessmax=1)           ! max sessions
       parameter (lxo=lx1)              ! max grid size on output (lxo>=lx1)
