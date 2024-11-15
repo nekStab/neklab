@@ -1,7 +1,5 @@
 c-----------------------------------------------------------------------
 
-! Still need to add the forcing implementation from Neklab!
-
       subroutine userchk
       use neklab
       include "SIZE"
@@ -23,7 +21,13 @@ c-----------------------------------------------------------------------
          allocate(OTD%baseflow); call OTD%baseflow%zero()
          OTD%baseflow = bf
 
-         opts = otd_opts(startstep = 1, n_usrIC = 0)
+         opts = otd_opts(startstep = 1,
+     $                   printstep = 5, 
+     $                   orthostep = 10, 
+     $                   iostep    = 500,
+     $                   iorststep = 500, 
+     $                   n_usrIC   = 0,
+     $                   solve_baseflow = .false.)
 
          call OTD_analysis(OTD, opts)
 

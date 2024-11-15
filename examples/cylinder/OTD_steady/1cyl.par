@@ -2,7 +2,7 @@
 startFrom = 0
 stopAt = endtime
 #numSteps = 1000
-endTime = 1.0
+endTime = 100.0
 
 dt = 0.009
 variableDt = no
@@ -19,7 +19,9 @@ dealiasing = yes
 #filterCutoffRatio = 0.84
 
 [PROBLEMTYPE]
-equation = incompNS
+equation = incompLinNS
+numberOfPerturbations = 2
+solveBaseFlow = no
 
 [PRESSURE]
 preconditioner = semg_xxt
