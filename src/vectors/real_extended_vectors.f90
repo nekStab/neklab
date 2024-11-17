@@ -106,8 +106,8 @@
       
          module procedure nek_ext_dsize
          integer :: i
-         n = 2*lv + lp
-         if (if3d) n = n + lv + 1
+         n = 2*lv + lp + 1
+         if (if3d) n = n + lv
          if (ifto) n = n + lv
          if (ldimt > 1) then
          do i = 2, ldimt
