@@ -6,6 +6,8 @@
       ! --> Utility functions for Nek vectors
          use neklab_utils
       ! --> Definitions of the abstract linops in the Nek framework.
+         use neklab_nek_setup
+      ! --> Routines to control the solver state in Nek5000
          use neklab_linops
       ! --> Definitions of the abstract systems in the Nek framework.
          use neklab_systems
