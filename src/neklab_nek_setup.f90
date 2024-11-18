@@ -93,6 +93,15 @@
                else
                   ifbase = .false.; call bcast(ifbase, lsize)
                end if
+      ! Force single perturbation mode.
+               if (param(31) > 1) then
+                  write (msg, *) "Neklab does not (yet) support npert > 1."
+                  call logger%log_message(msg, module=this_module, procedure='setup_nek')
+                  if (nid == 0) print *, trim(msg)
+                  call nek_end()
+               else
+                  param(31) = 1; npert = 1
+               end if
       ! Deactivate OIFS.
                if (ifchar) then
                   write (msg, *) "OIFS is not available for linearized solver. Turning it off."
