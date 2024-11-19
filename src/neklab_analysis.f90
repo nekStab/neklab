@@ -61,7 +61,7 @@
             end if
       
       ! Allocate eigenvectors and initialize Krylov basis.
-            allocate (eigvecs(nev)); call initialize_krylov_subspace(eigvecs)
+            allocate (eigvecs(nev)); call zero_basis(eigvecs)
       
       ! Run the eigenvalue analysis.
             call eigs(exptA, eigvecs, eigvals, residuals, info, kdim=kdim, transpose=adjoint_)
@@ -99,8 +99,8 @@
             character(len=3) :: file_prefix
       
       ! Allocate singular vectors.
-            allocate (U(nsv)); call initialize_krylov_subspace(U)
-            allocate (V(nsv)); call initialize_krylov_subspace(V)
+            allocate (U(nsv)); call zero_basis(U)
+            allocate (V(nsv)); call zero_basis(V)
       
       ! Call to LightKrylov.
             call svds(exptA, U, S, V, residuals, info, kdim=kdim)
