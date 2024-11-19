@@ -8,3 +8,4 @@ $(OBJDIR)/real_vectors.o	:$(NEKLAB_SOURCE_ROOT)/src/vectors/real_vectors.f90	;$(
 $(OBJDIR)/real_extended_vectors.o	:$(NEKLAB_SOURCE_ROOT)/src/vectors/real_extended_vectors.f90	;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/complex_vectors.o	:$(NEKLAB_SOURCE_ROOT)/src/vectors/complex_vectors.f90	;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/exponential_propagator.o	:$(NEKLAB_SOURCE_ROOT)/src/linops/exponential_propagator.f90	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/resolvent.o	:$(NEKLAB_SOURCE_ROOT)/src/linops/resolvent.f90	;$(FC) -c $(FL2) $< -o $@

@@ -1,0 +1,190 @@
+        subroutine make_actuator(forcing)
+            use neklab
+            include 'SIZE'
+            include 'TOTAL'
+
+            type(nek_dvector), intent(out) :: forcing
+            real(kind=dp), parameter :: sigma = 0.1_dp
+            real(kind=dp), parameter :: radius = 0.6_dp
+            real(kind=dp), parameter :: amplitude = 1.0_dp
+            real(kind=dp), parameter :: pi_ = 4.0_dp * atan(1.0_dp)
+            real(kind=dp), parameter :: theta = 70.0_dp * pi_ / 180.0_dp
+            real(kind=dp) :: sfield(2)
+
+            integer :: i, j, k, n
+            
+            n = nx1*ny1*nz1*nelt
+            do i = 1, n
+                ! Position.
+                x = xm1(i, 1, 1, 1)
+                y = ym1(i, 1, 1, 1)
+
+                ! Actuation field.
+                sfield(1) = amplitude/(2*pi*sigma**2) * exp(-((x - radius*cos(theta))**2 + (y - radius*sin(theta))**2) / (2*sigma**2))
+                sfield(2) = amplitude/(2*pi*sigma**2) * exp(-((x - radius*cos(-theta))**2 + (y - radius*sin(-theta))**2) / (2*sigma**2))
+
+                ! Actuator.
+                forcing%vx(i) = cos(theta) * (sfield(1) - sfield(2))
+                forcing%vy(i) = sin(theta) * (sfield(1) + sfield(2))
+            enddo
+
+            return
+        end
+c-----------------------------------------------------------------------
+      subroutine userchk
+      use neklab
+      include "SIZE"
+      include "TOTAL"
+ 
+        type(nek_dvector), allocatable :: bf
+        integer, parameter :: nsv = 2
+    	type(resolvent_linop), allocatable :: R
+        real(kind=dp) :: omega
+        real(kind=dp), parameter :: domega = 0.1_dp
+        type(nek_zvector), allocatable :: forcing, response
+        real(kind=dp) :: alpha
+        integer :: i
+	
+    	if (istep.eq.0) then
+            if (nid == 0) open(unit=1234, file="resolvent.txt")
+            ! Load forcing.
+            allocate(forcing, response) ; call forcing%zero() ; call response%zero()
+            call make_actuator(forcing) ; call outpost_dnek(forcing%re, "for")
+
+            ! Load baseflow.
+    		allocate(bf) ; call load_fld("BF_1cyl0.f00001")
+    		call nek2vec(bf, vx, vy, vz, pr, t)
+
+            ! Initialize resolvent operator.
+            do i = 1, 1
+                omega = 2.0_dp !i * domega
+                R = resolvent_linop(omega, bf)
+
+                ! Solving the resolvent's system.
+                call R%matvec(forcing, response)
+
+                call outpost_dnek(response%re, "rRe") ; call outpost_dnek(response%im, "rIm")
+                alpha = response%norm() ; if (nid == 0) write(1234, *) omega, alpha**2
+                if (nid == 0) flush(1234)
+            enddo
+
+            if (nid == 0) close(1234) ; call nek_end()
+    	endif
+        return
+      end
+c----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      use neklab
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+        call neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      integer iel,ifc
+      
+      !this mesh was generatd with genbox
+      !with only BCs for velicity
+      !here we chenge outflow to dirichlet if adjoint
+      !and initilize BCs for scalar field
+
+      if(uparam(1)==3.2)then !if adjoint, change BCs
+      do iel=1,nelt
+      do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
+      enddo
+      enddo
+      endif
+
+      if(ifheat)then
+      cbc(:,:,2)=cbc(:,:,1)
+      do iel=1,nelt
+       do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+      enddo
+      enddo
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end

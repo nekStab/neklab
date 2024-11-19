@@ -37,9 +37,11 @@
       ! Definition of the abstract vectors in the Nek framework.
          public :: nek_dvector
          public :: nek_ext_dvector
+         public :: nek_zvector
       
       ! Implementation of the standard linear operators.
          public :: exptA_linop
+         public :: resolvent_linop, neklab_forcing
       
       ! Implementation of the abstract systems and Jacobians
          public :: nek_system, nek_system_upo
@@ -57,4 +59,5 @@
          public :: nek2vec, vec2nek
          public :: nek2ext_vec, ext_vec2nek
          public :: setup_nonlinear_solver, setup_linear_solver
+         public :: outpost_dnek
       end module neklab

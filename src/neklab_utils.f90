@@ -426,14 +426,14 @@
             if (nid == 0 .and. .not. silent_) print '(5X,A)', 'Set integration time.'
       
       ! Force CFL to chosen limit
-            if (cfl_limit_ < 0.0_dp .or. cfl_limit_ > 0.5_dp) then
+            if (cfl_limit_ < 0.0_dp .or. cfl_limit_ > 2.0_dp) then
                write (msg, *) "Invalid target CFL. CLF_target =", cfl_limit_
                call logger%log_warning(msg, module=this_module, procedure='setup_nek')
                if (nid == 0) print *, "WARNING :", trim(msg)
-               write (msg, *) "          Forcing it to", 0.5_dp
+               write (msg, *) "          Forcing it to", 2.0_dp
                call logger%log_warning(msg, module=this_module, procedure='setup_nek')
                if (nid == 0) print *, trim(msg)
-               cfl_limit_ = 0.5_dp
+               cfl_limit_ = 1.0_dp
             end if
             param(26) = cfl_limit_
             if (nid == 0 .and. .not. silent_) print '(5X,A)', 'Set CFL limit.'
@@ -457,8 +457,11 @@
             fintim = nsteps*dt
       
       ! Set tolerances if requested
-            param(21) = ptol_
-            param(22) = vtol_
+            param(21) = ptol_; param(22) = vtol_
+            tolpdf = param(21); call bcast(tolpdf, wdsize)
+            tolhdf = param(22); call bcast(tolhdf, wdsize)
+            restol(:) = param(22); call bcast(restol, (ldimt+1)*wdsize)
+            atol(:) = param(22); call bcast(atol, (ldimt+1)*wdsize)
             if (nid == 0 .and. .not. silent_) print '(5X,A)', 'Set velocity and pressure solver tolerances.'
       
       ! Force constant timestep
