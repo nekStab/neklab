@@ -102,15 +102,18 @@ export FFLAGS
 
 # User-specified object files
 USR="neklab_vectors.o"
+USR+=" real_vectors.o"
+USR+=" complex_vectors.o"
+USR+=" real_extended_vectors.o"
 USR+=" neklab_utils.o"
+USR+=" neklab_nek_setup.o"
 USR+=" neklab_linops.o"
+USR+=" exponential_propagator.o"
 USR+=" neklab_systems.o"
+USR+=" fixed_point.o"
+USR+=" periodic_orbit.o"
 USR+=" neklab_analysis.o"
 USR+=" neklab.o"
-USR+=" real_vectors.o"
-USR+=" real_extended_vectors.o"
-USR+=" complex_vectors.o"
-USR+=" exponential_propagator.o"
 export USR
 
 # Output summary of settings
