@@ -6,6 +6,7 @@ $(OBJDIR)/neklab_utils.o		:$(NEKLAB_SOURCE_ROOT)/src/neklab_utils.f90			;$(FC) -
 $(OBJDIR)/neklab_nek_setup.o		:$(NEKLAB_SOURCE_ROOT)/src/neklab_nek_setup.f90			;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/neklab_linops.o		:$(NEKLAB_SOURCE_ROOT)/src/linops/neklab_linops.f90		;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/exponential_propagator.o	:$(NEKLAB_SOURCE_ROOT)/src/linops/exponential_propagator.f90	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/resolvent.o	:$(NEKLAB_SOURCE_ROOT)/src/linops/resolvent.f90	;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/neklab_systems.o		:$(NEKLAB_SOURCE_ROOT)/src/systems/neklab_systems.f90		;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/fixed_point.o			:$(NEKLAB_SOURCE_ROOT)/src/systems/fixed_point.f90		;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/periodic_orbit.o		:$(NEKLAB_SOURCE_ROOT)/src/systems/periodic_orbit.f90		;$(FC) -c $(FL2) $< -o $@

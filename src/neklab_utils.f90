@@ -329,5 +329,4 @@
             end do
             return
          end subroutine outpost_ext_dnek_basis
-      
       end module neklab_utils
