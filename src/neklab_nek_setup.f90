@@ -94,13 +94,19 @@
                   ifbase = .false.; call bcast(ifbase, lsize)
                end if
       ! Force single perturbation mode.
-               if (param(31) > 1) then
-                  write (msg, *) "Neklab does not (yet) support npert > 1."
+               npert = param(31)
+               if (param(31) == 1) then
+                  write (msg, '(A,I0,A,I0)') "Neklab single perturbation mode. lpert = ", lpert, ", npert = ", npert
+               else
+                  write (msg, '(A,I0,A,I0)') "Neklab multi-perturbation mode. lpert =", lpert, ", npert =", npert
+               end if
+               call logger%log_message(msg, module=this_module, procedure='setup_nek')
+               if (nid == 0) print *, trim(msg)
+               if (lpert /= npert) then
+                  write (msg, *) "Neklab requires lpert (SIZE) = npert (.par) to work reliably."
                   call logger%log_message(msg, module=this_module, procedure='setup_nek')
                   if (nid == 0) print *, trim(msg)
                   call nek_end()
-               else
-                  param(31) = 1; npert = 1
                end if
       ! Deactivate OIFS.
                if (ifchar) then

@@ -24,6 +24,8 @@
          include "ADJOINT"
          private
          character(len=*), parameter, private :: this_module = 'neklab_linops'
+         character(len=*), parameter, private :: logfile_Ls = 'Ls.dat'
+         character(len=*), parameter, private :: logfile_Lr = 'Lr.dat'
       
          integer, parameter :: lv = lx1*ly1*lz1*lelv
       !! Local number of grid points for the velocity mesh.
@@ -121,7 +123,7 @@
             character(len=128) :: msg
             character(len=128) :: ifile
             logical :: loadIC, exist_IC
-            integer :: i, r
+            integer :: i, j, r
       
       ! number of OTD modes
             r = self%r
@@ -167,9 +169,23 @@
                end if
             end do
             end if
+
+      ! Prepare logfiles
+            open(1234, file=logfile_Ls, status='replace', action='write'); close(1234)
+            open(1234, file=logfile_Lr, status='replace', action='write'); close(1234)
       
       ! orthonormalize
+            write(msg,'(A,*(1X,E10.3))') 'IC: norm.  err pre: ',  ( self%basis(i)%dot(self%basis(i)) - 1.0_dp, i = 1, r )
+            call logger%log_information(msg, module=this_module, procedure='OTD init')
+            write(msg,'(A,*(1X,E10.3))') 'IC: ortho. err pre: ', (( self%basis(i)%dot(self%basis(j)), j = i+1, r ), i = 1, r )
+            call logger%log_information(msg, module=this_module, procedure='OTD init')
+
             call orthonormalize_basis(self%basis)
+
+            write(msg,'(A,*(1X,E10.3))') 'IC: norm.  err post:',  ( self%basis(i)%dot(self%basis(i)) - 1.0_dp, i = 1, r )
+            call logger%log_debug(msg, module=this_module, procedure='OTD init')
+            write(msg,'(A,*(1X,E10.3))') 'IC: ortho. err post:', (( self%basis(i)%dot(self%basis(j)), j = i+1, r ), i = 1, r )
+            call logger%log_debug(msg, module=this_module, procedure='OTD init')
       
       ! force baseflow
             call vec2nek(vx, vy, vz, pr, t, self%baseflow)
@@ -208,9 +224,11 @@
             complex(dp), dimension(self%r, self%r) :: v
             integer :: i, r
             integer :: idx(self%r)
-            character(len=128) :: msg
+            character(len=128) :: msg, fmt_Lr
       
             r = self%r
+            write(fmt_Lr,'("(I8,1X,F15.8,A,",I0,"(1X,E15.8),A,",I0,"(1X,E15.8))")') r, r
+
       ! compute eigenvalues of the symmetrized operator
             Lsym = 0.5_dp*(Lr + transpose(Lr))
             call eig(Lsym, l, right=v)
@@ -224,6 +242,10 @@
             if (ifprint) then
                write (msg, '(I10,1X,F15.8,*(1X,E15.8))') istep, time, sigma
                call logger%log_message(msg, module=this_module, procedure='OTD Ls')
+      ! stamp logfile
+               open (1234, file=logfile_Ls, status='old', action='write', position='append')
+               write (1234, '(I8,1X,F15.8,A,*(1X,E15.8))') istep, time, ' Ls ', sigma
+               close (1234)
             end if
       ! outpost projected modes?
       
@@ -240,6 +262,10 @@
                call logger%log_message(msg, module=this_module, procedure='OTD Lr%Re')
                write (msg, '(I7,1X,F15.8,*(1X,E15.8))') istep, time, aimag(lambda)
                call logger%log_message(msg, module=this_module, procedure='OTD Lr%Im')
+               ! stamp logfile
+               open (1234, file=logfile_Lr, status='old', action='write', position='append')
+               write (1234,fmt_Lr) istep, time, ' Lr%Re ', real(lambda), ' Lr%Im ', aimag(lambda)
+               close (1234)
             end if
             return
          end subroutine spectral_analysis
@@ -250,30 +276,32 @@
             class(nek_otd), intent(inout) :: self
             complex(dp), dimension(self%r, self%r), intent(in) :: eigvec
       ! internal
-            complex(dp), dimension(lv, self%r) :: vxm
-            complex(dp), dimension(lv, self%r) :: vym
-            complex(dp), dimension(lv, self%r) :: vzm
+            real(dp), dimension(lv, self%r) :: vxr
+            real(dp), dimension(lv, self%r) :: vyr
+            real(dp), dimension(lv, self%r) :: vzr
+            !real(dp), dimension(lv, self%r) :: vxi
+            !real(dp), dimension(lv, self%r) :: vyi
+            !real(dp), dimension(lv, self%r) :: vzi
+            
             integer :: i, r
             character(len=3) :: file_prefix
       
             r = self%r
-      
       ! project modes (real part)
-            call mxm(vxp, lv, real(eigvec), r, vxm%re, r)
-            call mxm(vyp, lv, real(eigvec), r, vym%re, r)
+            call mxm(vxp, lv, real(eigvec), r, vxr, r)
+            call mxm(vyp, lv, real(eigvec), r, vyr, r)
             if (if3d) then
-               call mxm(vzp, lv, real(eigvec), r, vzm%re, r)
+               call mxm(vzp, lv, real(eigvec), r, vzr, r)
             end if
       !! project modes (imaginary part)
-      !      call mxm(vxp, lv,aimag(eigvec), r, vxm%im, r)
-      !      call mxm(vyp, lv,aimag(eigvec), r, vym%im, r)
+      !      call mxm(vxp, lv,aimag(eigvec), r, vxi, r)
+      !      call mxm(vyp, lv,aimag(eigvec), r, vyi, r)
       !      if (if3d) then
-      !         call mxm(vzp,lv,aimag(eigvec), r, vzm%im, r)
+      !         call mxm(vzp,lv,aimag(eigvec), r, vzi, r)
       !      end if
             do i = 1, self%r
                write (file_prefix, '(A,I2.2)') 'm', i
-               call outpost(vxm(1, i)%re, vym(1, i)%re, vzm(1, i)%re,
-     $   prp(1, i), tp(1, :, i), file_prefix)
+               call outpost(vxr(1, i),vyr(1, i),vzr(1, i),prp(1, i),tp(1, :, i),file_prefix)
             end do
             return
          end subroutine outpost_OTDmodes

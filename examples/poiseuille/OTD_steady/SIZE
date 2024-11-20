@@ -15,15 +15,15 @@ c
       parameter (lx2=lx1-2)            ! p-order for pressure (lx1 or lx1-2)
                                      
       parameter (lelg=512)           ! max total number of elements
-      parameter (lpmin=12)              ! min MPI ranks
-      parameter (lpmax=1024)           ! max MPI ranks
+      parameter (lpmin=1)              ! min MPI ranks
+      parameter (lpmax=12)           ! max MPI ranks
       parameter (ldimt=1)              ! max auxiliary fields (temperature + scalars)
 
       ! OPTIONAL
       parameter (ldimt_proj=1)         ! max auxiliary fields residual projection
       parameter (lhis=1000)            ! max history points
       parameter (maxobj=2)             ! max number of objects
-      parameter (lpert=2)              ! max perturbation modes
+      parameter (lpert=3)              ! max perturbation modes
       parameter (toteq=1)              ! max number of conserved scalars in cmt
       parameter (nsessmax=1)           ! max sessions
       parameter (lxo=lx1)              ! max grid size on output (lxo>=lx1)

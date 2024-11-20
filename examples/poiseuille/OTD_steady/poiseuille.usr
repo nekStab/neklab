@@ -149,6 +149,7 @@ c-----------------------------------------------------------------------
          OTD%baseflow = bf
 
          opts = otd_opts(solve_baseflow = .false.,
+     $                   if_output_initial_conditions = .true.,
      $                   startstep = 1,
      $                   printstep = 5, 
      $                   orthostep = 10, 

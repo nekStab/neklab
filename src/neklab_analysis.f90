@@ -231,17 +231,20 @@
                      call nek2vec(OTD%basis(i), vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i))
                   end do
       ! orthonormalize
-                  if (mod(istep, opts%orthostep) == 0 .or. mod(istep, opts%printstep) == 0 .or. mod(istep, opts%iostep) == 0) then
-                     write(msg,'(A,I5,A,*(E10.3))') 'Step ', istep, ': norm.  err pre: ', ( OTD%basis(i)%dot(OTD%basis(i)) - 1.0_dp, i = 1, r )
+                  if ((istep <= opts%startstep + 10) .or.
+     $     			mod(istep, opts%orthostep) == 0 .or.
+     $     			mod(istep, opts%printstep) == 0 .or.
+     $     			mod(istep, opts%iostep) == 0) then
+                     write(msg,'(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': norm.  err pre: ',  ( OTD%basis(i)%dot(OTD%basis(i)) - 1.0_dp, i = 1, r )
                      call logger%log_information(msg, module=this_module, procedure='OTD main')
-                     write(msg,'(A,I5,A,*(E10.3))') 'Step ', istep, ': ortho. err pre: ', (( OTD%basis(i)%dot(OTD%basis(j)), j = i+1, r ), i = 1, r )
+                     write(msg,'(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': ortho. err pre: ', (( OTD%basis(i)%dot(OTD%basis(j)), j = i+1, r ), i = 1, r )
                      call logger%log_information(msg, module=this_module, procedure='OTD main')
 
                      call orthonormalize_basis(OTD%basis)
 
-                     write(msg,'(A,I5,A,*(E10.3))') 'Step ', istep, ': norm.  err post:', ( OTD%basis(i)%dot(OTD%basis(i)) - 1.0_dp, i = 1, r )
+                     write(msg,'(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': norm.  err post:',  ( OTD%basis(i)%dot(OTD%basis(i)) - 1.0_dp, i = 1, r )
                      call logger%log_debug(msg, module=this_module, procedure='OTD main')
-                     write(msg,'(A,I5,A,*(E10.3))') 'Step ', istep, ': ortho. err post:', (( OTD%basis(i)%dot(OTD%basis(j)), j = i+1, r ), i = 1, r )
+                     write(msg,'(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': ortho. err post:', (( OTD%basis(i)%dot(OTD%basis(j)), j = i+1, r ), i = 1, r )
                      call logger%log_debug(msg, module=this_module, procedure='OTD main')
                   end if      
       ! compute Lu
