@@ -209,24 +209,24 @@
             if (if3d) then
                call local_grad3(ur, us, ut, ux, nel, e, dxm1, dxtm1)
                do i = 1, lxyz
-                  nabla_u(i, e) = jacmi(i, e)*(ur(i)*rxm1(i, 1, 1, e)+us(i)*sxm1(i, 1, 1, e)+ut(i)*txm1(i, 1, 1, e))
+                  nabla_u(i, e) = jacmi(i, e)*(ur(i)*rxm1(i, 1, 1, e) + us(i)*sxm1(i, 1, 1, e) + ut(i)*txm1(i, 1, 1, e))
                end do
                call local_grad3(ur, us, ut, uy, nel, e, dxm1, dxtm1)
                do i = 1, lxyz
-                  nabla_u(i, e) = nabla_u(i, e) + jacmi(i, e)*(ur(i)*rym1(i, 1, 1, e)+us(i)*sym1(i, 1, 1, e)+ut(i)*tym1(i, 1, 1, e))
+                  nabla_u(i, e) = nabla_u(i, e) + jacmi(i, e)*(ur(i)*rym1(i, 1, 1, e) + us(i)*sym1(i, 1, 1, e) + ut(i)*tym1(i, 1, 1, e))
                end do
                call local_grad3(ur, us, ut, uz, nel, e, dxm1, dxtm1)
                do i = 1, lxyz
-                  nabla_u(i, e) = nabla_u(i, e) + jacmi(i, e)*(ur(i)*rzm1(i, 1, 1, e)+us(i)*szm1(i, 1, 1, e)+ut(i)*tzm1(i, 1, 1, e))
+                  nabla_u(i, e) = nabla_u(i, e) + jacmi(i, e)*(ur(i)*rzm1(i, 1, 1, e) + us(i)*szm1(i, 1, 1, e) + ut(i)*tzm1(i, 1, 1, e))
                end do
             else ! 2D
                call local_grad2(ur, us, ux, nel, e, dxm1, dytm1)
                do i = 1, lxyz
-                  nabla_u(i, e) = jacmi(i, e)*(ur(i)*rxm1(i, 1, 1, e)+us(i)*sxm1(i, 1, 1, e))
+                  nabla_u(i, e) = jacmi(i, e)*(ur(i)*rxm1(i, 1, 1, e) + us(i)*sxm1(i, 1, 1, e))
                end do
                call local_grad2(ur, us, uy, nel, e, dxm1, dytm1)
                do i = 1, lxyz
-                  nabla_u(i, e) = nabla_u(i, e) + jacmi(i, e)*(ur(i)*rym1(i, 1, 1, e)+us(i)*sym1(i, 1, 1, e))
+                  nabla_u(i, e) = nabla_u(i, e) + jacmi(i, e)*(ur(i)*rym1(i, 1, 1, e) + us(i)*sym1(i, 1, 1, e))
                end do
             end if ! if3d
             end do
