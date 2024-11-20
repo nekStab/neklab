@@ -30,7 +30,6 @@
          public :: newton_fixed_point_iteration
          public :: newton_periodic_orbit
          public :: otd_analysis
-         public :: compare_nek_arnoldi
       
       contains
       

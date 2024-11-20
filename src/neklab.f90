@@ -76,17 +76,12 @@
          public :: compute_LNS_gradp
          public :: compute_LNS_laplacian
          public :: apply_Lv, apply_L
-         public :: pressure_projection
       
       ! Forcing function export
          public :: neklab_forcing
       
-      ! Miscellaneous.
-         public :: compare_nek_arnoldi
-      
       ! Various utilities.
          public :: nek2vec, vec2nek
-         public :: nek2pr_vec, pr_vec2nek
          public :: nek2ext_vec, ext_vec2nek
          public :: setup_nonlinear_solver, setup_linear_solver
       
