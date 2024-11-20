@@ -3,6 +3,7 @@
          use LightKrylov, only: gmres, fgmres, gmres_dp_opts, gmres_dp_metadata
          use LightKrylov_Logger
          use stdlib_logger, only: information_level
+         use neklab_nek_forcing, only: set_neklab_forcing, zero_neklab_forcing
          implicit none
 
          complex(kind=dp), parameter :: zero_cdp = cmplx(0.0_dp, 0.0_dp, kind=dp)
@@ -76,8 +77,6 @@
             if (adjoint) then
                ifadj = .true.; call bcast(ifadj, lsize)
             endif
-            ! Set the forcing function.
-            neklab_forcing => neklab_resolvent_forcing
             ! Set the sign (adjoint or direct).
             sign = merge(-1.0_dp, 1.0_dp, adjoint)
             ! Time integration.
@@ -87,11 +86,15 @@
                ! Update the resolvent forcing for the corresponding time.
                alpha = exp(sign*im_cdp*omega*time)
                call resolvent_forcing%axpby(zero_cdp, forcing, alpha)
+               associate (force => resolvent_forcing%re)
+                  call set_neklab_forcing(force%vx, force%vy, force%vz, ipert=1)
+               end associate
                ! Nek5000 step.
                call nek_advance()
             enddo
             call nek2vec(b, vxp, vyp, vzp, prp, tp)
-            neklab_forcing => dummy_forcing
+            ! Cleanup
+            call zero_neklab_forcing()
             if (adjoint) then
                ifadj = .false.; call bcast(ifadj, lsize)
             endif
@@ -128,8 +131,6 @@
             if (adjoint) then
                ifadj = .true.; call bcast(ifadj, lsize)
             endif
-            ! Set the forcing function.
-            neklab_forcing => neklab_resolvent_forcing
             ! Set the sign (adjoint or direct).
             sign = merge(-1.0_dp, 1.0_dp, adjoint)
             ! Initial condition.
@@ -140,28 +141,17 @@
                ! Update resolvent forcing.
                alpha = exp(sign*im_cdp*omega*time)
                call resolvent_forcing%axpby(zero_cdp, forcing, alpha)
+               associate (force => resolvent_forcing%re)
+                  call set_neklab_forcing(force%vx, force%vy, force%vz, ipert=1)
+               end associate
                ! Nek5000 step.
                call nek_advance()
             enddo
+            ! Cleanup
+            call zero_neklab_forcing()
             call nek2vec(y, vxp, vyp, vzp, prp, tp)
-            neklab_forcing => neklab_resolvent_forcing
             if (adjoint) then
                ifadj = .false.; call bcast(ifadj, lsize)
             endif
          end function
-
-         subroutine neklab_resolvent_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
-            real(dp), intent(inout) :: ffx, ffy, ffz
-            integer, intent(in) :: ix, iy, iz, ieg
-            integer :: iel, ip
-            ! Local index.
-            iel = gllel(ieg)
-            ip = ix + nx1*(iy - 1 + ny1*(iz - 1 + nz1*(iel - 1)))
-            ! Update forcing.
-            associate (force => resolvent_forcing%re)
-               ffx = ffx + force%vx(ip)
-               ffy = ffy + force%vy(ip)
-               if (if3d) ffz = ffz + force%vz(ip)
-            end associate
-         end subroutine
       end submodule

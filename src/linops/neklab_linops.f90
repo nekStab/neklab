@@ -17,24 +17,7 @@
          integer, parameter :: lv = lx1*ly1*lz1*lelv
          integer, parameter :: lp = lx2*ly2*lz2*lelv
       
-         public :: apply_exptA, dummy_forcing
-         procedure(neklab_forcing_interface), pointer, public :: neklab_forcing => dummy_forcing
-
-         !------------------------------------
-         !-----     Utility function     -----
-         !------------------------------------
-
-         interface
-            module subroutine neklab_forcing_interface(ffx, ffy, ffz, ix, iy, iz, ieg)
-               real(kind=dp), intent(inout) :: ffx, ffy, ffz
-               integer, intent(in) :: ix, iy, iz, ieg
-            end subroutine
-
-            module subroutine dummy_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
-               real(kind=dp), intent(inout) :: ffx, ffy, ffz
-               integer, intent(in) :: ix, iy, iz, ieg
-            end subroutine
-         end interface
+         public :: apply_exptA
       
       !------------------------------------------
       !-----     EXPONENTIAL PROPAGATOR     -----
@@ -100,9 +83,6 @@
          end interface
       
       contains
-
-         module procedure dummy_forcing
-         end procedure
       
          subroutine apply_exptA(vec_out, A, vec_in, tau, info, trans)
       !! Subroutine for the exponential propagator that conforms with the abstract interface

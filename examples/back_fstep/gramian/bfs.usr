@@ -1,75 +1,75 @@
 c-----------------------------------------------------------------------
       subroutine userchk
-      use neklab
-      include 'SIZE'
-      include 'TOTAL'
+      	use neklab
+      	include 'SIZE'
+      	include 'TOTAL'
 
-        type(nek_dvector), allocatable :: bf
-        integer, parameter :: nsv = 4, kdim = 512
-    	type(resolvent_linop), allocatable :: R
-        real(kind=dp) :: omega
-        type(nek_zvector), allocatable :: forcing, response
-        real(kind=dp) :: alpha
-        integer :: i
-	
-    	if (istep.eq.0) then
-            ! Load forcing.
-            allocate(forcing, response)
-            call forcing%zero() ; call response%zero()
-            call make_actuator(forcing)
-            call outpost_dnek(forcing%re, "for")
+      	type(nek_dvector), allocatable :: bf
+      	integer, parameter :: nsv = 4, kdim = 512
+    		type(resolvent_linop), allocatable :: R
+      	real(kind=dp) :: omega
+      	type(nek_zvector), allocatable :: forcing, response
+      	real(kind=dp) :: alpha
+      	integer :: i
+			
+    		if (istep.eq.0) then
+      	   ! Load forcing.
+      	   allocate(forcing, response)
+      	   call forcing%zero() ; call response%zero()
+      	   call make_actuator(forcing)
+      	   call outpost_dnek(forcing%re, "for")
 
-            ! Load baseflow.
-    		allocate(bf)
-    		call load_fld("BF_bfs0.f00001")
-    		call nek2vec(bf, vx, vy, vz, pr, t)
+      	   ! Load baseflow.
+    			allocate(bf)
+    			call load_fld("BF_bfs0.f00001")
+    			call nek2vec(bf, vx, vy, vz, pr, t)
 
-            if (nid.eq.0) open(unit=1234, file="amplitude.dat")
+      	   if (nid.eq.0) open(unit=1234, file="amplitude.dat")
 
-            ! Initialize resolvent operator.
-            do i = 1, 15
-                omega = i * 0.2_dp
-                R = resolvent_linop(omega, bf)
+      	   ! Initialize resolvent operator.
+      	   do i = 1, 15
+      	      omega = i * 0.2_dp
 
-                call R%matvec(forcing, response)
+      	      R = resolvent_linop(omega, bf)
+    	       
+					call R%matvec(forcing, response)
+    	       	call outpost_dnek(response%re, "rRe")
+      	      call outpost_dnek(response%im, "rIm")
+      	      
+					vxp(:, 1) = response%re%vx**2 + response%im%vx**2
+      	      call outpost(vxp, vyp, vzp, prp, tp, "amp")
+      	      alpha = response%norm()
+      	      if (nid == 0) then
+      	         write(*, *) "SQUARE-NORM OF THE RESPONSE :", 0.5*alpha**2
+      	         write(1234, *) omega, 0.5*alpha**2
+      	         call flush(1234)
+      	      endif
+      	      call nek_end()
+      	   enddo
+      	   if (nid.eq.0) close(1234)
+    			call nek_end()
+    		endif
 
-                call outpost_dnek(response%re, "rRe")
-                call outpost_dnek(response%im, "rIm")
-                vxp(:, 1) = response%re%vx**2 + response%im%vx**2
-                call outpost(vxp, vyp, vzp, prp, tp, "amp")
-                alpha = response%norm()
-                if (nid == 0) then
-                    write(*, *) "SQUARE-NORM OF THE RESPONSE :", 0.5*alpha**2
-                    write(1234, *) omega, 0.5*alpha**2
-                    call flush(1234)
-                endif
-                call nek_end()
-            enddo
-            if (nid.eq.0) close(1234)
-    		call nek_end()
-    	endif
-
-      return
+      	return
       end
 c-----------------------------------------------------------------------
-        subroutine make_actuator(forcing)
-            use neklab
-            include 'SIZE'
-            include 'TOTAL'
+      subroutine make_actuator(forcing)
+         use neklab
+         include 'SIZE'
+         include 'TOTAL'
 
-            type(nek_dvector), intent(out) :: forcing
-            real(kind=dp), parameter :: xcenter = 0.6_dp, width = 0.6_dp, ycenter = 1.0_dp
-            integer :: i, j, k, n
-            
-            n = nx1*ny1*nz1*nelt
-            do i = 1, n
-                x = xm1(i, 1, 1, 1)
-                y = ym1(i, 1, 1, 1)
-                forcing%vy(i) = exp(-((x-xcenter)**2 + (y-ycenter)**2)/width**2)
-            enddo
-
-            return
-        end
+         type(nek_dvector), intent(out) :: forcing
+         real(kind=dp), parameter :: xcenter = 0.6_dp, width = 0.6_dp, ycenter = 1.0_dp
+         integer :: i, j, k, n
+          
+         n = nx1*ny1*nz1*nelt
+         do i = 1, n
+            x = xm1(i, 1, 1, 1)
+            y = ym1(i, 1, 1, 1)
+            forcing%vy(i) = exp(-((x-xcenter)**2 + (y-ycenter)**2)/width**2)
+         enddo
+         return
+      end
 
       subroutine userf (ix,iy,iz,ieg)
       use neklab, only: neklab_forcing
@@ -81,7 +81,7 @@ c-----------------------------------------------------------------------
       ffy = 0.0d0
       ffz = 0.0d0
 
-      call neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
+      call neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg, jp)
       return
       end
 c-----------------------------------------------------------------------
@@ -129,13 +129,13 @@ c-----------------------------------------------------------------------
       end
 c-----------------------------------------------------------------------
       subroutine usrdat
-	include 'SIZE'
-	include 'TOTAL'
+			include 'SIZE'
+			include 'TOTAL'
 
-        call setbc(5, 1, "W  ")
-        call setbc(2, 1, "v  ")
-        call setbc(3, 1, "O  ")
-        call setbc(4, 1, "SYM")
+      	call setbc(5, 1, "W  ")
+      	call setbc(2, 1, "v  ")
+      	call setbc(3, 1, "O  ")
+      	call setbc(4, 1, "SYM")
       return
       end
 c-----------------------------------------------------------------------
