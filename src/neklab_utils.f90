@@ -80,17 +80,6 @@
             module procedure outpost_ext_dnek_basis
          end interface
       
-      ! Nek pressure vector utilities
-         interface nek2pr_vec
-            module procedure nek2pr_vec_std
-            module procedure nek2pr_vec_prt
-         end interface
-      
-         interface pr_vec2nek
-            module procedure pr_vec2nek_std
-            module procedure pr_vec2nek_prt
-         end interface
-      
       ! Nek forcing function
          interface
             subroutine abstract_neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg, ipert)
@@ -283,38 +272,6 @@
             end select
             return
          end subroutine abstract_ext_vec2nek_prt
-      
-         subroutine nek2pr_vec_prt(vec, pr_)
-            include "SIZE"
-            type(nek_pr_dvector), intent(out) :: vec
-            real(kind=dp), dimension(lp, lpert), intent(in) :: pr_
-            call copy(vec%pr, pr_(:, 1), lp)
-            return
-         end subroutine nek2pr_vec_prt
-      
-         subroutine nek2pr_vec_std(vec, pr_)
-            include "SIZE"
-            type(nek_pr_dvector), intent(out) :: vec
-            real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(in) :: pr_
-            call copy(vec%pr, pr_, lp)
-            return
-         end subroutine nek2pr_vec_std
-      
-         subroutine pr_vec2nek_std(pr_, vec)
-            include "SIZE"
-            type(nek_pr_dvector), intent(in) :: vec
-            real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(out) :: pr_
-            call copy(pr_, vec%pr, lp)
-            return
-         end subroutine pr_vec2nek_std
-      
-         subroutine pr_vec2nek_prt(pr_, vec)
-            include "SIZE"
-            type(nek_pr_dvector), intent(in) :: vec
-            real(kind=dp), dimension(lp, 1), intent(out) :: pr_
-            call copy(pr_(:, 1), vec%pr, lp)
-            return
-         end subroutine pr_vec2nek_prt
       
          pure real(dp) function get_period_abs(vec) result(period)
             class(abstract_vector_rdp), intent(in) :: vec

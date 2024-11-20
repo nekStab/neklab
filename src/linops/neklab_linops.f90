@@ -1,7 +1,7 @@
       module neklab_linops
          use stdlib_optval, only: optval
          use LightKrylov, only: dp, atol_dp, rtol_dp
-         use LightKrylov, only: abstract_linop_rdp, abstract_sym_linop_rdp, abstract_vector_rdp
+         use LightKrylov, only: abstract_linop_rdp, abstract_vector_rdp
          use LightKrylov, only: cg, cg_dp_opts, cg_dp_metadata
          use LightKrylov_Logger
          use neklab_vectors
@@ -23,7 +23,6 @@
          public :: compute_LNS_gradp
          public :: compute_LNS_laplacian
          public :: apply_Lv, apply_L
-         public :: project_perturbation
       
       !------------------------------------------
       !-----     EXPONENTIAL PROPAGATOR     -----
@@ -54,78 +53,6 @@
       
             module subroutine exptA_rmatvec(self, vec_in, vec_out)
                class(exptA_linop), intent(inout) :: self
-               class(abstract_vector_rdp), intent(in) :: vec_in
-               class(abstract_vector_rdp), intent(out) :: vec_out
-            end subroutine
-         end interface
-      
-      !-----------------------------------------------------
-      !-----     LINEARIZED NAVIER-STOKES OPERATOR     -----
-      !-----------------------------------------------------
-      
-      ! --> Type.
-         type, extends(abstract_linop_rdp), public :: LNS_linop
-            type(nek_dvector) :: baseflow
-         contains
-            private
-            procedure, pass(self), public :: init => init_LNS
-            procedure, pass(self), public :: matvec => LNS_matvec
-            procedure, pass(self), public :: rmatvec => LNS_rmatvec
-         end type LNS_linop
-      
-      ! --> Type-bound procedures: LNS_operator.f90
-         interface
-            module subroutine init_LNS(self)
-               class(LNS_linop), intent(in) :: self
-            end subroutine
-      
-            module subroutine LNS_matvec(self, vec_in, vec_out)
-               class(LNS_linop), intent(inout) :: self
-               class(abstract_vector_rdp), intent(in) :: vec_in
-               class(abstract_vector_rdp), intent(out) :: vec_out
-            end subroutine
-      
-            module subroutine LNS_rmatvec(self, vec_in, vec_out)
-               class(LNS_linop), intent(inout) :: self
-               class(abstract_vector_rdp), intent(in) :: vec_in
-               class(abstract_vector_rdp), intent(out) :: vec_out
-            end subroutine
-         end interface
-      
-         ! --> Type.
-         type, extends(abstract_sym_linop_rdp), public :: DDT_linop
-         contains
-            private
-            procedure, pass(self), public :: matvec  => apply_DDT
-            procedure, pass(self), public :: rmatvec => apply_DDT
-         end type DDT_linop
-
-         ! --> Type-bound procedures: pressure_projection.f90
-         interface
-            module subroutine apply_DDT(self, vec_in, vec_out)
-               class(DDT_linop), intent(inout) :: self
-               class(abstract_vector_rdp), intent(in) :: vec_in
-               class(abstract_vector_rdp), intent(out) :: vec_out
-            end subroutine
-         end interface
-      
-      !--------------------------------------------------
-      !-----     Projection onto div-free space     -----
-      !--------------------------------------------------
-      
-      ! --> Type.
-         type, extends(abstract_sym_linop_rdp), public :: P_div0_linop
-            type(DDT_linop) :: DDT
-         contains
-            private
-            procedure, pass(self), public :: matvec => project_div0
-            procedure, pass(self), public :: rmatvec => project_div0
-         end type P_div0_linop
-      
-      ! --> Type-bound procedures: pressure_projection.f90
-         interface
-            module subroutine project_div0(self, vec_in, vec_out)
-               class(P_div0_linop), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
@@ -252,32 +179,24 @@
             if (if3d) then
                call local_grad3(ur, us, ut, ux, nel, e, dxm1, dxtm1)
                do i = 1, lxyz
-                  nabla_u(i, e) = jacmi(i, e)*(ur(i)*rxm1(i, 1, 1, e)
-     $   +us(i)*sxm1(i, 1, 1, e)
-     $   +ut(i)*txm1(i, 1, 1, e))
+                  nabla_u(i, e) = jacmi(i, e)*(ur(i)*rxm1(i, 1, 1, e)+us(i)*sxm1(i, 1, 1, e)+ut(i)*txm1(i, 1, 1, e))
                end do
                call local_grad3(ur, us, ut, uy, nel, e, dxm1, dxtm1)
                do i = 1, lxyz
-                  nabla_u(i, e) = nabla_u(i, e) + jacmi(i, e)*(ur(i)*rym1(i, 1, 1, e)
-     $   +us(i)*sym1(i, 1, 1, e)
-     $   +ut(i)*tym1(i, 1, 1, e))
+                  nabla_u(i, e) = nabla_u(i, e) + jacmi(i, e)*(ur(i)*rym1(i, 1, 1, e)+us(i)*sym1(i, 1, 1, e)+ut(i)*tym1(i, 1, 1, e))
                end do
                call local_grad3(ur, us, ut, uz, nel, e, dxm1, dxtm1)
                do i = 1, lxyz
-                  nabla_u(i, e) = nabla_u(i, e) + jacmi(i, e)*(ur(i)*rzm1(i, 1, 1, e)
-     $   +us(i)*szm1(i, 1, 1, e)
-     $   +ut(i)*tzm1(i, 1, 1, e))
+                  nabla_u(i, e) = nabla_u(i, e) + jacmi(i, e)*(ur(i)*rzm1(i, 1, 1, e)+us(i)*szm1(i, 1, 1, e)+ut(i)*tzm1(i, 1, 1, e))
                end do
             else ! 2D
                call local_grad2(ur, us, ux, nel, e, dxm1, dytm1)
                do i = 1, lxyz
-                  nabla_u(i, e) = jacmi(i, e)*(ur(i)*rxm1(i, 1, 1, e)
-     $   +us(i)*sxm1(i, 1, 1, e))
+                  nabla_u(i, e) = jacmi(i, e)*(ur(i)*rxm1(i, 1, 1, e)+us(i)*sxm1(i, 1, 1, e))
                end do
                call local_grad2(ur, us, uy, nel, e, dxm1, dytm1)
                do i = 1, lxyz
-                  nabla_u(i, e) = nabla_u(i, e) + jacmi(i, e)*(ur(i)*rym1(i, 1, 1, e)
-     $   +us(i)*sym1(i, 1, 1, e))
+                  nabla_u(i, e) = nabla_u(i, e) + jacmi(i, e)*(ur(i)*rym1(i, 1, 1, e)+us(i)*sym1(i, 1, 1, e))
                end do
             end if ! if3d
             end do
@@ -346,93 +265,5 @@
             call opsub2(Lux, Luy, Luz, utmpx, utmpy, utmpz)
             return
          end subroutine apply_Lv
-      
-         subroutine project_perturbation(dpr)
-      !! Project perturbation velocity fields onto closest solenoidal space
-      !! with div u = 0
-      !! For this, we solve
-      !!        D @ D^T @ dpr = D @ u
-      !! using CG iteration to the recover the corresponding velocity correction
-      !!        du = D @ p
-      !! that we add to the previously computed velocity field.
-            real(dp), dimension(lp, 1), intent(inout) :: dpr
-      ! internal
-            real(dp), dimension(lx1, ly1, lz1, lelv) :: vxtmp, vytmp, vztmp
-            real(dp), dimension(lx1, ly1, lz1, lelv) :: h1, h2
-            real(dp), dimension(lx2, ly2, lz2, lelv) :: wp, xCG, rpCG
-            logical :: iconv
-            integer :: iter
-            real(dp) :: tolps, tolpss
-            real(dp) :: rrp1, rrp2
-            real(dp) :: alpha, beta
-            real(dp) :: div0, rnorm, rnrm1, ratio, pDTDp
-            real(dp), external :: glsc2 ! inner product
-            common/scruz/wp, xCG, rpCG
-            common/scrvh/h1, h2
-      
-            call ortho(dpr) ! project out null-space
-      
-            iter = 0
-      
-            call chktCG2(tolps, dpr, iconv) ! copute tolerance for pressure solver
-            if (param(21) > 0 .and. tolps > abs(param(21))) tolps = abs(param(21))
-      ! param(21) is the pressure tolerance
-      
-      !call uzprec(rpCG,dpr,h1,h2,0,wp)
-      ! let's see whether we can use the preconditioner, this is what it does
-      !call col3        (wp,dpr,h1m2,lp)     ! wp = dpr .* h1m1
-      !call col3        (rpCG,wp,BM2inv,lp) ! rpCG = wp ./ bm2
-      ! rpCG = dpr .* h1m2./bm2
-      !rrp1 = glsc2 (rpCG,dpr,lp)                 ! < p , p >_(diag(h1m2/bm2)) = < r , z >
-      !call copy    (dpr,rpCG,lp)
-      
-            rrp1 = glsc2(dpr, dpr, lp)
-            call rzero(xCG, lp)                     ! xCG = 0
-      
-            beta = 0.0_dp
-            div0 = 0.0_dp
-      
-            call convprn(iconv, rnorm, rrp1, dpr, rpCG, tolpss) ! computes rnorm, rrp1
-      
-            tolpss = tolps
-            if (nid == 0) print *, 'rrp1', rrp1, tolpss
-            cg_loop: do iter = 1, nmxp
-               if (nid == 0) print *, 'Step', iter
-      
-               pDTDp = glsc2(dpr, wp, lp)        ! < p , p >_(D^T @ D)
-      
-               if (nid == 0) print *, 'pDTDp', pDTDp
-      
-               alpha = rrp1/pDTDp             ! step size
-               call add2s2(xCG, dpr, alpha, lp)  ! x = x + alpha*dpr
-               call add2s2(dpr, wp, -alpha, lp)  ! r = r - alpha*DTDdpr
-      
-               call ortho(dpr) ! project out null-space
-      
-      ! preconditioner
-      !call uzprec  (rpCG,dpr,h1,h2,0,wp)
-               call copy(rpCG, dpr)
-      
-      ! check for convergence
-               call convprn(iconv, rnorm, rrp2, dpr, rpCG, tolpss) ! Convergence test for the pressure step;  < r , z >  ! rrp2 is output
-               if (iter == 1) div0 = rnorm ! reference is the initial rnorm
-               if (param(21) < 0) tolpss = abs(param(21))*div0 ! relative norm
-               ratio = rnorm/div0
-               if (nio == 0) write (6, '(I5,1P4E12.5," Divergence")') iter, tolpss, rnorm, div0, ratio
-               if (iconv .and. iter > 1) exit cg_loop
-      
-               beta = rrp2/rrp1
-               call add2s1(dpr, rpCG, beta, lp) ! dpr = beta*dpr + rpCG
-      
-               rrp1 = rrp2
-            end do cg_loop
-      
-            iter = iter - 1
-      
-            if (iter > 0) call copy(dpr, xCG, lp) ! copy result into input/output vector
-            call ortho(dpr)
-      
-            return
-         end subroutine project_perturbation
       
       end module neklab_linops
