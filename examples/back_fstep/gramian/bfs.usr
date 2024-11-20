@@ -17,7 +17,7 @@ c-----------------------------------------------------------------------
             allocate(forcing, response)
             call forcing%zero() ; call response%zero()
             call make_actuator(forcing)
-            call outpost_vec(forcing%re, "for")
+            call outpost_dnek(forcing%re, "for")
 
             ! Load baseflow.
     		allocate(bf)
@@ -33,8 +33,8 @@ c-----------------------------------------------------------------------
 
                 call R%matvec(forcing, response)
 
-                call outpost_vec(response%re, "rRe")
-                call outpost_vec(response%im, "rIm")
+                call outpost_dnek(response%re, "rRe")
+                call outpost_dnek(response%im, "rIm")
                 vxp(:, 1) = response%re%vx**2 + response%im%vx**2
                 call outpost(vxp, vyp, vzp, prp, tp, "amp")
                 alpha = response%norm()
