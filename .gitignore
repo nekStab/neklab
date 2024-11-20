@@ -38,24 +38,16 @@ Nek5000/
 *.nek5000
 
 # Build files, executables etc.
-**.npy
-**.fld
-**.log
-**.log*
-**/logfile
-**.dat
-**.info
-**/makefile
-**/makefile_usr.inc
+**/*.log
 **/.state
 **/.usr
 **/makefile
 **/makefile_usr.inc
-**/makefile_usr
-**/nek5000
-**/run*/
-**/obj/
-**/??_run*/
-**/*.png
-**/SESSION.NAME
+**/*nek5000
+**/run*/*
+**/obj/*
+**/*.log
+**/.state
+**/.usr
+**/??_run*/*
 examples/**/*.f

@@ -10,19 +10,22 @@
          end procedure
       
          module procedure exptA_matvec
-         call setup_linear_solver(transpose=.false., silent=.true.)
+         call setup_linear_solver(transpose=.false., silent=.false.)
       ! Force baseflow.
          call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+      
       ! Set initial condition for the linearized solver.
          select type (vec_in)
          type is (nek_dvector)
             call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
          end select
+      
       ! Integrate the equations forward in time.
          time = 0.0_dp
          do istep = 1, nsteps
             call nek_advance()
          end do
+      
       ! Copy the final solution to vector.
          select type (vec_out)
          type is (nek_dvector)
@@ -34,16 +37,19 @@
          call setup_linear_solver(transpose=.true., silent=.true.)
       ! Force baseflow.
          call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+      
       ! Set initial condition for the linearized solver.
          select type (vec_in)
          type is (nek_dvector)
             call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
          end select
+      
       ! Integrate the equations forward in time.
          time = 0.0_dp
          do istep = 1, nsteps
             call nek_advance()
          end do
+      
       ! Copy the final solution to vector.
          select type (vec_out)
          type is (nek_dvector)

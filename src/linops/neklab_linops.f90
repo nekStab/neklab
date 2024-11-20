@@ -2,6 +2,7 @@
          use stdlib_optval, only: optval
          use LightKrylov, only: dp, atol_dp, rtol_dp
          use LightKrylov, only: abstract_linop_rdp, abstract_vector_rdp
+         use LightKrylov, only: abstract_linop_cdp, abstract_vector_cdp
          use LightKrylov, only: cg, cg_dp_opts, cg_dp_metadata
          use LightKrylov_Logger
          use neklab_vectors
@@ -55,6 +56,35 @@
                class(exptA_linop), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
+            end subroutine
+         end interface
+      
+      !--------------------------------------
+      !-----     RESOLVENT OPERATOR     -----
+      !--------------------------------------
+      
+      ! --> Type.
+         type, extends(abstract_linop_cdp), public :: resolvent_linop
+            real(kind=dp) :: omega
+            type(nek_dvector) :: baseflow
+         contains
+            private
+            procedure, pass(self), public :: matvec => resolvent_matvec
+            procedure, pass(self), public :: rmatvec => resolvent_rmatvec
+         end type
+      
+      ! --> Type-bound procedures: resolvent.f90
+         interface
+            module subroutine resolvent_matvec(self, vec_in, vec_out)
+               class(resolvent_linop), intent(inout) :: self
+               class(abstract_vector_cdp), intent(in) :: vec_in
+               class(abstract_vector_cdp), intent(out) :: vec_out
+            end subroutine
+      
+            module subroutine resolvent_rmatvec(self, vec_in, vec_out)
+               class(resolvent_linop), intent(inout) :: self
+               class(abstract_vector_cdp), intent(in) :: vec_in
+               class(abstract_vector_cdp), intent(out) :: vec_out
             end subroutine
          end interface
       
