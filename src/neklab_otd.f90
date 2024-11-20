@@ -15,7 +15,8 @@
          use LightKrylov_Logger
       ! Extensions of the abstract vector types to nek data format.
          use neklab_vectors
-         use neklab_utils, only: nek2vec, vec2nek, neklab_forcing
+         use neklab_nek_forcing, only: neklab_forcing, set_neklab_forcing
+         use neklab_utils, only: nek2vec, vec2nek
          use neklab_nek_setup, only: setup_linear_solver
          use neklab_linops, only: apply_L
          implicit none
@@ -36,10 +37,6 @@
             integer :: r = lpert
             type(nek_dvector), allocatable :: baseflow
             type(nek_dvector), allocatable :: basis(:)
-      ! Forcing components
-            real(dp), dimension(lv, lpert) :: OTDfx = 0.0_dp
-            real(dp), dimension(lv, lpert) :: OTDfy = 0.0_dp
-            real(dp), dimension(lv, lpert) :: OTDfz = 0.0_dp
          contains
             private
             procedure, pass(self), public :: init => init_OTD
@@ -48,7 +45,6 @@
             procedure, pass(self), public :: spectral_analysis
             procedure, pass(self), public :: outpost_OTDmodes
             procedure, pass(self), public :: generate_forcing
-            procedure, pass(self), public :: set_forcing
          end type nek_otd
       
          type, extends(abstract_opts), public :: otd_opts
@@ -73,9 +69,6 @@
             character(len=128) :: OTDIC_basename = 'OTDIC_'
       !! Base filename for initial conditions
          end type
-      
-      ! Module level pointer to the current instance of nek_otd
-         type(nek_otd), pointer, public :: otd_instance => null()
       
       contains
       
@@ -127,9 +120,6 @@
       
       ! number of OTD modes
             r = self%r
-      
-      ! Associate the current instance and the neklab forcing
-            call set_neklab_forcing(self)
       
       ! allocate variables
             allocate (self%basis(r), source=self%baseflow)
@@ -313,73 +303,18 @@
             real(dp), dimension(self%r, self%r), intent(in) :: Lr
             real(dp), dimension(self%r, self%r), intent(in) :: Phi
       ! internal
-            integer :: r
+            integer :: r, i
+            real(dp), dimension(lv, self%r) :: OTDfx
+            real(dp), dimension(lv, self%r) :: OTDfy
+            real(dp), dimension(lv, self%r) :: OTDfz
             r = self%r
-            call mxm(vxp, lv, Lr - Phi, r, self%OTDfx, r)
-            call mxm(vyp, lv, Lr - Phi, r, self%OTDfy, r)
-            call mxm(vzp, lv, Lr - Phi, r, self%OTDfz, r)
+            call mxm(vxp, lv, Lr - Phi, r, OTDfx, r)
+            call mxm(vyp, lv, Lr - Phi, r, OTDfy, r)
+            call mxm(vzp, lv, Lr - Phi, r, OTDfz, r)
+            do i = 1, r
+               call set_neklab_forcing(OTDfx(:,i), OTDfy(:,i),OTDfy(:,i),ipert=i)
+            end do
             return
          end subroutine generate_forcing
-      
-         subroutine set_forcing(self, ffx, ffy, ffz, ix, iy, iz, ieg, ipert)
-      ! Linear Operator.
-            class(nek_otd), intent(in) :: self
-            real(dp), intent(inout) :: ffx
-            real(dp), intent(inout) :: ffy
-            real(dp), intent(inout) :: ffz
-            integer, intent(in) :: ix
-            integer, intent(in) :: iy
-            integer, intent(in) :: iz
-            integer, intent(in) :: ieg
-            integer, intent(in) :: ipert
-      ! internal
-            integer :: e, ijke
-            e = gllel(ieg)
-            ijke = ix + lx1*((iy - 1) + ly1*((iz - 1) + lz1*(e - 1)))
-            if (ipert /= 0) then
-               ffx = ffx + self%OTDfx(ijke, ipert)
-               ffy = ffy + self%OTDfy(ijke, ipert)
-               ffz = ffz + self%OTDfz(ijke, ipert)
-            end if
-         end subroutine set_forcing
-      
-         subroutine set_neklab_forcing(instance)
-            type(nek_otd), target, intent(inout) :: instance
-      ! set pointer for current instance
-            otd_instance => instance
-            if (associated(otd_instance)) then
-               call logger%log_debug('OTD instance associated!', module=this_module, procedure='set_neklab_forcing')
-            else
-               call logger%log_message('OTD instance not associated!', module=this_module, procedure='set_neklab_forcing')
-               call nek_end()
-            end if
-      ! set neklab forcing pointer to otd_forcing function
-            neklab_forcing => wrapper_neklab_forcing
-            if (associated(neklab_forcing)) then
-               call logger%log_debug('neklab_forcing set to OTD forcing!', module=this_module, procedure='set_neklab_forcing')
-            else
-               call logger%log_message('neklab_forcing not associated!', module=this_module, procedure='set_neklab_forcing')
-               call nek_end()
-            end if
-            return
-         end subroutine set_neklab_forcing
-      
-         subroutine wrapper_neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg, ipert)
-            real(dp), intent(inout) :: ffx
-            real(dp), intent(inout) :: ffy
-            real(dp), intent(inout) :: ffz
-            integer, intent(in) :: ix
-            integer, intent(in) :: iy
-            integer, intent(in) :: iz
-            integer, intent(in) :: ieg
-            integer, intent(in) :: ipert
-            if (associated(otd_instance)) then
-               call otd_instance%set_forcing(ffx, ffy, ffz, ix, iy, iz, ieg, ipert)
-            else
-               call logger%log_message('otd_instance not associated.', module=this_module, procedure='wrapper_neklab_forcing')
-               call nek_end()
-            end if
-            return
-         end subroutine wrapper_neklab_forcing
       
       end module neklab_otd

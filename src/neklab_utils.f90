@@ -31,8 +31,6 @@
       ! utilities for extended nek vectors
          public :: nek2ext_vec, ext_vec2nek, abs_ext_vec2nek, outpost_ext_dnek
          public :: get_period, get_period_abs
-      ! neklab forcing (called in userf)
-         public :: neklab_forcing
       ! miscellaneous
          public :: nopcopy
       
@@ -77,23 +75,6 @@
             module procedure outpost_ext_dnek_vector
             module procedure outpost_ext_dnek_basis
          end interface
-      
-      ! Nek forcing function
-         interface
-            subroutine abstract_neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg, ipert)
-               import dp
-               real(kind=dp), intent(inout) :: ffx
-               real(kind=dp), intent(inout) :: ffy
-               real(kind=dp), intent(inout) :: ffz
-               integer, intent(in) :: ix
-               integer, intent(in) :: iy
-               integer, intent(in) :: iz
-               integer, intent(in) :: ieg
-               integer, intent(in) :: ipert
-            end subroutine abstract_neklab_forcing
-         end interface
-      
-         procedure(abstract_neklab_forcing), pointer :: neklab_forcing => null()
       
       contains
       
