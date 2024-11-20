@@ -163,8 +163,10 @@
             fintim = nsteps*dt
       
       ! Set tolerances if requested
-            param(21) = ptol_
-            param(22) = vtol_
+            param(21) = ptol_; TOLPDF = param(21); call bcast(TOLPDF,wdsize)
+            param(22) = vtol_; TOLHDF = param(22); call bcast(TOLHDF,wdsize)
+            restol(:) = param(22); call bcast(restol, (ldimt1+1)*wdsize)
+            atol(:) = param(22); call bcast(atol, (ldimt1+1)*wdsize)
             if (nid == 0 .and. .not. silent_) print '(5X,A)', 'Set velocity and pressure solver tolerances.'
       
       ! Force constant timestep
