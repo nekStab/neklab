@@ -159,22 +159,22 @@
                end if
             end do
             end if
-
+      
       ! Prepare logfiles
-            open(1234, file=logfile_Ls, status='replace', action='write'); close(1234)
-            open(1234, file=logfile_Lr, status='replace', action='write'); close(1234)
+            open (1234, file=logfile_Ls, status='replace', action='write'); close (1234)
+            open (1234, file=logfile_Lr, status='replace', action='write'); close (1234)
       
       ! orthonormalize
-            write(msg,'(A,*(1X,E10.3))') 'IC: norm.  err pre: ',  ( self%basis(i)%dot(self%basis(i)) - 1.0_dp, i = 1, r )
+            write (msg, '(A,*(1X,E10.3))') 'IC: norm.  err pre: ', (self%basis(i)%dot(self%basis(i)) - 1.0_dp, i=1, r)
             call logger%log_information(msg, module=this_module, procedure='OTD init')
-            write(msg,'(A,*(1X,E10.3))') 'IC: ortho. err pre: ', (( self%basis(i)%dot(self%basis(j)), j = i+1, r ), i = 1, r )
+            write (msg, '(A,*(1X,E10.3))') 'IC: ortho. err pre: ', ((self%basis(i)%dot(self%basis(j)), j=i + 1, r), i=1, r)
             call logger%log_information(msg, module=this_module, procedure='OTD init')
-
+      
             call orthonormalize_basis(self%basis)
-
-            write(msg,'(A,*(1X,E10.3))') 'IC: norm.  err post:',  ( self%basis(i)%dot(self%basis(i)) - 1.0_dp, i = 1, r )
+      
+            write (msg, '(A,*(1X,E10.3))') 'IC: norm.  err post:', (self%basis(i)%dot(self%basis(i)) - 1.0_dp, i=1, r)
             call logger%log_debug(msg, module=this_module, procedure='OTD init')
-            write(msg,'(A,*(1X,E10.3))') 'IC: ortho. err post:', (( self%basis(i)%dot(self%basis(j)), j = i+1, r ), i = 1, r )
+            write (msg, '(A,*(1X,E10.3))') 'IC: ortho. err post:', ((self%basis(i)%dot(self%basis(j)), j=i + 1, r), i=1, r)
             call logger%log_debug(msg, module=this_module, procedure='OTD init')
       
       ! force baseflow
@@ -217,8 +217,8 @@
             character(len=128) :: msg, fmt_Lr
       
             r = self%r
-            write(fmt_Lr,'("(I8,1X,F15.8,A,",I0,"(1X,E15.8),A,",I0,"(1X,E15.8))")') r, r
-
+            write (fmt_Lr, '("(I8,1X,F15.8,A,",I0,"(1X,E15.8),A,",I0,"(1X,E15.8))")') r, r
+      
       ! compute eigenvalues of the symmetrized operator
             Lsym = 0.5_dp*(Lr + transpose(Lr))
             call eig(Lsym, l, right=v)
@@ -252,9 +252,9 @@
                call logger%log_message(msg, module=this_module, procedure='OTD Lr%Re')
                write (msg, '(I7,1X,F15.8,*(1X,E15.8))') istep, time, aimag(lambda)
                call logger%log_message(msg, module=this_module, procedure='OTD Lr%Im')
-               ! stamp logfile
+      ! stamp logfile
                open (1234, file=logfile_Lr, status='old', action='write', position='append')
-               write (1234,fmt_Lr) istep, time, ' Lr%Re ', real(lambda), ' Lr%Im ', aimag(lambda)
+               write (1234, fmt_Lr) istep, time, ' Lr%Re ', real(lambda), ' Lr%Im ', aimag(lambda)
                close (1234)
             end if
             return
@@ -269,10 +269,10 @@
             real(dp), dimension(lv, self%r) :: vxr
             real(dp), dimension(lv, self%r) :: vyr
             real(dp), dimension(lv, self%r) :: vzr
-            !real(dp), dimension(lv, self%r) :: vxi
-            !real(dp), dimension(lv, self%r) :: vyi
-            !real(dp), dimension(lv, self%r) :: vzi
-            
+      !real(dp), dimension(lv, self%r) :: vxi
+      !real(dp), dimension(lv, self%r) :: vyi
+      !real(dp), dimension(lv, self%r) :: vzi
+      
             integer :: i, r
             character(len=3) :: file_prefix
       
@@ -291,7 +291,7 @@
       !      end if
             do i = 1, self%r
                write (file_prefix, '(A,I2.2)') 'm', i
-               call outpost(vxr(1, i),vyr(1, i),vzr(1, i),prp(1, i),tp(1, :, i),file_prefix)
+               call outpost(vxr(1, i), vyr(1, i), vzr(1, i), prp(1, i), tp(1, :, i), file_prefix)
             end do
             return
          end subroutine outpost_OTDmodes
@@ -312,7 +312,7 @@
             call mxm(vyp, lv, Lr - Phi, r, OTDfy, r)
             call mxm(vzp, lv, Lr - Phi, r, OTDfz, r)
             do i = 1, r
-               call set_neklab_forcing(OTDfx(:,i), OTDfy(:,i),OTDfy(:,i),ipert=i)
+               call set_neklab_forcing(OTDfx(:, i), OTDfy(:, i), OTDfy(:, i), ipert=i)
             end do
             return
          end subroutine generate_forcing
