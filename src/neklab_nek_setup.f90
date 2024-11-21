@@ -103,10 +103,11 @@
                call logger%log_message(msg, module=this_module, procedure='setup_nek')
                if (nid == 0) print *, trim(msg)
                if (lpert /= npert) then
-                  write (msg, *) "Neklab requires lpert (SIZE) = npert (.par) to work reliably."
+                  param(31) = lpert
+                  npert = lpert
+                  write (msg, *) "Neklab requires lpert (SIZE) = npert (.par) to work reliably. Forcing npert=lpert."
                   call logger%log_message(msg, module=this_module, procedure='setup_nek')
                   if (nid == 0) print *, trim(msg)
-                  call nek_end()
                end if
       ! Deactivate OIFS.
                if (ifchar) then
