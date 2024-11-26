@@ -104,24 +104,32 @@ export FFLAGS
 # User-specified object files
 USR="neklab_vectors.o"
 USR+=" real_vectors.o"
-USR+=" complex_vectors.o"
 USR+=" real_extended_vectors.o"
-USR+=" neklab_utils.o"
-USR+=" neklab_nek_setup.o"
+USR+=" complex_vectors.o"
 USR+=" neklab_linops.o"
 USR+=" exponential_propagator.o"
 USR+=" resolvent.o"
 USR+=" neklab_systems.o"
 USR+=" fixed_point.o"
 USR+=" periodic_orbit.o"
+USR+=" neklab_utils.o"
+USR+=" neklab_nek_setup.o"
+USR+=" neklab_nek_forcing.o"
+USR+=" neklab_otd.o"
 USR+=" neklab_analysis.o"
 USR+=" neklab.o"
 export USR
 
 # Output summary of settings
-echo "Nek5000 version: $N_VERSION"
-echo "neklab version: $NS_VERSION"
-echo "preparing compilation with: $(which $FC; echo $FFLAGS $USR_LFLAGS)"
+echo ""
+echo "  compilation script: $0"
+echo "  Nek5000 version:    $N_VERSION"
+echo "  neklab version:     $NS_VERSION"
+echo "  preparing compilation with:"
+echo "      compiler:     $(which $FC)"
+echo "      flags:      $FFLAGS"
+echo "      link-flags: $USR_LFLAGS"
+echo "  USR = $USR"
 
 # Update makefile and static variables
 echo "include $NEKLAB_SOURCE_ROOT/src/makefile_neklab" > makefile_usr.inc

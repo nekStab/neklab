@@ -33,21 +33,21 @@
 LightKrylov/
 Nek5000/
 
+# output
+*0.f0*
+*.nek5000
+
 # Build files, executables etc.
-examples/*/*.log
-examples/*/.state
-examples/*/.usr
-examples/*/makefile
-examples/*/makefile_usr.inc
-examples/*/nek5000
-examples/*/run*/*
-examples/*/obj/*
-examples/*/*/*.log
-examples/*/*/.state
-examples/*/*/.usr
-examples/*/*/makefile
-examples/*/*/makefile_usr.inc
-examples/*/*/nek5000
-examples/*/*/obj/*
-examples/*/*/run*/*
-examples/*/*/??_run*/*
+**/*.log
+**/.state
+**/.usr
+**/makefile
+**/makefile_usr.inc
+**/*nek5000
+**/run*/*
+**/obj/*
+**/*.log
+**/.state
+**/.usr
+**/??_run*/*
+examples/**/*.f

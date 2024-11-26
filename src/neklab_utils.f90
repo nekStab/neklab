@@ -251,7 +251,7 @@
             end select
             return
          end subroutine abstract_ext_vec2nek_prt
-
+      
          pure real(dp) function get_period_abs(vec) result(period)
             class(abstract_vector_rdp), intent(in) :: vec
             select type (vec)

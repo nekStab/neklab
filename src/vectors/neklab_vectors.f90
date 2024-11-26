@@ -15,6 +15,8 @@
          complex(kind=dp), parameter :: one_cdp = cmplx(1.0_dp, 0.0_dp, kind=dp)
          complex(kind=dp), parameter :: im_cdp = cmplx(0.0_dp, 1.0_dp, kind=dp)
       
+         public :: mth_rand
+      
       !----------------------------------------
       !-----     NEK REAL VECTOR TYPE     -----
       !----------------------------------------
@@ -204,6 +206,7 @@
                class(nek_zvector), intent(in) :: self
             end function
          end interface
+      
       contains
       
          real(kind=dp) function mth_rand(ix, iy, iz, ieg, xl, fcoeff) !generate random number

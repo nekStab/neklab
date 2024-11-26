@@ -5,7 +5,6 @@
       ! For the baseflow field for dt/nsteps/cfl computation.
          call vec2nek(vx, vy, vz, pr, t, self%baseflow)
          call logger%log_message("Set self%baseflow -> vx, vy, vz, pr, t", module=this_module, procedure="init_exptA")
-      
       ! Setup Nek5000 for perturbation solver.
          call setup_linear_solver(solve_baseflow=.false., endtime=self%tau, recompute_dt=.true., cfl_limit=0.5_dp)
          end procedure

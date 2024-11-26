@@ -20,8 +20,11 @@
          character(len=*), parameter, private :: this_module = 'neklab_utils'
       
          integer, parameter :: lv = lx1*ly1*lz1*lelv
+      !! Local number of grid points for the velocity mesh.
          integer, parameter :: lp = lx2*ly2*lz2*lelv
+      !! Local number of grid points for the pressure mesh.
          integer, parameter :: lt = lx1*ly1*lz1*lelt
+      !! Local number of grid points for the temperature/passive scalar mesh.
       
       ! Set up solver
          public :: setup_nek, setup_nonlinear_solver, setup_linear_solver, nek_status
@@ -91,13 +94,20 @@
                   ifbase = .false.; call bcast(ifbase, lsize)
                end if
       ! Force single perturbation mode.
-               if (param(31) > 1) then
-                  write (msg, *) "Neklab does not (yet) support npert > 1."
+               npert = param(31)
+               if (param(31) == 1) then
+                  write (msg, '(A,I0,A,I0)') "Neklab single perturbation mode. lpert = ", lpert, ", npert = ", npert
+               else
+                  write (msg, '(A,I0,A,I0)') "Neklab multi-perturbation mode. lpert =", lpert, ", npert =", npert
+               end if
+               call logger%log_message(msg, module=this_module, procedure='setup_nek')
+               if (nid == 0) print *, trim(msg)
+               if (lpert /= npert) then
+                  param(31) = lpert
+                  npert = lpert
+                  write (msg, *) "Neklab requires lpert (SIZE) = npert (.par) to work reliably. Forcing npert=lpert."
                   call logger%log_message(msg, module=this_module, procedure='setup_nek')
                   if (nid == 0) print *, trim(msg)
-                  call nek_end()
-               else
-                  param(31) = 1; npert = 1
                end if
       ! Deactivate OIFS.
                if (ifchar) then
@@ -154,8 +164,10 @@
             fintim = nsteps*dt
       
       ! Set tolerances if requested
-            param(21) = ptol_
-            param(22) = vtol_
+            param(21) = ptol_; TOLPDF = param(21); call bcast(TOLPDF,wdsize)
+            param(22) = vtol_; TOLHDF = param(22); call bcast(TOLHDF,wdsize)
+            restol(:) = param(22); call bcast(restol, (ldimt1+1)*wdsize)
+            atol(:) = param(22); call bcast(atol, (ldimt1+1)*wdsize)
             if (nid == 0 .and. .not. silent_) print '(5X,A)', 'Set velocity and pressure solver tolerances.'
       
       ! Force constant timestep

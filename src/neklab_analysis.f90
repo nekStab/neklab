@@ -5,8 +5,8 @@
          use stdlib_logger, only: information_level, warning_level, debug_level, error_level, all_level, success
          use LightKrylov, only: atol_dp, dp, eigs, svds, save_eigenspectrum
          use LightKrylov, only: kexpm, gmres_rdp
-         use LightKrylov, only: initialize_krylov_subspace, zero_basis
-         use LightKrylov, only: linear_combination, innerprod, rand_basis
+         use LightKrylov, only: initialize_krylov_subspace, orthonormalize_basis, zero_basis, rand_basis
+         use LightKrylov, only: linear_combination, innerprod
          use LightKrylov, only: newton, newton_dp_opts
          use LightKrylov_Logger
          use LightKrylov_NewtonKrylov, only: dynamic_tol_dp, constant_atol_dp
@@ -14,6 +14,7 @@
          use neklab_linops
          use neklab_utils
          use neklab_nek_setup
+         use neklab_otd
          use neklab_systems
       
          implicit none
@@ -28,6 +29,7 @@
          public :: transient_growth_analysis_fixed_point
          public :: newton_fixed_point_iteration
          public :: newton_periodic_orbit
+         public :: otd_analysis
       
       contains
       
@@ -52,6 +54,9 @@
             integer :: i
             logical :: adjoint_
             character(len=3) :: file_prefix
+      
+      ! Set up logging
+            call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
       
       ! Optional parameters.
             if (present(adjoint)) then
@@ -97,6 +102,9 @@
       ! Miscellaneous.
             integer :: i, j
             character(len=3) :: file_prefix
+      
+      ! Set up logging
+            call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
       
       ! Allocate singular vectors.
             allocate (U(nsv)); call initialize_krylov_subspace(U)
@@ -179,4 +187,112 @@
             return
          end subroutine newton_periodic_orbit
       
-      end module neklab_analysis
+         subroutine otd_analysis(OTD, opts_)
+            type(nek_otd), intent(inout) :: OTD
+            type(otd_opts), optional, intent(in) :: opts_
+            type(otd_opts) :: opts
+      ! internal
+            real(dp), dimension(:), allocatable :: sigma
+            real(dp), dimension(:, :), allocatable :: Lr, Phi, svec
+            complex(dp), dimension(:), allocatable :: lambda
+            complex(dp), dimension(:, :), allocatable :: eigvec
+            type(nek_dvector), allocatable :: Lu(:)
+      ! Misc
+            integer :: i, j, r
+            character(len=3) :: file_prefix
+            character(len=128) :: msg
+      
+            if (present(opts_)) then
+               opts = opts_
+            else
+               opts = otd_opts()
+            end if
+      
+      ! Set up logging
+            call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      
+      ! initialize OTD structure
+            call OTD%init(opts)
+      
+      ! Allocate memory
+            r = OTD%r
+            allocate (sigma(r), svec(r, r)); sigma = 0.0_dp; svec = 0.0_dp
+            allocate (lambda(r), eigvec(r, r)); lambda = 0.0_dp; eigvec = 0.0_dp
+            allocate (Lr(r, r), Phi(r, r)); Lr = 0.0_dp; Phi = 0.0_dp
+            allocate (Lu(r), source=OTD%baseflow); call zero_basis(Lu)
+      !      allocate (G(r, r)); G = 0.0_dp
+      
+      ! Intgrate the nonlinear equations forward
+            time = 0.0_dp
+            do istep = 1, nsteps
+               call nek_advance()
+               if (istep >= opts%startstep) then
+      ! load perturbations
+                  do i = 1, r
+                     call nek2vec(OTD%basis(i), vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i))
+                  end do
+      ! orthonormalize
+                  if ((istep <= opts%startstep + 10) .or.
+     $   mod(istep, opts%orthostep) == 0 .or.
+     $   mod(istep, opts%printstep) == 0 .or.
+     $   mod(istep, opts%iostep) == 0) then
+      ! debugging
+      !            call innerprod(G, OTD%basis, OTD%basis)
+      !            write (msg, '(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': norm.  err pre: ',  (G(i,i) - 1.0_dp, i=1, r)
+      !            call logger%log_information(msg, module=this_module, procedure='OTD main')
+      !            write (msg, '(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': ortho. err pre: ', ((G(i,j), j=i+1, r), i=1, r)
+      !            call logger%log_information(msg, module=this_module, procedure='OTD main')
+      
+                  call orthonormalize_basis(OTD%basis)
+      
+      !            write (msg, '(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': norm.  err post:',  (G(i,i) - 1.0_dp, i=1, r)
+      !            call logger%log_debug(msg, module=this_module, procedure='OTD main')
+      !            write (msg, '(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': ortho. err post:', ((G(i,j), j=i+1, r), i=1, r)
+      !            call logger%log_debug(msg, module=this_module, procedure='OTD main')
+               end if
+      ! compute Lu
+               do i = 1, r
+               if (opts%trans) then
+                  call OTD%apply_rmatvec(OTD%basis(i), Lu(i))
+               else
+                  call OTD%apply_matvec(OTD%basis(i), Lu(i))
+               end if
+               end do
+      ! compute reduced operator
+               call innerprod(Lr, OTD%basis, Lu)
+      
+               Phi = 0.0_dp
+               do i = 1, r
+               do j = i + 1, r
+                  Phi(i, j) = Lr(i, j)
+                  Phi(j, 1) = -Lr(i, j)
+               end do
+               end do
+      ! output projected modes
+               if (mod(istep, opts%printstep) == 0) then
+                  call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec, ifprint=.true.)
+               end if
+      ! at the end of the step we copy data back to nek2vec
+               do i = 1, r
+                  call vec2nek(vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i), OTD%basis(i))
+               end do
+      ! project basis vectors and output modes
+               if (mod(istep, opts%iostep) == 0) then
+               if (mod(istep, opts%printstep) /= 0) then
+                  call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec, ifprint=.false.)
+               end if
+               call OTD%outpost_OTDmodes(eigvec)
+               end if
+      ! output basis vectors
+               if (mod(istep, opts%iorststep) == 0) then
+                  write (file_prefix, '(A)') 'rst'
+                  call outpost_dnek(OTD%basis, file_prefix)
+               end if
+      ! set the forcing
+               call OTD%generate_forcing(Lr, Phi)
+               end if
+               end do
+               return
+               end subroutine otd_analysis
+      
+            end module neklab_analysis
