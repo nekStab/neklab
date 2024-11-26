@@ -26,6 +26,7 @@
       
          public :: linear_stability_analysis_fixed_point
          public :: transient_growth_analysis_fixed_point
+         public :: resolvent_analysis_fixed_point
          public :: newton_fixed_point_iteration
          public :: newton_periodic_orbit
       
@@ -118,6 +119,54 @@
       
             return
          end subroutine transient_growth_analysis_fixed_point
+
+
+         subroutine resolvent_analysis_fixed_point(R, nsv, kdim)
+            type(resolvent_linop), intent(inout) :: R
+            !! Resolvent operator.
+            integer, intent(in) :: nsv
+            !! Desired number of singular triplets.
+            integer, intent(in) :: kdim
+            !! Maximum dimension of the Krylov subspace in LightKrylov.
+
+            ! Singular value decomposition.
+            type(nek_zvector), allocatable :: U(:), V(:)
+            real(kind=dp), allocatable :: S(:), residuals(:)
+            integer :: info
+            ! Miscellaneous.
+            integer :: i, j
+            character(len=3) :: file_prefix
+
+            ! Allocate singular vectors.
+            allocate (U(nsv)); call zero_basis(U)
+            allocate (V(nsv)); call zero_basis(V)
+
+            ! Call to LightKrylov.
+            write(*, *) "GETTING LK", nsv, kdim
+            call svds(R, U, S, V, residuals, info, kdim=kdim)
+            write(*, *) "OUT OF LK", info
+
+            ! Save singular spectrum to disk.
+            if (nid == 0) then
+               open(unit=1234, file="singular_spectrum.dat")
+               write(1234, *) S
+               close(1234)
+            endif
+
+            ! Export optimal forcing and optimal responses.
+            do i = 1, nsv
+               ! Forcing real part.
+               file_prefix = "rFR"; call outpost_dnek(V(i)%re, file_prefix)
+               ! Forcing imaginary part.
+               file_prefix = "iFR"; call outpost_dnek(V(i)%im, file_prefix)
+               ! Response real part.
+               file_prefix = "rRP"; call outpost_dnek(U(i)%re, file_prefix)
+               ! Response imaginary part.
+               file_prefix = "iRP"; call outpost_dnek(U(i)%im, file_prefix)
+            enddo
+            
+            return
+         end subroutine resolvent_analysis_fixed_point
       
          subroutine newton_fixed_point_iteration(sys, bf, tol)
             type(nek_system), intent(inout) :: sys

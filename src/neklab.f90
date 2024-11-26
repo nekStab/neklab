@@ -56,6 +56,7 @@
       ! Stability analysis exports.
          public :: linear_stability_analysis_fixed_point
          public :: transient_growth_analysis_fixed_point
+         public :: resolvent_analysis_fixed_point
       
       ! Various utilities.
          public :: nek2vec, vec2nek
