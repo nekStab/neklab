@@ -50,6 +50,7 @@
             logical, optional, intent(in) :: silent
             logical :: silent_
       ! internal
+            character(len=*), parameter :: nekfmt = '(5X,A)'
             character(len=128) :: msg
             logical :: full_summary
       
@@ -101,19 +102,19 @@
                   write (msg, '(A,I0,A,I0)') "Neklab multi-perturbation mode. lpert =", lpert, ", npert =", npert
                end if
                call logger%log_message(msg, module=this_module, procedure='setup_nek')
-               if (nid == 0) print *, trim(msg)
+               if (nid == 0) print '(A)', trim(msg)
                if (lpert /= npert) then
                   param(31) = lpert
                   npert = lpert
-                  write (msg, *) "Neklab requires lpert (SIZE) = npert (.par) to work reliably. Forcing npert=lpert."
+                  write (msg, '(A)') "Neklab requires lpert (SIZE) = npert (.par) to work reliably. Forcing npert=lpert."
                   call logger%log_message(msg, module=this_module, procedure='setup_nek')
-                  if (nid == 0) print *, trim(msg)
+                  if (nid == 0) print '(A)', trim(msg)
                end if
       ! Deactivate OIFS.
                if (ifchar) then
-                  write (msg, *) "OIFS is not available for linearized solver. Turning it off."
+                  write (msg, '(A)') "OIFS is not available for linearized solver. Turning it off."
                   call logger%log_warning(msg, module=this_module, procedure='setup_nek')
-                  if (nid == 0) print *, "WARNING :", trim(msg)
+                  if (nid == 0) print '(A)', "WARNING :", trim(msg)
                   ifchar = .false.
                end if
             else
@@ -124,37 +125,39 @@
       
       ! Set integration time
             if (endtime_ <= 0.0_dp) then
-               write (msg, *) 'Invalid endtime specified. Endtime =', endtime_
+               write (msg, '(A)') 'Invalid endtime specified. Endtime =', endtime_
                call logger%log_message(msg, module=this_module, procedure='setup_nek')
-               if (nid == 0) print *, trim(msg)
+               if (nid == 0) print '(A)', trim(msg)
                call nek_end()
             end if
             param(10) = endtime_
-            if (nid == 0 .and. .not. silent_) print '(5X,A)', 'Set integration time.'
+            write (msg, '(A,F15.8)') padl('Set integration time: ', 30), param(10)
+            if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
       
       ! Force CFL to chosen limit
             if (cfl_limit_ < 0.0_dp .or. cfl_limit_ > 0.5_dp) then
-               write (msg, *) "Invalid target CFL. CLF_target =", cfl_limit_
+               write (msg, '(A)') "Invalid target CFL. CLF_target =", cfl_limit_
                call logger%log_warning(msg, module=this_module, procedure='setup_nek')
-               if (nid == 0) print *, "WARNING :", trim(msg)
-               write (msg, *) "          Forcing it to", 0.5_dp
+               if (nid == 0) print '(A)', "WARNING :"//trim(msg)
+               write (msg, '(A)') "          Forcing it to", 0.5_dp
                call logger%log_warning(msg, module=this_module, procedure='setup_nek')
-               if (nid == 0) print *, trim(msg)
+               if (nid == 0) print '(A)', trim(msg)
                cfl_limit_ = 0.5_dp
             end if
             param(26) = cfl_limit_
-            if (nid == 0 .and. .not. silent_) print '(5X,A)', 'Set CFL limit.'
+            write (msg, '(A,F15.8)') padl('Set CFL limit: ', 30), param(26)
+            if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
       
       ! Recompute dt
             if (recompute_dt_) then
-               write (msg, '(5X,A)') 'Recomputing dt/nsteps/cfl from target_cfl and current baseflow.'
+               write (msg, '(A)') 'Recomputing dt/nsteps/cfl from target_cfl and current baseflow.'
                call logger%log_information(msg, module=this_module, procedure='setup_nek')
                if (nid == 0) print '(A)', trim(msg)
                call compute_cfl(ctarg, vx, vy, vz, 1.0_dp)
                dt = param(26)/ctarg; nsteps = ceiling(param(10)/dt)
                dt = param(10)/nsteps; param(12) = dt
                call compute_cfl(ctarg, vx, vy, vz, dt)
-               write (msg, '(5X,A,F15.8)') padl('effective CFL = ', 20), ctarg
+               write (msg, '(5X,A,F15.8)') padl('effective CFL = ', 30), ctarg
                call logger%log_information(msg, module=this_module, procedure='setup_nek')
                if (nid == 0) print '(A)', trim(msg)
             else
@@ -168,11 +171,15 @@
             param(22) = vtol_; TOLHDF = param(22); call bcast(TOLHDF,wdsize)
             restol(:) = param(22); call bcast(restol, (ldimt1+1)*wdsize)
             atol(:) = param(22); call bcast(atol, (ldimt1+1)*wdsize)
-            if (nid == 0 .and. .not. silent_) print '(5X,A)', 'Set velocity and pressure solver tolerances.'
+            write (msg, '(A,E15.8)') padl('Set pressure tol: ', 30), param(21)
+            if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
+            write (msg, '(A,E15.8)') padl('Set velocity tol: ', 30), param(22)
+            if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
       
       ! Force constant timestep
             param(12) = -abs(param(12))
-            if (nid == 0 .and. .not. silent_) print '(5X,A)', 'Force a constant timestep.'
+            write (msg, '(A,E15.8)') padl('Force constant timestep: ', 30), -param(12)
+            if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
       
       ! Broadcast parameters
             call bcast(param, 200*wdsize)
