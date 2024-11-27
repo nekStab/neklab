@@ -9,6 +9,7 @@
          use LightKrylov, only: linear_combination, innerprod
          use LightKrylov, only: newton, newton_dp_opts
          use LightKrylov_Logger
+         use LightKrylov_Timing, only: timer => global_lightkrylov_timer
          use LightKrylov_NewtonKrylov, only: dynamic_tol_dp, constant_atol_dp
          use neklab_vectors
          use neklab_linops
@@ -57,6 +58,9 @@
       
       ! Set up logging
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      ! Initialize timers
+            call timer%initialize()
+            call timer%add_timer('LSA_FP', start=.true.)
       
       ! Optional parameters.
             if (present(adjoint)) then
@@ -82,6 +86,9 @@
       
       ! Export eigenfunctions to disk.
             call outpost_dnek(eigvecs(:nev), file_prefix)
+
+      ! Finalize timers
+            call timer%finalize()
       
             return
          end subroutine linear_stability_analysis_fixed_point
@@ -105,7 +112,10 @@
       
       ! Set up logging
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
-      
+      ! Initialize timers
+            call timer%initialize()
+            call timer%add_timer('TGA_FP', start=.true.)
+
       ! Allocate singular vectors.
             allocate (U(nsv)); call initialize_krylov_subspace(U)
             allocate (V(nsv)); call initialize_krylov_subspace(V)
@@ -123,6 +133,9 @@
       ! Export optimal perturbations and optimal responses.
             file_prefix = "prt"; call outpost_dnek(V(:nsv), file_prefix)
             file_prefix = "rsp"; call outpost_dnek(U(:nsv), file_prefix)
+
+      ! Finalize timers
+            call timer%finalize()
       
             return
          end subroutine transient_growth_analysis_fixed_point
@@ -143,6 +156,9 @@
       
       ! Set up logging
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      ! Initialize timers
+            call timer%initialize()
+            call timer%add_timer('Newton_FP', start=.true.)
       
       ! Define options for the Newton solver
             opts = newton_dp_opts(maxiter=30, ifbisect=.true.)
@@ -153,6 +169,9 @@
       ! Outpost initial condition.
             file_prefix = 'nwt'
             call outpost_dnek(bf, file_prefix)
+
+      ! Finalize timers
+            call timer%finalize()
       
             return
          end subroutine newton_fixed_point_iteration
@@ -173,6 +192,9 @@
       
       ! Set up logging
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      ! Initialize timers
+            call timer%initialize()
+            call timer%add_timer('Newton_PO', start=.true.)
       
       ! Define options for the Newton solver
             opts = newton_dp_opts(maxiter=30, ifbisect=.true.)
@@ -183,6 +205,9 @@
       ! Outpost initial condition.
             file_prefix = 'nwt'
             call outpost_ext_dnek(bf, file_prefix)
+      
+      ! Finalize timers
+            call timer%finalize()
       
             return
          end subroutine newton_periodic_orbit
@@ -210,6 +235,9 @@
       
       ! Set up logging
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      ! Initialize timers
+            call timer%initialize()
+            call timer%add_timer('OTD_analysis', start=.true.)
       
       ! initialize OTD structure
             call OTD%init(opts)
@@ -227,10 +255,12 @@
             do istep = 1, nsteps
                call nek_advance()
                if (istep >= opts%startstep) then
+
       ! load perturbations
                   do i = 1, r
                      call nek2vec(OTD%basis(i), vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i))
                   end do
+
       ! orthonormalize
                   if ((istep <= opts%startstep + 10) .or.
      $   mod(istep, opts%orthostep) == 0 .or.
@@ -250,6 +280,7 @@
       !            write (msg, '(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': ortho. err post:', ((G(i,j), j=i+1, r), i=1, r)
       !            call logger%log_debug(msg, module=this_module, procedure='OTD main')
                end if
+
       ! compute Lu
                do i = 1, r
                if (opts%trans) then
@@ -258,6 +289,7 @@
                   call OTD%apply_matvec(OTD%basis(i), Lu(i))
                end if
                end do
+
       ! compute reduced operator
                call innerprod(Lr, OTD%basis, Lu)
       
@@ -268,14 +300,17 @@
                   Phi(j, 1) = -Lr(i, j)
                end do
                end do
+
       ! output projected modes
                if (mod(istep, opts%printstep) == 0) then
                   call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec, ifprint=.true.)
                end if
+
       ! at the end of the step we copy data back to nek2vec
                do i = 1, r
                   call vec2nek(vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i), OTD%basis(i))
                end do
+
       ! project basis vectors and output modes
                if (mod(istep, opts%iostep) == 0) then
                if (mod(istep, opts%printstep) /= 0) then
@@ -283,16 +318,21 @@
                end if
                call OTD%outpost_OTDmodes(eigvec)
                end if
+
       ! output basis vectors
                if (mod(istep, opts%iorststep) == 0) then
                   write (file_prefix, '(A)') 'rst'
                   call outpost_dnek(OTD%basis, file_prefix)
                end if
+
       ! set the forcing
                call OTD%generate_forcing(Lr, Phi)
                end if
-               end do
-               return
-               end subroutine otd_analysis
+            end do
+
+      ! Finalize timers
+            call timer%finalize()
+            return
+         end subroutine otd_analysis
       
-            end module neklab_analysis
+      end module neklab_analysis
