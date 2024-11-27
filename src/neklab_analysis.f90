@@ -60,7 +60,7 @@
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
       ! Initialize timers
             call timer%initialize()
-            call timer%add_timer('LSA_FP', start=.true.)
+            call timer%add_timer('Linear Stability Fixed Point', start=.true.)
       
       ! Optional parameters.
             if (present(adjoint)) then
@@ -114,7 +114,7 @@
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
       ! Initialize timers
             call timer%initialize()
-            call timer%add_timer('TGA_FP', start=.true.)
+            call timer%add_timer('Transient Growth Fixed Point', start=.true.)
 
       ! Allocate singular vectors.
             allocate (U(nsv)); call initialize_krylov_subspace(U)
@@ -158,7 +158,7 @@
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
       ! Initialize timers
             call timer%initialize()
-            call timer%add_timer('Newton_FP', start=.true.)
+            call timer%add_timer('Newton Fixed Point', start=.true.)
       
       ! Define options for the Newton solver
             opts = newton_dp_opts(maxiter=30, ifbisect=.true.)
@@ -194,7 +194,7 @@
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
       ! Initialize timers
             call timer%initialize()
-            call timer%add_timer('Newton_PO', start=.true.)
+            call timer%add_timer('Newton Periodic Orbit', start=.true.)
       
       ! Define options for the Newton solver
             opts = newton_dp_opts(maxiter=30, ifbisect=.true.)
@@ -237,7 +237,7 @@
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
       ! Initialize timers
             call timer%initialize()
-            call timer%add_timer('OTD_analysis', start=.true.)
+            call timer%add_timer('OTD analysis', start=.true.)
       
       ! initialize OTD structure
             call OTD%init(opts)
