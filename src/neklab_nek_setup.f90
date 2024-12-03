@@ -17,7 +17,7 @@
          include "TOTAL"
          include "ADJOINT"
          private
-         character(len=*), parameter, private :: this_module = 'neklab_utils'
+         character(len=*), parameter, private :: this_module = 'neklab_nek_setup'
       
          integer, parameter :: lv = lx1*ly1*lz1*lelv
       !! Local number of grid points for the velocity mesh.
@@ -101,13 +101,13 @@
                else
                   write (msg, '(A,I0,A,I0)') "Neklab multi-perturbation mode. lpert =", lpert, ", npert =", npert
                end if
-               call logger%log_message(msg, module=this_module, procedure='setup_nek')
+               call logger%log_debug(msg, module=this_module, procedure='setup_nek')
                if (nid == 0) print '(A)', trim(msg)
                if (lpert /= npert) then
                   param(31) = lpert
                   npert = lpert
                   write (msg, '(A)') "Neklab requires lpert (SIZE) = npert (.par) to work reliably. Forcing npert=lpert."
-                  call logger%log_message(msg, module=this_module, procedure='setup_nek')
+                  call logger%log_warning(msg, module=this_module, procedure='setup_nek')
                   if (nid == 0) print '(A)', trim(msg)
                end if
       ! Deactivate OIFS.
