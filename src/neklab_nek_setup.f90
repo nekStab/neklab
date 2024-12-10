@@ -29,7 +29,7 @@
       ! Set up solver
          public :: setup_nek, setup_nonlinear_solver, setup_linear_solver, nek_status
       ! Utilities for logging
-         public :: nek_log_message, nek_log_warning, nek_log_information
+         public :: nek_log_message, nek_log_warning, nek_log_information, nek_log_debug
       
       contains
       
@@ -52,6 +52,7 @@
             logical, optional, intent(in) :: silent
             logical :: silent_
       ! internal
+            real(dp) :: dt_old
             character(len=128) :: msg
             logical :: full_summary
       
@@ -143,14 +144,22 @@
       
       ! Recompute dt
             if (recompute_dt_) then
-               write (msg, '(5X,A)') 'Recomputing dt/nsteps/cfl from target_cfl and current baseflow.'
-               call nek_log_information(msg, this_module, 'setup_nek')
+               dt_old = dt
                call compute_cfl(ctarg, vx, vy, vz, 1.0_dp)
                dt = param(26)/ctarg; nsteps = ceiling(param(10)/dt)
                dt = param(10)/nsteps; param(12) = dt
                call compute_cfl(ctarg, vx, vy, vz, dt)
-               write (msg, '(5X,A,F15.8)') padl('effective CFL = ', 20), ctarg
-               call nek_log_information(msg, this_module, 'setup_nek')
+               if (dt /= dt_old) then
+                  write (msg, '(5X,A)') 'Recomputing dt/nsteps/cfl from target_cfl and current baseflow.'
+                  call nek_log_information(msg, this_module, 'setup_nek')
+                  write (msg, '(5X,A,F15.8)') padl('effective CFL = ', 20), ctarg
+                  call nek_log_information(msg, this_module, 'setup_nek')
+               else
+                  write (msg, '(5X,A)') 'Recomputing dt/nsteps/cfl from target_cfl and current baseflow.'
+                  call nek_log_debug(msg, this_module, 'setup_nek')
+                  write (msg, '(5X,A,F15.8)') padl('effective CFL = ', 20), ctarg
+                  call nek_log_debug(msg, this_module, 'setup_nek')
+               end if
             else
                nsteps = ceiling(param(10)/dt)
                param(12) = dt
@@ -298,6 +307,18 @@
             call logger%log_warning(msg, module=module, procedure=procedure)
             if (nid == 0) print fmt_, "WARNING :", trim(msg)
          end subroutine nek_log_warning
+
+         subroutine nek_log_debug(msg, module, procedure, fmt)
+            character(len=*), intent(in) :: msg
+            character(len=*), optional, intent(in) :: module
+            character(len=*), optional, intent(in) :: procedure
+            character(len=*), optional, intent(in) :: fmt
+            ! internal
+            character(len=128) :: fmt_
+            fmt_ = optval(fmt,'(A)')
+            call logger%log_debug(msg, module=module, procedure=procedure)
+            if (nid == 0) print fmt_, trim(msg)
+         end subroutine nek_log_debug
 
          subroutine nek_log_information(msg, module, procedure, fmt)
             character(len=*), intent(in) :: msg
