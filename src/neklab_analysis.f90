@@ -10,7 +10,7 @@
          use LightKrylov, only: newton, newton_dp_opts
          use LightKrylov_Logger
          use LightKrylov_Timing, only: timer => global_lightkrylov_timer
-         use LightKrylov_NewtonKrylov, only: dynamic_tol_dp, constant_atol_dp
+         use LightKrylov_NewtonKrylov, only: dynamic_tol_dp, constant_tol_dp
          use neklab_vectors
          use neklab_linops
          use neklab_utils
@@ -164,7 +164,7 @@
             opts = newton_dp_opts(maxiter=30, ifbisect=.true.)
       
       ! Call to LightKrylov.
-            call newton(sys, bf, gmres_rdp, info, tolerance=tol, options=opts, scheduler=constant_atol_dp)
+            call newton(sys, bf, gmres_rdp, info, atol=tol, options=opts, scheduler=constant_tol_dp)
       
       ! Outpost initial condition.
             file_prefix = 'nwt'
@@ -200,7 +200,7 @@
             opts = newton_dp_opts(maxiter=30, ifbisect=.true.)
       
       ! Call to LightKrylov.
-            call newton(sys, bf, gmres_rdp, info, tolerance=tol, options=opts, scheduler=constant_atol_dp)
+            call newton(sys, bf, gmres_rdp, info, atol=tol, options=opts, scheduler=constant_tol_dp)
       
       ! Outpost initial condition.
             file_prefix = 'nwt'
