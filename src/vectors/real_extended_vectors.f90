@@ -94,6 +94,8 @@
             call daxpy(lp, beta, vec%pr, 1, self%pr, 1)
             if (ifto) call daxpy(lv, beta, vec%theta(:, 1), 1, self%theta(:, 1), 1)
             self%T = alpha*self%T + beta*vec%T
+         class default
+            call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='nek_ext_daxpby')
          end select
          end procedure
       
@@ -114,6 +116,8 @@
             end do
             end if
             alpha = alpha + self%T*vec%T
+         class default
+            call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='nek_ext_ddot')
          end select
          end procedure
       

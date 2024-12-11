@@ -145,6 +145,8 @@
             select type (vec)
             type is (nek_dvector)
                call nopcopy(vx_, vy_, vz_, pr_, t_, vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
+            class default
+               call stop_error('Input must be a nek_dvector', module=this_module, procedure='abstract_vec2nek_std')
             end select
             return
          end subroutine abstract_vec2nek_std
@@ -160,6 +162,8 @@
             select type (vec)
             type is (nek_dvector)
                call nopcopy(vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1), vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
+            class default
+               call stop_error('Input must be a nek_dvector', module=this_module, procedure='abstract_vec2nek_prt')
             end select
             return
          end subroutine abstract_vec2nek_prt
@@ -233,6 +237,8 @@
             select type (vec)
             type is (nek_ext_dvector)
                call nopcopy(vx_, vy_, vz_, pr_, t_, vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
+            class default
+               call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='abstract_ext_vec2nek_std')
             end select
             return
          end subroutine abstract_ext_vec2nek_std
@@ -248,6 +254,8 @@
             select type (vec)
             type is (nek_ext_dvector)
                call nopcopy(vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1), vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
+            class default
+               call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='abstract_ext_vec2nek_prt')
             end select
             return
          end subroutine abstract_ext_vec2nek_prt
@@ -257,6 +265,8 @@
             select type (vec)
             type is (nek_ext_dvector)
                period = vec%T
+            class default
+               call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='get_period_abs')
             end select
          end function get_period_abs
       

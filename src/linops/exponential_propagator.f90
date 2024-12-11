@@ -10,50 +10,52 @@
          end procedure
       
          module procedure exptA_matvec
-         call setup_linear_solver(transpose=.false., silent=.false.)
-      ! Force baseflow.
-         call vec2nek(vx, vy, vz, pr, t, self%baseflow)
-      
-      ! Set initial condition for the linearized solver.
          select type (vec_in)
          type is (nek_dvector)
-            call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
-         end select
-      
+            select type (vec_out)
+            type is (nek_dvector)
+               call setup_linear_solver(transpose=.false., silent=.false.)
+      ! Force baseflow.
+               call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+      ! Set initial condition for the linearized solver.
+               call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Integrate the equations forward in time.
-         time = 0.0_dp
-         do istep = 1, nsteps
-            call nek_advance()
-         end do
-      
+               time = 0.0_dp
+               do istep = 1, nsteps
+                  call nek_advance()
+               end do
       ! Copy the final solution to vector.
-         select type (vec_out)
-         type is (nek_dvector)
-            call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
+               call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
+            class default
+               call stop_error('Output must be a nek_dvector', module=this_module, procedure='exptA_matvec')
+            end select
+         class default
+            call stop_error('Input must be a nek_dvector', module=this_module, procedure='exptA_matvec')
          end select
          end procedure
       
          module procedure exptA_rmatvec
-         call setup_linear_solver(transpose=.true., silent=.true.)
-      ! Force baseflow.
-         call vec2nek(vx, vy, vz, pr, t, self%baseflow)
-      
-      ! Set initial condition for the linearized solver.
          select type (vec_in)
          type is (nek_dvector)
-            call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
-         end select
-      
+            select type (vec_out)
+            type is (nek_dvector)
+               call setup_linear_solver(transpose=.true., silent=.true.)
+      ! Force baseflow.
+               call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+      ! Set initial condition for the linearized solver.
+               call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Integrate the equations forward in time.
-         time = 0.0_dp
-         do istep = 1, nsteps
-            call nek_advance()
-         end do
-      
+               time = 0.0_dp
+               do istep = 1, nsteps
+                  call nek_advance()
+               end do
       ! Copy the final solution to vector.
-         select type (vec_out)
-         type is (nek_dvector)
-            call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
+               call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
+            class default
+               call stop_error('Output must be a nek_dvector', module=this_module, procedure='exptA_rmatvec')
+            end select
+         class default
+            call stop_error('Input must be a nek_dvector', module=this_module, procedure='exptA_rmatvec')
          end select
          end procedure
       end submodule

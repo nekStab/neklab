@@ -20,7 +20,11 @@
                call nek2vec(vec_out, vx, vy, vz, pr, t)
       ! Evaluate residual F(X) - X.
                call vec_out%sub(vec_in)
+            class default
+               call stop_error('Output must be a nek_dvector', module=this_module, procedure='nonlinear_map')
             end select
+         class default
+            call stop_error('Input must be a nek_dvector', module=this_module, procedure='nonlinear_map')
          end select
          end procedure nonlinear_map
       
@@ -45,7 +49,11 @@
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
       ! Evaluate [ exp(tau*J) - I ] @ dx.
                call vec_out%sub(vec_in)
+            class default
+               call stop_error('Output must be a nek_dvector', module=this_module, procedure='jac_exptA_matvec')
             end select
+         class default
+            call stop_error('Input must be a nek_dvector', module=this_module, procedure='jac_exptA_matvec')
          end select
          end procedure jac_exptA_matvec
       
@@ -70,7 +78,11 @@
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
       ! Evaluate [ exp(tau*J) - I ] @ dx.
                call vec_out%sub(vec_in)
+            class default
+               call stop_error('Output must be a nek_dvector', module=this_module, procedure='jac_exptA_rmatvec')
             end select
+         class default
+            call stop_error('Input must be a nek_dvector', module=this_module, procedure='jac_exptA_rmatvec')
          end select
          end procedure jac_exptA_rmatvec
       end submodule
