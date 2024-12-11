@@ -88,6 +88,8 @@
             if (if3d) call daxpy(lv, beta, vec%vz, 1, self%vz, 1)
             call daxpy(lp, beta, vec%pr, 1, self%pr, 1)
             if (ifto) call daxpy(lv, beta, vec%theta(:, 1), 1, self%theta(:, 1), 1)
+         class default
+            call stop_error('Input must be a nek_dvector', module=this_module, procedure='nek_daxpby')
          end select
          end procedure
       
@@ -107,6 +109,8 @@
                if (ifpsco(i - 1)) alpha = alpha + glsc3(self%theta(:, i), vec%theta(:, i), bm1, lv)
             end do
             end if
+         class default
+            call stop_error('Input must be a nek_dvector', module=this_module, procedure='nek_ddot')
          end select
          end procedure
       

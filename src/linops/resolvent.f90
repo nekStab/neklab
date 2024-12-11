@@ -34,7 +34,11 @@
       ! Evaluate the imaginary part.
                exptA%tau = tau/4.0_dp; call exptA%init()
                vec_out%im = evaluate_imaginary_part(vec_in, self%omega, vec_out%re, ifadj)
+            class default
+               call stop_error('Output must be a nek_zvector', module=this_module, procedure='resolvent_matvec')
             end select
+         class default
+            call stop_error('Input must be a nek_zvector', module=this_module, procedure='resolvent_matvec')
          end select
          end procedure
       
@@ -59,7 +63,11 @@
       ! Evaluate the imaginary part.
                exptA%tau = tau/4.0_dp; call exptA%init()
                vec_out%im = evaluate_imaginary_part(vec_in, self%omega, vec_out%re, .true.)
+            class default
+               call stop_error('Output must be a nek_zvector', module=this_module, procedure='resolvent_rmatvec')
             end select
+         class default
+            call stop_error('Input must be a nek_zvector', module=this_module, procedure='resolvent_rmatvec')
          end select
          end procedure
       

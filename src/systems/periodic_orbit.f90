@@ -26,7 +26,11 @@
                vec_out%T = vec_in%T
       ! Evaluate residual F(X) - X.
                call vec_out%sub(vec_in)
+            class default
+               call stop_error('Output must be a nek_ext_dvector', module=this_module, procedure='nonlinear_map_UPO')
             end select
+         class default
+            call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='nonlinear_map_UPO')
          end select
          end procedure nonlinear_map_UPO
       
@@ -62,7 +66,11 @@
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
                call compute_fdot(vec)
                vec_out%T = vec_in%dot(vec)
+            class default
+               call stop_error('Output must be a nek_ext_dvector', module=this_module, procedure='jac_direct_map')
             end select
+         class default
+            call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='jac_direct_map')
          end select
          end procedure jac_direct_map
       
@@ -97,7 +105,11 @@
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
                call compute_fdot(vec)
                vec_out%T = vec_in%dot(vec)
+            class default
+               call stop_error('Output must be a nek_ext_dvector', module=this_module, procedure='jac_adjoint_map')
             end select
+         class default
+            call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='jac_adjoint_map')
          end select
          end procedure jac_adjoint_map
       end submodule

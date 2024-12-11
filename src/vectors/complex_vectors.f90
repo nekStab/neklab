@@ -64,6 +64,8 @@
       ! Vector addition.
             call nek_daxpby(self%re, 1.0_dp, wrk%re, 1.0_dp)
             call nek_daxpby(self%im, 1.0_dp, wrk%im, 1.0_dp)
+         class default
+            call stop_error('Input must be a nek_zvector', module=this_module, procedure='nek_zaxpby')
          end select
          end procedure
       
@@ -74,6 +76,8 @@
             alpha_r = self%re%dot(vec%re) + self%im%dot(vec%im)
             alpha_i = self%re%dot(vec%im) - self%im%dot(vec%re)
             alpha = cmplx(alpha_r, alpha_i, kind=dp)
+         class default
+            call stop_error('Input must be a nek_zvector', module=this_module, procedure='nek_zdot')
          end select
          end procedure
       
