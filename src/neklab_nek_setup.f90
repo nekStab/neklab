@@ -261,6 +261,7 @@
                end if
             else
                if (full_summary_) then
+                  call nek_log_message('NONLINEAR MODE:', this_module, 'nek_status', nekfmt)
                   write (msg, '(A,L8)') padl('OIFS: ', 20), ifchar
                   call nek_log_message(msg, this_module, 'nek_status', nekfmt)
                else
