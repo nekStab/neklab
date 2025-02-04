@@ -54,7 +54,7 @@ if [ "$should_clone" == "yes" ]; then
         echo "Cloning LightKrylov repository..."
         git clone https://github.com/nekStab/LightKrylov.git
         cd LightKrylov
-        git checkout updates_skern
+        git checkout dev
     else
         echo "Skipping cloning."
     fi
@@ -79,7 +79,7 @@ if command -v mpiifort >/dev/null 2>&1; then
     FPM_FFLAGS="-Ofast -xHost -g -traceback"
     FPM_FC="mpiifort"
 else
-    FPM_FFLAGS="-march=native -O3 -funroll-loops -ffast-math"
+    FPM_FFLAGS="-march=native -O3 -funroll-loops -DMPI"
     FPM_FC="mpifort"
 fi
 
