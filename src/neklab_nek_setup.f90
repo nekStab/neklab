@@ -1,6 +1,7 @@
       module neklab_nek_setup
          use stdlib_strings, only: padl
          use stdlib_optval, only: optval
+         use stdlib_logger, only: debug_level, warning_level, information_level
       !---------------------------------------
       !-----     LightKrylov Imports     -----
       !---------------------------------------
@@ -29,7 +30,7 @@
       ! Set up solver
          public :: setup_nek, setup_nonlinear_solver, setup_linear_solver, nek_status
       ! Utilities for logging
-         public :: nek_log_message, nek_log_warning, nek_log_information, nek_log_debug
+         public :: nek_log_message, nek_log_warning, nek_log_information, nek_log_debug, nek_stop_error
       
       contains
       
@@ -104,17 +105,17 @@
                else
                   write (msg, '(A,I0,A,I0)') "Neklab multi-perturbation mode. lpert =", lpert, ", npert =", npert
                end if
-               call nek_log_debug(msg, module=this_module, procedure='setup_nek')
+               call nek_log_debug(msg, this_module, 'setup_nek')
                if (lpert /= npert) then
                   param(31) = lpert
                   npert = lpert
                   write (msg, '(A)') "Neklab requires lpert (SIZE) = npert (.par) to work reliably. Forcing npert=lpert."
-                  call nek_log_warning(msg, module=this_module, procedure='setup_nek')
+                  call nek_log_message(msg, this_module, 'setup_nek')
                end if
       ! Deactivate OIFS.
                if (ifchar) then
                   write (msg, '(A)') "OIFS is not available for linearized solver. Turning it off."
-                  call nek_log_warning(msg, module=this_module, procedure='setup_nek')
+                  call nek_log_warning(msg, this_module, 'setup_nek')
                   ifchar = .false.
                end if
             else
@@ -178,7 +179,7 @@
             if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
             write (msg, '(A,E15.8)') padl('Set velocity tol: ', 30), param(22)
             if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
-      
+
       ! Force constant timestep
             param(12) = -abs(param(12))
             write (msg, '(A,E15.8)') padl('Force constant timestep: ', 30), -param(12)
@@ -256,8 +257,7 @@
                   write (msg, '(A,L8)') padl('OIFS: ', 20), ifchar
                   call nek_log_message(msg, this_module, 'nek_status', nekfmt)
                else
-                  write (msg, '(A,A,L8,A,I8)') 'LINEAR MODE: ', padl('ifpert: ', 10), ifpert, padl('npert: ', 10), npert
-                  call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+                  call nek_log_message('LINEAR MODE', this_module, 'nek_status', nekfmt)
                end if
             else
                if (full_summary_) then
@@ -299,7 +299,7 @@
             character(len=*), optional, intent(in) :: fmt
             ! internal
             character(len=128) :: fmt_
-            fmt_ = optval(fmt,'(A)')
+            fmt_ = optval(fmt,default_fmt('', module, procedure))
             call logger%log_message(msg, module=module, procedure=procedure)
             if (nid == 0) print fmt_, trim(msg)
          end subroutine nek_log_message
@@ -310,10 +310,12 @@
             character(len=*), optional, intent(in) :: procedure
             character(len=*), optional, intent(in) :: fmt
             ! internal
+            integer :: level
             character(len=128) :: fmt_
-            fmt_ = optval(fmt,'(A,A)')
+            fmt_ = optval(fmt,default_fmt("WARNING:", module, procedure))
+            call logger%configuration(level=level)
             call logger%log_warning(msg, module=module, procedure=procedure)
-            if (nid == 0) print fmt_, "WARNING :", trim(msg)
+            if (nid == 0 .and. level == warning_level) print fmt_, trim(msg)
          end subroutine nek_log_warning
 
          subroutine nek_log_debug(msg, module, procedure, fmt)
@@ -322,10 +324,12 @@
             character(len=*), optional, intent(in) :: procedure
             character(len=*), optional, intent(in) :: fmt
             ! internal
+            integer :: level
             character(len=128) :: fmt_
-            fmt_ = optval(fmt,'(A)')
+            fmt_ = optval(fmt,default_fmt("DEBUG:", module, procedure))
+            call logger%configuration(level=level)
             call logger%log_debug(msg, module=module, procedure=procedure)
-            if (nid == 0) print fmt_, trim(msg)
+            if (nid == 0 .and. level == debug_level) print fmt_, trim(msg)
          end subroutine nek_log_debug
 
          subroutine nek_log_information(msg, module, procedure, fmt)
@@ -334,10 +338,43 @@
             character(len=*), optional, intent(in) :: procedure
             character(len=*), optional, intent(in) :: fmt
             ! internal
+            integer :: level
             character(len=128) :: fmt_
-            fmt_ = optval(fmt,'(A)')
+            fmt_ = optval(fmt,default_fmt("INFO:", module, procedure))
+            call logger%configuration(level=level)
             call logger%log_information(msg, module=module, procedure=procedure)
-            if (nid == 0) print fmt_, trim(msg)
+            if (nid == 0 .and. level == information_level) print fmt_, trim(msg)
          end subroutine nek_log_information
+
+         subroutine nek_stop_error(msg, module, procedure, fmt)
+            character(len=*), intent(in) :: msg
+            character(len=*), optional, intent(in) :: module
+            character(len=*), optional, intent(in) :: procedure
+            character(len=*), optional, intent(in) :: fmt
+            ! internal
+            character(len=128) :: fmt_
+            fmt_ = optval(fmt,default_fmt("ERROR:", module, procedure))
+            call nekgsync()
+            if (nid == 0) print fmt_, trim(msg)
+            call stop_error(msg, module=module, procedure=procedure)
+         end subroutine nek_stop_error
+
+         function default_fmt(prefix, module, procedure) result(fmt)
+            character(len=*), optional, intent(in) :: prefix
+            character(len=*), optional, intent(in) :: module
+            character(len=*), optional, intent(in) :: procedure
+            character(len=128) :: fmt, fmt_string
+            ! internal
+            character(len=128) :: mod, pfx, prc
+            pfx = optval(trim(prefix), '')
+            prc = optval(trim(procedure)//' :', '')
+            if (present(procedure)) then
+               mod = optval(trim(module)//' %', '')
+            else
+               mod = optval(trim(module), '')
+            end if
+            fmt_string = trim(pfx)//' '//trim(mod)//' '//trim(prc)
+            write(fmt,'("(",A,",1X,A)")') '"'//adjustl(trim(fmt_string))//'"'
+         end function default_fmt
       
       end module neklab_nek_setup
