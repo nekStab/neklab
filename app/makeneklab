@@ -2,11 +2,11 @@
 set -a
 
 # Compiler and architecture settings
-FC=""
-CC=""
-FFLAGS=""
-USR_LFLAGS=""
-ar=""
+#FC=""
+#CC=""
+#FFLAGS=""
+#USR_LFLAGS=""
+#ar=""
 
 # Fetch version information for user reference
 N_VERSION=$(git -C $NEK_SOURCE_ROOT describe --tag --long --always)
@@ -51,7 +51,6 @@ else
     FFLAGS+=" -ffixed-form" # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
     FFLAGS+=" -march=native" # Enables all instruction subsets supported by the local machine.
-    FFLAGS+=" -mtune=native" # Enables all instruction subsets supported by the local machine.
     FFLAGS+=" -g" # Enables debugging information.
     FFLAGS+=" -fbacktrace" # Provides a backtrace in case of errors, useful for debugging.
     FFLAGS+=" -std=legacy -Wall" # Provides a backtrace in case of errors, useful for debugging.
@@ -61,6 +60,9 @@ fi
 #-------------------------------------------------------------------------------
 # Linking with LAPACK and BLAS
 #-------------------------------------------------------------------------------
+
+export PPLIST="VENDOR_BLAS"
+
 # Lapack is a library of linear algebra routines.
 # Blas (Basic Linear Algebra Subprograms) is used by Lapack.
 
@@ -108,13 +110,13 @@ USR+=" real_extended_vectors.o"
 USR+=" complex_vectors.o"
 USR+=" neklab_utils.o"
 USR+=" neklab_nek_setup.o"
+USR+=" neklab_nek_forcing.o"
 USR+=" neklab_linops.o"
 USR+=" exponential_propagator.o"
 USR+=" resolvent.o"
 USR+=" neklab_systems.o"
 USR+=" fixed_point.o"
 USR+=" periodic_orbit.o"
-USR+=" neklab_nek_forcing.o"
 USR+=" neklab_otd.o"
 USR+=" neklab_analysis.o"
 USR+=" neklab.o"
