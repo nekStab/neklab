@@ -291,7 +291,7 @@
                end do
 
       ! compute reduced operator
-               call innerprod(Lr, OTD%basis, Lu)
+               Lr = innerprod(OTD%basis, Lu)
       
                Phi = 0.0_dp
                do i = 1, r
