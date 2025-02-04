@@ -260,7 +260,7 @@
             return
          end subroutine abstract_ext_vec2nek_prt
       
-         pure real(dp) function get_period_abs(vec) result(period)
+         real(dp) function get_period_abs(vec) result(period)
             class(abstract_vector_rdp), intent(in) :: vec
             select type (vec)
             type is (nek_ext_dvector)
@@ -309,6 +309,8 @@
             select type (vec)
             type is (nek_dvector)
                call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
+            class default
+               call stop_error('Input must be a nek_dvector', module=this_module, procedure='outpost_dnek_abs_vector')
             end select
             return
          end subroutine outpost_dnek_abs_vector
