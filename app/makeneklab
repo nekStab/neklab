@@ -51,6 +51,7 @@ else
     FFLAGS+=" -ffixed-form" # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
     FFLAGS+=" -march=native" # Enables all instruction subsets supported by the local machine.
+    FFLAGS+=" -mtune=native" # Enables all instruction subsets supported by the local machine.
     FFLAGS+=" -g" # Enables debugging information.
     FFLAGS+=" -fbacktrace" # Provides a backtrace in case of errors, useful for debugging.
     FFLAGS+=" -std=legacy -Wall" # Provides a backtrace in case of errors, useful for debugging.
@@ -103,6 +104,9 @@ esac
 FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
 export FFLAGS
 
+# Update makefile and static variables
+echo "include $NEKLAB_SOURCE_ROOT/src/makefile_neklab" > makefile_usr.inc
+
 # User-specified object files
 USR="neklab_vectors.o"
 USR+=" real_vectors.o"
@@ -132,9 +136,7 @@ echo "      compiler:     $(which $FC)"
 echo "      flags:      $FFLAGS"
 echo "      link-flags: $USR_LFLAGS"
 echo "  USR = $USR"
-
-# Update makefile and static variables
-echo "include $NEKLAB_SOURCE_ROOT/src/makefile_neklab" > makefile_usr.inc
+echo ""
 
 set +a -e
 $NEK_SOURCE_ROOT/bin/nekconfig $@
