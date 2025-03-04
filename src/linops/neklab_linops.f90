@@ -8,6 +8,8 @@
          use neklab_vectors
          use neklab_utils, only: nek2vec, vec2nek
          use neklab_nek_setup, only: setup_nonlinear_solver, setup_linear_solver
+         use neklab_nek_setup, only: nek_stop_error, nek_log_message
+         use neklab_helix
          implicit none
          include "SIZE"
          include "TOTAL"
@@ -87,6 +89,42 @@
                class(abstract_vector_cdp), intent(out) :: vec_out
             end subroutine
          end interface
+
+      !-----------------------------------------
+      !-----     FLOQUET OPERATOR TORUS    -----
+      !-----------------------------------------
+      
+      ! --> Type.
+         type, extends(abstract_linop_rdp), public :: floquet_linop
+            type(nek_dvector) :: baseflow
+            real(dp) :: tau = 0.0_dp
+            logical :: baseflow_computed = .false.
+            logical :: is_initialized = .false.
+         contains
+            private
+            procedure, pass(self), public :: init => floquet_init
+            procedure, pass(self), public :: matvec => floquet_matvec
+            procedure, pass(self), public :: rmatvec => floquet_rmatvec
+         end type
+      
+      ! --> Type-bound procedures: floquet_operator.f90
+         interface
+            module subroutine floquet_init(self)
+               class(floquet_linop), intent(inout) :: self
+            end subroutine
+
+            module subroutine floquet_matvec(self, vec_in, vec_out)
+               class(floquet_linop), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               class(abstract_vector_rdp), intent(out) :: vec_out
+            end subroutine
+      
+            module subroutine floquet_rmatvec(self, vec_in, vec_out)
+               class(floquet_linop), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               class(abstract_vector_rdp), intent(out) :: vec_out
+            end subroutine
+         end interface
       
       contains
       
@@ -124,8 +162,14 @@
                      else
                         call A%matvec(vec_in, vec_out)
                      end if
+                  class default
+                     call stop_error("The intent [INOUT] argument 'A' must be of type 'exptA_linop'", this_module, 'apply_exptA')
                   end select
+               class default
+                  call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'", this_module, 'apply_exptA')
                end select
+            class default
+               call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'", this_module, 'apply_exptA')
             end select
             return
          end subroutine apply_exptA

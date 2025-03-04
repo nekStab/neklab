@@ -65,7 +65,8 @@
             call nek_daxpby(self%re, 1.0_dp, wrk%re, 1.0_dp)
             call nek_daxpby(self%im, 1.0_dp, wrk%im, 1.0_dp)
          class default
-            call stop_error('Input must be a nek_zvector', module=this_module, procedure='nek_zaxpby')
+            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_zvector'",
+     & this_module, 'nek_zaxpby')
          end select
          end procedure
       
@@ -77,18 +78,20 @@
             alpha_i = self%re%dot(vec%im) - self%im%dot(vec%re)
             alpha = cmplx(alpha_r, alpha_i, kind=dp)
          class default
-            call stop_error('Input must be a nek_zvector', module=this_module, procedure='nek_zdot')
+            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_zvector'",
+     & this_module, 'nek_zdot')
          end select
          end procedure
       
          module procedure nek_zsize
-         integer :: i
-         n = 2*lv + lp
-         if (if3d) n = n + lv
-         if (ifto) n = n + lv
+         integer :: i, n1
+         n1 = nx1*ny1*nz1*nelv
+         n = 2*n1 + nx2*ny2*nz2*nelv
+         if (if3d) n = n + n1
+         if (ifto) n = n + n1
          if (ldimt > 1) then
          do i = 2, ldimt
-            if (ifpsco(i - 1)) n = n + lv
+            if (ifpsco(i - 1)) n = n + n1
          end do
          end if
          end procedure

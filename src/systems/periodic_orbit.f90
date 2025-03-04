@@ -11,8 +11,11 @@
       ! Set the initial condition
                call ext_vec2nek(vx, vy, vz, pr, t, vec_in)
       ! Set appropriate tolerances and Nek status
-               call setup_nonlinear_solver(recompute_dt=.true., endtime=vec_in%T,
-     $   cfl_limit = 0.4_dp, vtol = atol/10.0, ptol = atol/10.0)
+               call setup_nonlinear_solver(recompute_dt = .true., 
+     $                                     endtime      = vec_in%T,
+     $                                     cfl_limit    = 0.4_dp,
+     $                                     vtol         = atol*0.1,
+     $                                     ptol         = atol*0.1)
                write (msg, '(A,F9.6)') 'Current period estimate, T = ', vec_in%T
                if (nid == 0) print *, msg
                call logger%log_message(msg, module=this_module, procedure='nonlinear_map_UPO')
@@ -27,25 +30,34 @@
       ! Evaluate residual F(X) - X.
                call vec_out%sub(vec_in)
             class default
-               call stop_error('Output must be a nek_ext_dvector', module=this_module, procedure='nonlinear_map_UPO')
+               call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_ext_dvector'",
+     & this_module, 'nonlinear_map_upo')
             end select
          class default
-            call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='nonlinear_map_UPO')
+            call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_ext_dvector'",
+     & this_module, 'nonlinear_map_upo')
          end select
          end procedure nonlinear_map_UPO
       
          module procedure jac_direct_map
       ! internal
+         real(dp) :: atol
          type(nek_ext_dvector) :: vec
          select type (vec_in)
          type is (nek_ext_dvector)
             select type (vec_out)
             type is (nek_ext_dvector)
+               atol = param(22)
       ! Set the baseflow initial condition
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
       ! Ensure correct nek status -> set end time
-               call setup_linear_solver(solve_baseflow=.true., transpose=.false.,
-     $   recompute_dt = .true., endtime = get_period_abs(self%X), cfl_limit = 0.4_dp)
+               call setup_linear_solver(solve_baseflow = .true.,
+     $                                    transpose    = .false.,
+     $                                    recompute_dt = .true.,
+     $                                    endtime      = get_period_abs(self%X),
+     $                                    cfl_limit    = 0.4_dp, 
+     $                                    vtol         = atol*0.5,
+     $                                    ptol         = atol*0.5)
       ! Set the perturbation initial condition
                call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Intgrate the coupled equations forward
@@ -66,26 +78,37 @@
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
                call compute_fdot(vec)
                vec_out%T = vec_in%dot(vec)
+               param(22) = atol
+               param(21) = atol
             class default
-               call stop_error('Output must be a nek_ext_dvector', module=this_module, procedure='jac_direct_map')
+               call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_ext_dvector'",
+     & this_module, 'jac_direct_map')
             end select
          class default
-            call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='jac_direct_map')
+            call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_ext_dvector'",
+     & this_module, 'jac_direct_map')
          end select
          end procedure jac_direct_map
       
          module procedure jac_adjoint_map
       ! internal
+         real(dp) :: atol
          type(nek_ext_dvector) :: vec
          select type (vec_in)
          type is (nek_ext_dvector)
             select type (vec_out)
             type is (nek_ext_dvector)
+               atol = param(22)
       ! Set the baseflow initial condition
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
       ! Ensure correct nek status -> set end time
-               call setup_linear_solver(solve_baseflow=.true., transpose=.true.,
-     $   recompute_dt = .true., endtime = get_period_abs(self%X), cfl_limit = 0.4_dp)
+               call setup_linear_solver(solve_baseflow = .true.,
+     $                                    transpose    = .true.,
+     $                                    recompute_dt = .true.,
+     $                                    endtime      = get_period_abs(self%X),
+     $                                    cfl_limit    = 0.4_dp, 
+     $                                    vtol         = atol*0.5,
+     $                                    ptol         = atol*0.5)
       ! Set the perturbation initial condition
                call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Integrate the equations forward in time.
@@ -105,11 +128,15 @@
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
                call compute_fdot(vec)
                vec_out%T = vec_in%dot(vec)
+               param(22) = atol
+               param(21) = atol
             class default
-               call stop_error('Output must be a nek_ext_dvector', module=this_module, procedure='jac_adjoint_map')
+               call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_ext_dvector'",
+     & this_module, 'jac_adjoint_map')
             end select
          class default
-            call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='jac_adjoint_map')
+            call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_ext_dvector'",
+     & this_module, 'jac_adjoint_map')
          end select
          end procedure jac_adjoint_map
       end submodule

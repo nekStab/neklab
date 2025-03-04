@@ -9,8 +9,10 @@
       ! Set the initial condition
                call vec2nek(vx, vy, vz, pr, t, vec_in)
       ! Set appropriate tolerances
-               call setup_nonlinear_solver(recompute_dt=.true., cfl_limit=0.4_dp,
-     $   vtol = atol/10.0, ptol = atol/10.0)
+               call setup_nonlinear_solver(recompute_dt = .true., 
+     $                                     cfl_limit    = 0.4_dp,
+     $                                     vtol         = atol*0.1,
+     $                                     ptol         = atol*0.1)
       ! Intgrate the nonlinear equations forward
                time = 0.0_dp
                do istep = 1, nsteps
@@ -21,23 +23,31 @@
       ! Evaluate residual F(X) - X.
                call vec_out%sub(vec_in)
             class default
-               call stop_error('Output must be a nek_dvector', module=this_module, procedure='nonlinear_map')
+               call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
+     & this_module, 'nonlinear_map')
             end select
          class default
-            call stop_error('Input must be a nek_dvector', module=this_module, procedure='nonlinear_map')
+            call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'",
+     & this_module, 'nonlinear_map')
          end select
          end procedure nonlinear_map
       
          module procedure jac_exptA_matvec
+      ! internal
+         real(dp) :: atol
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
+               atol = param(22)
       ! Set the baseflow initial condition
                call abs_vec2nek(vx, vy, vz, pr, t, self%X)
       ! Ensure correct nek status
-               call setup_linear_solver(solve_baseflow=.false.,
-     $   recompute_dt = .true., cfl_limit = 0.5_dp)
+               call setup_linear_solver(solve_baseflow = .false.,
+     $                                  recompute_dt   = .true.,
+     $                                  cfl_limit      = 0.5_dp, 
+     $                                  vtol           = atol*0.5,
+     $                                  ptol           = atol*0.5)
       ! Set the initial condition for Nek5000's linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Integrate the equations forward in time.
@@ -45,28 +55,38 @@
                do istep = 1, nsteps
                   call nek_advance()
                end do
-      ! Extract the final solution to vector.
+      ! Extract the final solution to vector.   
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
       ! Evaluate [ exp(tau*J) - I ] @ dx.
                call vec_out%sub(vec_in)
+               param(22) = atol
             class default
-               call stop_error('Output must be a nek_dvector', module=this_module, procedure='jac_exptA_matvec')
+               call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
+     & this_module, 'jac_exptA_matvec')
             end select
          class default
-            call stop_error('Input must be a nek_dvector', module=this_module, procedure='jac_exptA_matvec')
+            call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'",
+     & this_module, 'jac_exptA_matvec')
          end select
          end procedure jac_exptA_matvec
       
          module procedure jac_exptA_rmatvec
+      ! internal
+         real(dp) :: atol
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
+               atol = param(22)
       ! Set the baseflow initial condition
                call abs_vec2nek(vx, vy, vz, pr, t, self%X)
       ! Ensure correct nek status
-               call setup_linear_solver(transpose=.true., solve_baseflow=.false.,
-     $   recompute_dt = .true., cfl_limit = 0.5_dp)
+               call setup_linear_solver(transpose      = .true., 
+     $                                  solve_baseflow = .false.,
+     $                                  recompute_dt   = .true.,
+     $                                  cfl_limit      = 0.5_dp, 
+     $                                  vtol           = atol*0.5,
+     $                                  ptol           = atol*0.5)
       ! Set the initial condition for Nek5000's linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Integrate the equations forward in time.
@@ -78,11 +98,14 @@
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
       ! Evaluate [ exp(tau*J) - I ] @ dx.
                call vec_out%sub(vec_in)
+               param(22) = atol
             class default
-               call stop_error('Output must be a nek_dvector', module=this_module, procedure='jac_exptA_rmatvec')
+               call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
+     & this_module, 'jac_exptA_rmatvec')
             end select
          class default
-            call stop_error('Input must be a nek_dvector', module=this_module, procedure='jac_exptA_rmatvec')
+            call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'",
+     & this_module, 'jac_exptA_rmatvec')
          end select
          end procedure jac_exptA_rmatvec
       end submodule

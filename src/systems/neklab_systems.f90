@@ -9,6 +9,7 @@
       ! Default real kind.
          use LightKrylov, only: dp, qr
       ! Abstract types for real-valued vectors and utilities
+         use LightKrylov, only: atol_dp
          use LightKrylov, only: abstract_linop_rdp, abstract_vector_rdp
          use LightKrylov, only: orthonormalize_basis, orthogonalize_against_basis, zero_basis, copy, rand_basis, linear_combination
          use LightKrylov, only: abstract_system_rdp, abstract_jacobian_linop_rdp
@@ -30,6 +31,8 @@
          integer, parameter :: lp = lx2*ly2*lz2*lelv
       
          public :: compute_fdot
+         public :: nek_constant_tol
+         public :: nek_dynamic_tol
       
       !--------------------------------------------------
       !-----     NEKLAB SYSTEM FOR FIXED-POINTS   -------
@@ -135,5 +138,102 @@
             vec%T = 0.0_dp ! ensure that the period shift vec_out%T is zero
             return
          end subroutine compute_fdot
+
+         !---------------------------------------------------------------------
+         !-----     Definition of two tolerance schedulers for Nek5000    -----
+         !---------------------------------------------------------------------
+      
+         subroutine nek_constant_tol(tol, target_tol, rnorm, iter, info)
+            !! Constant tolerance scheduler for the Newton iteration
+            real(dp), intent(out) :: tol
+            !! Tolerance to be used
+            real(dp), intent(in) :: target_tol
+            !! Target tolerance
+            real(dp), intent(in)  :: rnorm
+            !! Norm of the residual of the current iterate
+            integer,  intent(in)  :: iter
+            !! Newton iteration count
+            integer,  intent(out)  :: info
+            !! Information flag
+            character(len=256) :: msg
+            real(dp), parameter :: mintol = 10.0*atol_dp! minimum acceptable solver tolerance
+            if (target_tol < mintol) then
+               tol = mintol
+               write(msg,'(A,E11.4)') 'Input tolerance below minimum tolerance! Resetting solver tolerance to mintol= ', tol
+               call logger%log_warning(msg, module=this_module, procedure='nek_constant_tol')
+            else
+               tol = target_tol
+               write(msg,'(A,E11.4)') 'Nek velocity and pressure tolerances set to tol= ', tol
+               call logger%log_information(msg, module=this_module, procedure='nek_constant_tol')
+            end if
+            param(21) = tol; TOLPDF = param(21); call bcast(TOLPDF,wdsize)
+            param(22) = tol; TOLHDF = param(22); call bcast(TOLHDF,wdsize)
+            restol(:) = param(22); call bcast(restol, (ldimt1+1)*wdsize)
+            atol(:) = param(22); call bcast(atol, (ldimt1+1)*wdsize)
+            if (nid == 0) print '(A)', trim(msg)
+            return
+         end subroutine nek_constant_tol
+      
+         subroutine nek_dynamic_tol(tol, target_tol, rnorm, iter, info)
+            !! Dynamic tolerance scheduler for the Newton iteration that sets the tolerance based on the current residual
+            real(dp), intent(out) :: tol
+            !! Tolerance to be used
+            real(dp), intent(in) :: target_tol
+            !! Target tolerance
+            real(dp), intent(in)  :: rnorm
+            !! Norm of the residual of the current iterate
+            integer,  intent(in)  :: iter
+            !! Newton iteration count
+            integer,  intent(out)  :: info
+            !! Information flag
+            ! internals
+            real(dp), parameter :: maxtol = 1.0e-04_dp ! maximum acceptable solver tolerance
+            real(dp), parameter :: mintol = 10.0*atol_dp! minimum acceptable solver tolerance
+            real(dp) :: tol_old, target_tol_
+            character(len=256) :: msg
+
+            if (target_tol < mintol) then
+               write(msg,'(A,E11.4)') 'Input target tolerance below minimum tolerance! Resetting target to mintol= ', mintol
+               call nek_log_warning(msg, module=this_module, procedure='nek_dynamic_tol')
+            end if
+            target_tol_ = max(target_tol, mintol)
+
+            if (target_tol > maxtol) then
+               write(msg,'(A,E11.4)') 'Input target tolerance above maximum tolerance! Resetting target to maxtol= ', maxtol
+               call nek_log_warning(msg, module=this_module, procedure='nek_dynamic_tol')
+            end if
+            target_tol_ = min(target_tol_, maxtol)
+
+            tol_old = tol
+            tol = max(0.1_dp*rnorm, target_tol_)
+            if (tol < 10*target_tol_) then
+               write(msg,'(A,E11.4)') 'Residual is close to target. Setting tolerance to input target= ', target_tol_
+               call nek_log_information(msg, module=this_module, procedure='nek_dynamic_tol')
+               tol = target_tol_
+            end if
+            if (tol > maxtol) then
+               write(msg,'(A,E11.4)') 'Residual is large. Setting tolerance to tol= ', maxtol
+               call nek_log_information(msg, module=this_module, procedure='nek_dynamic_tol')
+            end if
+            tol = min(tol, maxtol)
+      
+            if (tol /= tol_old) then
+               if (tol == target_tol_) then
+                  write(msg,'(A,E11.4)') 'Nek solver tolerance set to input target. tol= ', tol
+               else
+                  write(msg,'(A,E11.4)') 'Nek solver tolerance set to tol= ', tol
+               end if
+               call nek_log_information(msg, module=this_module, procedure='nek_dynamic_tol')
+               param(21) = tol; TOLPDF = param(21); call bcast(TOLPDF,wdsize)
+               param(22) = tol; TOLHDF = param(22); call bcast(TOLHDF,wdsize)
+               restol(:) = param(22); call bcast(restol, (ldimt1+1)*wdsize)
+               atol(:) = param(22); call bcast(atol, (ldimt1+1)*wdsize)
+            else
+               write(msg,'(A,E11.4)') 'Nek solver tolerances unchanged at tol= ', tol_old
+               call nek_log_information(msg, module=this_module, procedure='nek_dynamic_tol')
+            end if
+            return
+         end subroutine nek_dynamic_tol
+                  
       
       end module neklab_systems

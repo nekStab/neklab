@@ -35,10 +35,12 @@
                exptA%tau = tau/4.0_dp; call exptA%init()
                vec_out%im = evaluate_imaginary_part(vec_in, self%omega, vec_out%re, ifadj)
             class default
-               call stop_error('Output must be a nek_zvector', module=this_module, procedure='resolvent_matvec')
+               call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_zvector'",
+     & this_module, 'resolvent_matvec')
             end select
          class default
-            call stop_error('Input must be a nek_zvector', module=this_module, procedure='resolvent_matvec')
+            call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_zvector'",
+     & this_module, 'resolvent_matvec')
          end select
          end procedure
       
@@ -64,10 +66,12 @@
                exptA%tau = tau/4.0_dp; call exptA%init()
                vec_out%im = evaluate_imaginary_part(vec_in, self%omega, vec_out%re, .true.)
             class default
-               call stop_error('Output must be a nek_zvector', module=this_module, procedure='resolvent_rmatvec')
+               call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_zvector'",
+     & this_module, 'resolvent_rmatvec')
             end select
          class default
-            call stop_error('Input must be a nek_zvector', module=this_module, procedure='resolvent_rmatvec')
+            call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_zvector'",
+     & this_module, 'resolvent_rmatvec')
          end select
          end procedure
       
