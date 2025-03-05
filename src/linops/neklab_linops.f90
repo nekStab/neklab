@@ -59,6 +59,49 @@
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
          end interface
+
+      !-----------------------------------------------------------------------
+      !-----     EXPONENTIAL PROPAGATOR with projection on wavenumber    -----
+      !-----------------------------------------------------------------------
+      
+      ! --> Type.
+         type, extends(abstract_linop_rdp), public :: exptA_linop_alpha
+            real(kind=dp) :: tau
+            type(nek_dvector) :: baseflow
+            real(kind=dp) :: alpha
+            real(kind=dp), dimension(lx1*ly1*lz1*lelv) :: cv = 0.0_dp
+            real(kind=dp), dimension(lx1*ly1*lz1*lelv) :: sv = 0.0_dp
+            integer :: hndl = 0
+         contains
+            private
+            procedure, pass(self), public :: init => init_exptA_alpha
+            procedure, pass(self), public :: proj => proj_alpha
+            procedure, pass(self), public :: matvec => exptA_matvec_alpha
+            procedure, pass(self), public :: rmatvec => exptA_rmatvec_alpha
+         end type exptA_linop_alpha
+      
+      ! --> Type-bound procedures: exponential_propagator.f90
+         interface
+            module subroutine init_exptA_alpha(self)
+               class(exptA_linop_alpha), intent(inout) :: self
+            end subroutine
+
+            module subroutine proj_alpha(self)
+               class(exptA_linop_alpha), intent(in) :: self
+            end subroutine
+      
+            module subroutine exptA_matvec_alpha(self, vec_in, vec_out)
+               class(exptA_linop_alpha), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               class(abstract_vector_rdp), intent(out) :: vec_out
+            end subroutine
+      
+            module subroutine exptA_rmatvec_alpha(self, vec_in, vec_out)
+               class(exptA_linop_alpha), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               class(abstract_vector_rdp), intent(out) :: vec_out
+            end subroutine
+         end interface
       
       !--------------------------------------
       !-----     RESOLVENT OPERATOR     -----
