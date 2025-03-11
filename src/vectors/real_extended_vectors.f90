@@ -1,4 +1,4 @@
-      submodule(neklab_vectors) real_ext_ended_vectors
+      submodule(neklab_vectors) real_extended_vectors
          implicit none
       contains
       
@@ -76,59 +76,71 @@
          end procedure
       
          module procedure nek_ext_dscal
-         call dscal(lv, alpha, self%vx, 1)
-         call dscal(lv, alpha, self%vy, 1)
-         if (if3d) call dscal(lv, alpha, self%vz, 1)
-         call dscal(lp, alpha, self%pr, 1)
-         if (ifto) call dscal(lv, alpha, self%theta(:, 1), 1)
+         integer :: n1, n2
+         n1 = nx1*ny1*nz1*nelv
+         n2 = nx2*ny2*nz2*nelv
+         call cmult(self%vx, alpha, n1)
+         call cmult(self%vy, alpha, n1)
+         if (if3d) call cmult(self%vz, alpha, n1)
+         call cmult(self%pr, alpha, n2)
+         if (ifto) call cmult(self%theta(:, 1), alpha, n1)
          self%T = alpha*self%T
          end procedure
       
          module procedure nek_ext_daxpby
+         integer :: n1, n2
+         n1 = nx1*ny1*nz1*nelv
+         n2 = nx2*ny2*nz2*nelv
          call self%scal(alpha)
          select type (vec)
          type is (nek_ext_dvector)
-            call daxpy(lv, beta, vec%vx, 1, self%vx, 1)
-            call daxpy(lv, beta, vec%vy, 1, self%vy, 1)
-            if (if3d) call daxpy(lv, beta, vec%vz, 1, self%vz, 1)
-            call daxpy(lp, beta, vec%pr, 1, self%pr, 1)
-            if (ifto) call daxpy(lv, beta, vec%theta(:, 1), 1, self%theta(:, 1), 1)
+            call add2s2(self%vx, vec%vx, beta, n1)
+            call add2s2(self%vy, vec%vy, beta, n1)
+            if (if3d) call add2s2(self%vz, vec%vz, beta, n1)
+            call add2s2(self%pr, vec%pr, beta, n2)
+            if (ifto) call add2s2(self%theta(:, 1), vec%theta(:, 1), beta, n1)
             self%T = alpha*self%T + beta*vec%T
          class default
-            call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='nek_ext_daxpby')
+            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
+     & this_module, 'nek_ext_daxpby')
          end select
+
          end procedure
       
          module procedure nek_ext_ddot
-         real(kind=dp), external :: op_glsc2_wt, glsc3
-         integer :: i
-      
-         ifield = 1
+         real(kind=dp), external :: glsc3
+         integer :: i, n
+         n = nx1*ny1*nz1*nelv
          select type (vec)
          type is (nek_ext_dvector)
-            alpha = op_glsc2_wt(self%vx, self%vy, self%vz, vec%vx, vec%vy, vec%vz, bm1)
+            alpha =         glsc3(self%vx, self%vx, bm1, n)
+            alpha = alpha + glsc3(self%vy, self%vy, bm1, n)
+            if (if3d) alpha = alpha + glsc3(self%vz, self%vz, bm1, n)
             if (ifto) then
-               alpha = alpha + glsc3(self%theta(:, 1), vec%theta(:, 1), bm1, lv)
+               alpha = alpha + glsc3(self%theta(:, 1), vec%theta(:, 1), bm1, n)
             end if
             if (ldimt > 1) then
             do i = 2, ldimt
-               if (ifpsco(i - 1)) alpha = alpha + glsc3(self%theta(:, i), vec%theta(:, i), bm1, lv)
+               if (ifpsco(i - 1)) alpha = alpha + glsc3(self%theta(:, i), vec%theta(:, i), bm1, n)
             end do
             end if
             alpha = alpha + self%T*vec%T
          class default
-            call stop_error('Input must be a nek_ext_dvector', module=this_module, procedure='nek_ext_ddot')
+            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
+     & this_module, 'nek_ext_ddot')
          end select
+
          end procedure
       
          module procedure nek_ext_dsize
-         integer :: i
-         n = 2*lv + lp + 1
-         if (if3d) n = n + lv
-         if (ifto) n = n + lv
+         integer :: i, n1
+         n1 = nx1*ny1*nz1*nelv
+         n = 2*n1 + nx2*ny2*nz2*nelv + 1
+         if (if3d) n = n + n1
+         if (ifto) n = n + n1
          if (ldimt > 1) then
          do i = 2, ldimt
-            if (ifpsco(i - 1)) n = n + lv
+            if (ifpsco(i - 1)) n = n + n1
          end do
          end if
          end procedure
