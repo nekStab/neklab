@@ -14,7 +14,7 @@
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
-               call setup_linear_solver(transpose=.false., silent=.false.)
+               call setup_linear_solver(transpose=.false., silent=.false., endtime=self%tau, recompute_dt=.true., cfl_limit=0.5_dp)
          ! Force baseflow.
                call vec2nek(vx, vy, vz, pr, t, self%baseflow)
          ! Set initial condition for the linearized solver.
@@ -41,7 +41,7 @@
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
-               call setup_linear_solver(transpose=.true., silent=.true.)
+               call setup_linear_solver(transpose=.true., silent=.true., endtime=self%tau, recompute_dt=.true., cfl_limit=0.5_dp)
          ! Force baseflow.
                call vec2nek(vx, vy, vz, pr, t, self%baseflow)
          ! Set initial condition for the linearized solver.
