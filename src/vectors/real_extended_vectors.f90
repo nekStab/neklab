@@ -39,20 +39,31 @@
       
          module procedure nek_ext_drand
          logical :: normalize
-         integer :: i, ieg, iel
+         integer :: i, ix, iy, iz, iel, ieg
          real(kind=dp) :: xl(ldim), fcoeff(3), alpha
          normalize = optval(ifnorm, .false.)
-         do i = 1, lv
+      
+         ifield = 1 ! for bcdirvc
+
+         i = 0
+         do iel = 1, nelv
+         do iz = 1, lx1
+         do iy = 1, ly1
+         do ix = 1, lz1
+            i = i + 1
+            xl(1) = xm1(ix, iy, iz, iel)
+            xl(2) = ym1(ix, iy, iz, iel)
+            if (if3d) xl(3) = zm1(ix, iy, iz, iel)
             ieg = lglel(iel)
-            xl(1) = xm1(i, 1, 1, 1)
-            xl(2) = ym1(i, 1, 1, 1)
-            if (if3d) xl(3) = zm1(i, 1, 1, 1)
       
             call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-            self%vx(i) = self%vx(i) + mth_rand(i, 1, 1, 1, xl, fcoeff)
+            self%vx(i) = self%vx(i) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
       
             call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-            self%vy(i) = self%vy(i) + mth_rand(i, 1, 1, 1, xl, fcoeff)
+            self%vy(i) = self%vy(i) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+         end do
+         end do
+         end do
          end do
       
       ! Face averaging.
