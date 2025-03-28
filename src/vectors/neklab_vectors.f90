@@ -64,7 +64,7 @@
                real(kind=dp), intent(in) :: alpha
             end subroutine
       
-            module subroutine nek_daxpby(self, alpha, vec, beta)
+            module subroutine nek_daxpby(alpha, vec, beta, self)
                class(nek_dvector), intent(inout) :: self
                real(kind=dp), intent(in) :: alpha
                class(abstract_vector_rdp), intent(in) :: vec
@@ -129,7 +129,7 @@
                real(kind=dp), intent(in) :: alpha
             end subroutine
       
-            module subroutine nek_ext_daxpby(self, alpha, vec, beta)
+            module subroutine nek_ext_daxpby(alpha, vec, beta, self)
                class(nek_ext_dvector), intent(inout) :: self
                real(kind=dp), intent(in) :: alpha
                class(abstract_vector_rdp), intent(in) :: vec
@@ -191,7 +191,7 @@
                complex(kind=dp), intent(in) :: alpha
             end subroutine
       
-            module subroutine nek_zaxpby(self, alpha, vec, beta)
+            module subroutine nek_zaxpby(alpha, vec, beta, self)
                class(nek_zvector), intent(inout) :: self
                complex(kind=dp), intent(in) :: alpha
                class(abstract_vector_cdp), intent(in) :: vec

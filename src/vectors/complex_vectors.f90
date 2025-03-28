@@ -49,8 +49,8 @@
       ! Scratch array.
          wrk = self
       ! Scale complex vector.
-         call nek_daxpby(self%re, alpha%re, wrk%im, -alpha%im)
-         call nek_daxpby(self%im, alpha%re, wrk%re, alpha%im)
+         call nek_daxpby(alpha%re, wrk%im, -alpha%im, self%re)
+         call nek_daxpby(alpha%re, wrk%re, alpha%im, self%im)
          end procedure
       
          module procedure nek_zaxpby
@@ -60,10 +60,10 @@
          type is (nek_zvector)
             wrk = vec
       ! Scale vectors before addition.
-            call self%scal(alpha); call wrk%scal(beta)
+            call self%scal(beta); call wrk%scal(alpha)
       ! Vector addition.
-            call nek_daxpby(self%re, 1.0_dp, wrk%re, 1.0_dp)
-            call nek_daxpby(self%im, 1.0_dp, wrk%im, 1.0_dp)
+            call nek_daxpby(1.0_dp, wrk%re, 1.0_dp, self%re)
+            call nek_daxpby(1.0_dp, wrk%im, 1.0_dp, self%im)
          class default
             call stop_error("The intent [IN] argument 'vec' must be of type 'nek_zvector'",
      & this_module, 'nek_zaxpby')
