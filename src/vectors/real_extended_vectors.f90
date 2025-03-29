@@ -39,28 +39,33 @@
       
          module procedure nek_ext_drand
          logical :: normalize
-         integer :: i, ix, iy, iz, iel, ieg
+         integer :: ix, iy, iz, iel, ieg, ijke
+         integer :: iface, kx1, kx2, ky1, ky2, kz1, kz2
          real(kind=dp) :: xl(ldim), fcoeff(3), alpha
          normalize = optval(ifnorm, .false.)
       
          ifield = 1 ! for bcdirvc
 
-         i = 0
          do iel = 1, nelv
-         do iz = 1, lx1
+         do iz = 1, lz1
          do iy = 1, ly1
-         do ix = 1, lz1
-            i = i + 1
+         do ix = 1, lx1
+            ieg = lglel(iel)
             xl(1) = xm1(ix, iy, iz, iel)
             xl(2) = ym1(ix, iy, iz, iel)
             if (if3d) xl(3) = zm1(ix, iy, iz, iel)
-            ieg = lglel(iel)
+            ijke = ix + lx1*((iy-1) + ly1*((iz-1) + lz1*(iel-1)))
       
             call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-            self%vx(i) = self%vx(i) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+            self%vx(ijke) = self%vx(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
       
             call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-            self%vy(i) = self%vy(i) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+            self%vy(ijke) = self%vy(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+
+            if (if3d) then
+               call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
+               self%vz(ijke) = self%vz(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+            end if
          end do
          end do
          end do
@@ -74,15 +79,11 @@
          if (if3d) call dsavg(self%vz)
          call bcdirvc(self%vx, self%vy, self%vz, v1mask, v2mask, v3mask)
       
+         call random_number(self%T)
+         
          if (normalize) then
             alpha = self%norm()
             call self%scal(1.0_dp/alpha)
-         end if
-      
-         call random_number(self%T)
-      
-         if (optval(ifnorm, .false.)) then
-            alpha = self%norm(); call self%scal(1.0_dp/alpha)
          end if
          end procedure
       
@@ -110,9 +111,9 @@
             if (if3d) call add2s2(self%vz, vec%vz, alpha, n1)
             call add2s2(self%pr, vec%pr, alpha, n2)
             if (ifto) call add2s2(self%theta(:, 1), vec%theta(:, 1), alpha, n1)
-            self%T = alpha*self%T + alpha*vec%T
+            self%T = beta*self%T + alpha*vec%T
          class default
-            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
+            call nek_stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
      & this_module, 'nek_ext_daxpby')
          end select
 
@@ -124,9 +125,9 @@
          n = nx1*ny1*nz1*nelv
          select type (vec)
          type is (nek_ext_dvector)
-            alpha =         glsc3(self%vx, self%vx, bm1, n)
-            alpha = alpha + glsc3(self%vy, self%vy, bm1, n)
-            if (if3d) alpha = alpha + glsc3(self%vz, self%vz, bm1, n)
+            alpha =         glsc3(self%vx, vec%vx, bm1, n)
+            alpha = alpha + glsc3(self%vy, vec%vy, bm1, n)
+            if (if3d) alpha = alpha + glsc3(self%vz, vec%vz, bm1, n)
             if (ifto) then
                alpha = alpha + glsc3(self%theta(:, 1), vec%theta(:, 1), bm1, n)
             end if
@@ -137,7 +138,7 @@
             end if
             alpha = alpha + self%T*vec%T
          class default
-            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
+            call nek_stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
      & this_module, 'nek_ext_ddot')
          end select
 
