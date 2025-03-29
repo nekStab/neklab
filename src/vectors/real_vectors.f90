@@ -40,28 +40,33 @@
       
          module procedure nek_drand
          logical :: normalize
-         integer :: i, ix, iy, iz, iel, ieg
+         integer :: ix, iy, iz, iel, ieg, ijke
+         integer :: iface, kx1, kx2, ky1, ky2, kz1, kz2
          real(kind=dp) :: xl(ldim), fcoeff(3), alpha
          normalize = optval(ifnorm, .false.)
       
          ifield = 1 ! for bcdirvc
 
-         i = 0
          do iel = 1, nelv
-         do iz = 1, lx1
+         do iz = 1, lz1
          do iy = 1, ly1
-         do ix = 1, lz1
-            i = i + 1
+         do ix = 1, lx1
+            ieg = lglel(iel)
             xl(1) = xm1(ix, iy, iz, iel)
             xl(2) = ym1(ix, iy, iz, iel)
             if (if3d) xl(3) = zm1(ix, iy, iz, iel)
-            ieg = lglel(iel)
+            ijke = ix + lx1*((iy-1) + ly1*((iz-1) + lz1*(iel-1)))
       
             call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-            self%vx(i) = self%vx(i) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+            self%vx(ijke) = self%vx(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
       
             call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-            self%vy(i) = self%vy(i) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+            self%vy(ijke) = self%vy(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+
+            if (if3d) then
+               call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
+               self%vz(ijke) = self%vz(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+            end if
          end do
          end do
          end do
@@ -105,7 +110,7 @@
             call add2s2(self%pr, vec%pr, alpha, n2)
             if (ifto) call add2s2(self%theta(:, 1), vec%theta(:, 1), alpha, n1)
          class default
-            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
+            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_dvector'",
      & this_module, 'nek_daxpby')
          end select
 
@@ -129,7 +134,7 @@
             end do
             end if
          class default
-            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
+            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_dvector'",
      & this_module, 'nek_ddot')
          end select
 

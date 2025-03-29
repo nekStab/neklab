@@ -16,6 +16,7 @@
       ! Extensions of the abstract vector types to nek data format.
          use neklab_vectors
          use neklab_nek_forcing, only: neklab_forcing, set_neklab_forcing
+         use neklab_nek_setup, only: nek_stop_error, nek_log_debug, nek_log_message, nek_log_information
          use neklab_utils, only: nek2vec, vec2nek
          use neklab_nek_setup, only: setup_linear_solver
          use neklab_linops, only: apply_L
@@ -86,11 +87,11 @@
                   call apply_L(vec_out%vx, vec_out%vy, vec_out%vz,
      $   vec_in%vx, vec_in%vy, vec_in%vz, vec_in%pr, trans = .false.)
                   class default
-                  call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
+                  call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
      & this_module, 'apply_LNS')
                end select
             class default
-               call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'",
+               call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'",
      & this_module, 'apply_LNS')
             end select
             return
@@ -110,11 +111,11 @@
                   call apply_L(vec_out%vx, vec_out%vy, vec_out%vz,
      $   vec_in%vx, vec_in%vy, vec_in%vz, vec_in%pr, trans = .true.)
                class default
-                  call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
+                  call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
      & this_module, 'apply_adjLNS')
                end select
             class default
-               call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'",
+               call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'",
      & this_module, 'apply_adjLNS')
             end select
             return
@@ -140,12 +141,12 @@
             loadIC = .false.
             if (opts%n_usrIC < 0) then
                write (msg, *) 'Incorrect number of IC fields to load. nIC=', opts%n_usrIC
-               call logger%log_message(msg, module=this_module, procedure='init_OTD')
+               call nek_log_message(msg, module=this_module, procedure='init_OTD')
                if (nid == 0) print *, trim(msg)
                call nek_end()
             else if (opts%n_usrIC > r) then
                write (msg, *) 'Inconsistent number of IC fields to load. nIC=', opts%n_usrIC, ' r=', self%r
-               call logger%log_message(msg, module=this_module, procedure='init_OTD')
+               call nek_log_message(msg, module=this_module, procedure='init_OTD')
                if (nid == 0) print *, trim(msg)
                call nek_end()
             else
@@ -160,12 +161,12 @@
                inquire (file=ifile, exist=exist_IC)
                if (exist_IC) then
                   write (msg, *) 'Loading IC file: ', trim(ifile)
-                  call logger%log_message(msg, module=this_module, procedure='init_OTD')
+                  call nek_log_message(msg, module=this_module, procedure='init_OTD')
                   call load_fld(ifile)
                   call nek2vec(self%basis(i), vx, vy, vz, pr, t)
                else
                   write (msg, *) 'Cannot find IC file: ', trim(ifile)
-                  call logger%log_message(msg, module=this_module, procedure='init_OTD')
+                  call nek_log_message(msg, module=this_module, procedure='init_OTD')
                   if (nid == 0) print *, trim(msg)
                   call nek_end()
                end if
@@ -178,16 +179,16 @@
       
       ! orthonormalize
             write (msg, '(A,*(1X,E10.3))') 'IC: norm.  err pre: ', (self%basis(i)%dot(self%basis(i)) - 1.0_dp, i=1, r)
-            call logger%log_information(msg, module=this_module, procedure='OTD init')
+            call nek_log_information(msg, module=this_module, procedure='OTD init')
             write (msg, '(A,*(1X,E10.3))') 'IC: ortho. err pre: ', ((self%basis(i)%dot(self%basis(j)), j=i + 1, r), i=1, r)
-            call logger%log_information(msg, module=this_module, procedure='OTD init')
+            call nek_log_information(msg, module=this_module, procedure='OTD init')
       
             call orthonormalize_basis(self%basis)
       
             write (msg, '(A,*(1X,E10.3))') 'IC: norm.  err post:', (self%basis(i)%dot(self%basis(i)) - 1.0_dp, i=1, r)
-            call logger%log_debug(msg, module=this_module, procedure='OTD init')
+            call nek_log_debug(msg, module=this_module, procedure='OTD init')
             write (msg, '(A,*(1X,E10.3))') 'IC: ortho. err post:', ((self%basis(i)%dot(self%basis(j)), j=i + 1, r), i=1, r)
-            call logger%log_debug(msg, module=this_module, procedure='OTD init')
+            call nek_log_debug(msg, module=this_module, procedure='OTD init')
       
       ! force baseflow
             call vec2nek(vx, vy, vz, pr, t, self%baseflow)
@@ -243,7 +244,7 @@
             call sort(sigma, reverse=.true.)
             if (ifprint) then
                write (msg, '(I10,1X,F15.8,*(1X,E15.8))') istep, time, sigma
-               call logger%log_message(msg, module=this_module, procedure='OTD Ls')
+               call nek_log_message(msg, module=this_module, procedure='OTD Ls')
       ! stamp logfile
                open (1234, file=logfile_Ls, status='old', action='write', position='append')
                write (1234, '(I8,1X,F15.8,A,*(1X,E15.8))') istep, time, ' Ls ', sigma
@@ -261,9 +262,9 @@
             end do
             if (ifprint) then
                write (msg, '(I7,1X,F15.8,*(1X,E15.8))') istep, time, real(lambda)
-               call logger%log_message(msg, module=this_module, procedure='OTD Lr%Re')
+               call nek_log_message(msg, module=this_module, procedure='OTD Lr%Re')
                write (msg, '(I7,1X,F15.8,*(1X,E15.8))') istep, time, aimag(lambda)
-               call logger%log_message(msg, module=this_module, procedure='OTD Lr%Im')
+               call nek_log_message(msg, module=this_module, procedure='OTD Lr%Im')
       ! stamp logfile
                open (1234, file=logfile_Lr, status='old', action='write', position='append')
                write (1234, fmt_Lr) istep, time, ' Lr%Re ', real(lambda), ' Lr%Im ', aimag(lambda)

@@ -17,8 +17,7 @@
      $                                     vtol         = atol*0.1,
      $                                     ptol         = atol*0.1)
                write (msg, '(A,F9.6)') 'Current period estimate, T = ', vec_in%T
-               if (nid == 0) print *, msg
-               call logger%log_message(msg, module=this_module, procedure='nonlinear_map_UPO')
+               call nek_log_message(msg, module=this_module, procedure='nonlinear_map_UPO')
       ! Intgrate the nonlinear equations forward
                time = 0.0_dp
                do istep = 1, nsteps
@@ -30,11 +29,11 @@
       ! Evaluate residual F(X) - X.
                call vec_out%sub(vec_in)
             class default
-               call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_ext_dvector'",
+               call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_ext_dvector'",
      & this_module, 'nonlinear_map_upo')
             end select
          class default
-            call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_ext_dvector'",
+            call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_ext_dvector'",
      & this_module, 'nonlinear_map_upo')
          end select
          end procedure nonlinear_map_UPO
@@ -56,8 +55,8 @@
      $                                    recompute_dt = .true.,
      $                                    endtime      = get_period_abs(self%X),
      $                                    cfl_limit    = 0.4_dp, 
-     $                                    vtol         = atol*0.5,
-     $                                    ptol         = atol*0.5)
+     $                                    vtol         = atol*0.1,
+     $                                    ptol         = atol*0.1)
       ! Set the perturbation initial condition
                call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Intgrate the coupled equations forward
@@ -72,7 +71,7 @@
       ! Evaluate f'(X(T), T) * dT and add it to the position residual
       ! Here we assume that vx,vy,vz contains the endpoint of the nonlinear trajectory
                call compute_fdot(vec)
-               call vec_out%axpby(1.0_dp, vec, vec_in%T)
+               call vec_out%axpby(vec_in%T, vec, 1.0_dp)
       ! Evaluate f'(X(0), 0).T @ dx and add phase condition
       ! Set the initial point of the nonlinear trajectory
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
@@ -81,11 +80,11 @@
                param(22) = atol
                param(21) = atol
             class default
-               call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_ext_dvector'",
+               call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_ext_dvector'",
      & this_module, 'jac_direct_map')
             end select
          class default
-            call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_ext_dvector'",
+            call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_ext_dvector'",
      & this_module, 'jac_direct_map')
          end select
          end procedure jac_direct_map
@@ -122,7 +121,7 @@
                call vec_out%sub(vec_in)
       ! Evaluate f'(X(T), T) * dT and add it to the position residual
                call compute_fdot(vec)
-               call vec_out%axpby(1.0_dp, vec, vec_in%T)
+               call vec_out%axpby(vec_in%T, vec, 1.0_dp)
       ! Evaluate f'(X(0), 0).T @ dx and add phase condition
       ! Set the initial point of the orbit
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
@@ -131,11 +130,11 @@
                param(22) = atol
                param(21) = atol
             class default
-               call stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_ext_dvector'",
+               call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_ext_dvector'",
      & this_module, 'jac_adjoint_map')
             end select
          class default
-            call stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_ext_dvector'",
+            call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_ext_dvector'",
      & this_module, 'jac_adjoint_map')
          end select
          end procedure jac_adjoint_map

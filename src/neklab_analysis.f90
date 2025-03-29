@@ -91,7 +91,7 @@
       ! Export eigenfunctions to disk.
             call outpost_dnek(eigvecs(:nev), file_prefix)
 
-            call logger%log_message('Exiting eigenvalue computation.', this_module, this_procedure)
+            call nek_log_message('Exiting eigenvalue computation.', this_module, this_procedure)
 
       ! Finalize exptA timings
             call exptA%finalize_timer()
@@ -168,7 +168,7 @@
       
 		tol_mode_ = optval(tol_mode, 1)
 
-      	call logger%log_message('Starting newton iteration.', this_module, this_procedure)
+      	call nek_log_message('Starting newton iteration.', this_module, this_procedure)
       
       ! Define options for the Newton solver
             opts = newton_dp_opts(maxiter=40, ifbisect=.false.)
@@ -196,7 +196,7 @@
                input_is_fixed_point = meta%input_is_fixed_point
             end if
 
-		call logger%log_message('Exiting newton iteration.', this_module, this_procedure)
+		call nek_log_message('Exiting newton iteration.', this_module, this_procedure)
       
             return
          end subroutine newton_fixed_point_iteration
@@ -225,8 +225,6 @@
       
       ! Set up logging
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
-
-            call logger%configuration(level=log_level)
       
       ! initialize OTD structure
             call OTD%init(opts)
@@ -259,18 +257,18 @@
                         allocate (G(r, r)); G = 0.0_dp
                         G = innerprod(OTD%basis, OTD%basis)
                         write (msg, '(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': norm.  err pre: ',  (G(i,i) - 1.0_dp, i=1, r)
-                        call logger%log_information(msg, this_module, this_procedure)
+                        call nek_log_information(msg, this_module, this_procedure)
                         write (msg, '(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': ortho. err pre: ', ((G(i,j), j=i+1, r), i=1, r)
-                        call logger%log_information(msg, this_module, this_procedure)
+                        call nek_log_information(msg, this_module, this_procedure)
                      end if
          
                      call orthonormalize_basis(OTD%basis)
 
                      if (log_level <= debug_level) then
                         write (msg, '(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': norm.  err post:',  (G(i,i) - 1.0_dp, i=1, r)
-                        call logger%log_debug(msg, this_module, this_procedure)
+                        call nek_log_debug(msg, this_module, this_procedure)
                         write (msg, '(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': ortho. err post:', ((G(i,j), j=i+1, r), i=1, r)
-                        call logger%log_debug(msg, this_module, this_procedure)
+                        call nek_log_debug(msg, this_module, this_procedure)
                      end if
                   end if
       ! compute Lu
