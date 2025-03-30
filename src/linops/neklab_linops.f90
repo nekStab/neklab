@@ -65,7 +65,7 @@
       !-----------------------------------------------------------------------
       
       ! --> Type.
-         type, extends(abstract_linop_rdp), public :: exptA_linop_alpha
+         type, extends(abstract_linop_rdp), public :: exptA_linop_proj
             real(kind=dp) :: tau
             type(nek_dvector) :: baseflow
             real(kind=dp) :: alpha
@@ -74,30 +74,30 @@
             integer :: hndl = 0
          contains
             private
-            procedure, pass(self), public :: init => init_exptA_alpha
+            procedure, pass(self), public :: init => init_exptA_proj
             procedure, pass(self), public :: proj => proj_alpha
-            procedure, pass(self), public :: matvec => exptA_matvec_alpha
-            procedure, pass(self), public :: rmatvec => exptA_rmatvec_alpha
-         end type exptA_linop_alpha
+            procedure, pass(self), public :: matvec => exptA_matvec_proj
+            procedure, pass(self), public :: rmatvec => exptA_rmatvec_proj
+         end type exptA_linop_proj
       
       ! --> Type-bound procedures: exponential_propagator.f90
          interface
-            module subroutine init_exptA_alpha(self)
-               class(exptA_linop_alpha), intent(inout) :: self
+            module subroutine init_exptA_proj(self)
+               class(exptA_linop_proj), intent(inout) :: self
             end subroutine
 
-            module subroutine proj_alpha(self)
-               class(exptA_linop_alpha), intent(in) :: self
+            module subroutine proj_proj(self)
+               class(exptA_linop_proj), intent(in) :: self
             end subroutine
       
-            module subroutine exptA_matvec_alpha(self, vec_in, vec_out)
-               class(exptA_linop_alpha), intent(inout) :: self
+            module subroutine exptA_matvec_proj(self, vec_in, vec_out)
+               class(exptA_linop_proj), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
       
-            module subroutine exptA_rmatvec_alpha(self, vec_in, vec_out)
-               class(exptA_linop_alpha), intent(inout) :: self
+            module subroutine exptA_rmatvec_proj(self, vec_in, vec_out)
+               class(exptA_linop_proj), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
