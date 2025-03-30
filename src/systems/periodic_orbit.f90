@@ -12,10 +12,10 @@
                call ext_vec2nek(vx, vy, vz, pr, t, vec_in)
       ! Set appropriate tolerances and Nek status
                call setup_nonlinear_solver(recompute_dt = .true., 
-     $                                     endtime      = vec_in%T,
-     $                                     cfl_limit    = 0.4_dp,
-     $                                     vtol         = atol*0.1,
-     $                                     ptol         = atol*0.1)
+     &                                     endtime      = vec_in%T,
+     &                                     cfl_limit    = 0.4_dp,
+     &                                     vtol         = atol*0.1,
+     &                                     ptol         = atol*0.1)
                write (msg, '(A,F9.6)') 'Current period estimate, T = ', vec_in%T
                call nek_log_message(msg, module=this_module, procedure='nonlinear_map_UPO')
       ! Intgrate the nonlinear equations forward
@@ -51,12 +51,12 @@
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
       ! Ensure correct nek status -> set end time
                call setup_linear_solver(solve_baseflow = .true.,
-     $                                    transpose    = .false.,
-     $                                    recompute_dt = .true.,
-     $                                    endtime      = get_period_abs(self%X),
-     $                                    cfl_limit    = 0.4_dp, 
-     $                                    vtol         = atol*0.1,
-     $                                    ptol         = atol*0.1)
+     &                                  transpose      = .false.,
+     &                                  recompute_dt   = .true.,
+     &                                  endtime        = get_period_abs(self%X),
+     &                                  cfl_limit      = 0.4_dp, 
+     &                                  vtol           = atol*0.1,
+     &                                  ptol           = atol*0.1)
       ! Set the perturbation initial condition
                call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Intgrate the coupled equations forward
@@ -102,12 +102,12 @@
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
       ! Ensure correct nek status -> set end time
                call setup_linear_solver(solve_baseflow = .true.,
-     $                                    transpose    = .true.,
-     $                                    recompute_dt = .true.,
-     $                                    endtime      = get_period_abs(self%X),
-     $                                    cfl_limit    = 0.4_dp, 
-     $                                    vtol         = atol*0.5,
-     $                                    ptol         = atol*0.5)
+     &                                  transpose      = .true.,
+     &                                  recompute_dt   = .true.,
+     &                                  endtime        = get_period_abs(self%X),
+     &                                  cfl_limit      = 0.4_dp, 
+     &                                  vtol           = atol*0.5,
+     &                                  ptol           = atol*0.5)
       ! Set the perturbation initial condition
                call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       ! Integrate the equations forward in time.

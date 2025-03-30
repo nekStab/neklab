@@ -31,7 +31,6 @@
             neklab_ffx = 0.0_dp
             neklab_ffy = 0.0_dp
             neklab_ffz = 0.0_dp
-            return
          end subroutine zero_neklab_forcing
       
          subroutine get_neklab_forcing(fx, fy, fz, ipert)
@@ -53,7 +52,6 @@
             fx = neklab_ffx(:, ipert + 1)
             fy = neklab_ffy(:, ipert + 1)
             fz = neklab_ffz(:, ipert + 1)
-            return
          end subroutine get_neklab_forcing
       
          subroutine set_neklab_forcing(fx, fy, fz, ipert)
@@ -75,7 +73,6 @@
             neklab_ffx(:, ipert + 1) = fx
             neklab_ffy(:, ipert + 1) = fy
             neklab_ffz(:, ipert + 1) = fz
-            return
          end subroutine set_neklab_forcing
       
          subroutine zero_neklab_forcing_ipert(ipert)
@@ -94,7 +91,6 @@
             neklab_ffx(:, ipert + 1) = 0.0_dp
             neklab_ffy(:, ipert + 1) = 0.0_dp
             neklab_ffz(:, ipert + 1) = 0.0_dp
-            return
          end subroutine zero_neklab_forcing_ipert
       
          subroutine neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg, ipert)
@@ -115,6 +111,5 @@
             ffx = ffx + neklab_ffx(ijke, ipert + 1)
             ffy = ffy + neklab_ffy(ijke, ipert + 1)
             ffz = ffz + neklab_ffz(ijke, ipert + 1)
-            return
          end subroutine neklab_forcing
       end module neklab_nek_forcing

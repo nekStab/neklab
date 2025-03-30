@@ -85,7 +85,7 @@
                select type (vec_out)
                type is (nek_dvector)
                   call apply_L(vec_out%vx, vec_out%vy, vec_out%vz,
-     $   vec_in%vx, vec_in%vy, vec_in%vz, vec_in%pr, trans = .false.)
+     & vec_in%vx, vec_in%vy, vec_in%vz, vec_in%pr, trans = .false.)
                   class default
                   call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
      & this_module, 'apply_LNS')
@@ -94,7 +94,6 @@
                call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'",
      & this_module, 'apply_LNS')
             end select
-            return
          end subroutine apply_LNS
       
          subroutine apply_adjLNS(self, vec_in, vec_out)
@@ -109,7 +108,7 @@
                select type (vec_out)
                type is (nek_dvector)
                   call apply_L(vec_out%vx, vec_out%vy, vec_out%vz,
-     $   vec_in%vx, vec_in%vy, vec_in%vz, vec_in%pr, trans = .true.)
+     & vec_in%vx, vec_in%vy, vec_in%vz, vec_in%pr, trans = .true.)
                class default
                   call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
      & this_module, 'apply_adjLNS')
@@ -118,7 +117,6 @@
                call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'",
      & this_module, 'apply_adjLNS')
             end select
-            return
          end subroutine apply_adjLNS
       
          subroutine init_OTD(self, opts)
@@ -207,8 +205,6 @@
       
       ! setup nek5000
             call setup_linear_solver(recompute_dt=.true., cfl_limit=0.4_dp, solve_baseflow=opts%solve_baseflow)
-      
-            return
          end subroutine init_OTD
       
          subroutine spectral_analysis(self, Lr, sigma, svec, lambda, eigvec, ifprint)
@@ -270,7 +266,6 @@
                write (1234, fmt_Lr) istep, time, ' Lr%Re ', real(lambda), ' Lr%Im ', aimag(lambda)
                close (1234)
             end if
-            return
          end subroutine spectral_analysis
       
          subroutine outpost_OTDmodes(self, eigvec)
@@ -306,7 +301,6 @@
                write (file_prefix, '(A,I2.2)') 'm', i
                call outpost(vxr(1, i), vyr(1, i), vzr(1, i), prp(1, i), tp(1, :, i), file_prefix)
             end do
-            return
          end subroutine outpost_OTDmodes
       
          subroutine generate_forcing(self, Lr, Phi)
@@ -327,7 +321,6 @@
             do i = 1, r
                call set_neklab_forcing(OTDfx(:, i), OTDfy(:, i), OTDfy(:, i), ipert=i)
             end do
-            return
          end subroutine generate_forcing
       
       end module neklab_otd

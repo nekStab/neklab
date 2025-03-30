@@ -243,8 +243,6 @@
       
       ! Print status
             if (.not. silent_) call nek_status(full_summary)
-      
-            return
          end subroutine setup_nek
       
          subroutine setup_nonlinear_solver(recompute_dt, variable_dt, endtime, vtol, ptol, cfl_limit, silent)
@@ -256,8 +254,7 @@
             real(dp), optional, intent(in) :: cfl_limit
             logical, optional, intent(in) :: silent
             call setup_nek(LNS=.false., recompute_dt=recompute_dt, variable_dt=variable_dt,
-     $   endtime = endtime, vtol = vtol, ptol = ptol, cfl_limit = cfl_limit, silent = silent)
-            return
+     & endtime = endtime, vtol = vtol, ptol = ptol, cfl_limit = cfl_limit, silent = silent)
          end subroutine setup_nonlinear_solver
       
          subroutine setup_linear_solver(transpose, solve_baseflow, recompute_dt, variable_dt, endtime, vtol, ptol, cfl_limit, silent)
@@ -271,8 +268,7 @@
             real(dp), optional, intent(in) :: cfl_limit
             logical, optional, intent(in) :: silent
             call setup_nek(LNS=.true., transpose=transpose, solve_baseflow=solve_baseflow, recompute_dt=recompute_dt,
-     $   variable_dt=variable_dt, endtime = endtime, vtol = vtol, ptol = ptol, cfl_limit = cfl_limit, silent = silent)
-            return
+     & variable_dt=variable_dt, endtime = endtime, vtol = vtol, ptol = ptol, cfl_limit = cfl_limit, silent = silent)
          end subroutine setup_linear_solver
       
          subroutine nek_status(full_summary)
@@ -348,7 +344,6 @@
                print '("neklab ",A)', '################## NEK STATUS ##################'
                print *, ''
             end if
-            return
          end subroutine nek_status
 
          subroutine nek_log_message(msg, module, procedure, fmt)

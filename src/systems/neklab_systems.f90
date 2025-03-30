@@ -171,7 +171,6 @@
             restol(:) = param(22); call bcast(restol, (ldimt1+1)*wdsize)
             atol(:) = param(22); call bcast(atol, (ldimt1+1)*wdsize)
             if (nid == 0) print '(A)', trim(msg)
-            return
          end subroutine nek_constant_tol
       
          subroutine nek_dynamic_tol(tol, target_tol, rnorm, iter, info)
@@ -232,7 +231,6 @@
                write(msg,'(A,E11.4)') 'Nek solver tolerances unchanged at tol= ', tol_old
                call nek_log_information(msg, module=this_module, procedure='nek_dynamic_tol')
             end if
-            return
          end subroutine nek_dynamic_tol
                   
       
