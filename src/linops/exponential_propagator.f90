@@ -7,8 +7,8 @@
          call nek_log_message("Set self%baseflow -> vx, vy, vz, pr, t", this_module, "init_exptA")
          ! Setup Nek5000 for perturbation solver.
          call setup_linear_solver(solve_baseflow = .false.,
-     &                            endtime        = self%tau,,
-     &                            recompute_dt   = .true., ,
+     &                            endtime        = self%tau,
+     &                            recompute_dt   = .true.,
      &                            cfl_limit      = 0.5_dp)
          end procedure
 
@@ -18,9 +18,9 @@
             select type (vec_out)
             type is (nek_dvector)
                call setup_linear_solver(transpose     = .false.,
-     &                                  silent        = .false., ,
-     &                                  endtime       = self%tau, ,
-     &                                  recompute_dt  = .true., ,
+     &                                  silent        = .false.,
+     &                                  endtime       = self%tau,
+     &                                  recompute_dt  = .true.,
      &                                  cfl_limit     = 0.5_dp)
          ! Force baseflow.
                call vec2nek(vx, vy, vz, pr, t, self%baseflow)
@@ -49,9 +49,9 @@
             select type (vec_out)
             type is (nek_dvector)
                call setup_linear_solver(transpose     = .true.,
-     &                                  silent        = .false., ,
-     &                                  endtime       = self%tau, ,
-     &                                  recompute_dt  = .true., ,
+     &                                  silent        = .false.,
+     &                                  endtime       = self%tau,
+     &                                  recompute_dt  = .true.,
      &                                  cfl_limit     = 0.5_dp)
          ! Force baseflow.
                call vec2nek(vx, vy, vz, pr, t, self%baseflow)

@@ -1,16 +1,16 @@
-      submodule(neklab_linops) exponential_propagator_alpha
+      submodule(neklab_linops) exponential_propagator_proj
          implicit none
       contains
-         module procedure init_exptA_alpha
-         ! internal
+         module procedure init_exptA_proj
+      ! internal
          integer :: idir, nelx, nely, nelz, i
       ! For the baseflow field for dt/nsteps/cfl computation.
          call vec2nek(vx, vy, vz, pr, t, self%baseflow)
          call nek_log_message("Set self%baseflow -> vx, vy, vz, pr, t", this_module, "init_exptA_alpha")
       ! Setup Nek5000 for perturbation solver.
          call setup_linear_solver(solve_baseflow = .false.,
-     &                            endtime        = self%tau,,
-     &                            recompute_dt   = .true., ,
+     &                            endtime        = self%tau,
+     &                            recompute_dt   = .true.,
      &                            cfl_limit      = 0.5_dp)
          idir = 1
          nelx = 10
@@ -23,15 +23,15 @@
          end do
          end procedure
       
-         module procedure exptA_matvec_alpha
+         module procedure exptA_matvec_proj
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
                call setup_linear_solver(transpose     = .false.,
-     &                                  silent        = .false., ,
-     &                                  endtime       = self%tau, ,
-     &                                  recompute_dt  = .true., ,
+     &                                  silent        = .false.,
+     &                                  endtime       = self%tau,
+     &                                  recompute_dt  = .true.,
      &                                  cfl_limit     = 0.5_dp)
       ! Force baseflow.
                call vec2nek(vx, vy, vz, pr, t, self%baseflow)
@@ -50,23 +50,23 @@
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
             class default
                call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'", 
-     & this_module, 'exptA_alpha_matvec')
+     & this_module, 'exptA_proj_matvec')
             end select
          class default
             call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'", 
-     & this_module, 'exptA_alpha_matvec')
+     & this_module, 'exptA_proj_matvec')
          end select
          end procedure
       
-         module procedure exptA_rmatvec_alpha
+         module procedure exptA_rmatvec_proj
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
                call setup_linear_solver(transpose     = .true.,
-     &                                  silent        = .false., ,
-     &                                  endtime       = self%tau, ,
-     &                                  recompute_dt  = .true., ,
+     &                                  silent        = .false.,
+     &                                  endtime       = self%tau,
+     &                                  recompute_dt  = .true.,
      &                                  cfl_limit     = 0.5_dp)
       ! Force baseflow.
                call vec2nek(vx, vy, vz, pr, t, self%baseflow)
@@ -85,11 +85,11 @@
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
             class default
                call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'", 
-     & this_module, 'exptA_alpha_rmatvec')
+     & this_module, 'exptA_proj_rmatvec')
             end select
          class default
             call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'", 
-     & this_module, 'exptA_alpha_rmatvec')
+     & this_module, 'exptA_proj_rmatvec')
          end select
          end procedure
 

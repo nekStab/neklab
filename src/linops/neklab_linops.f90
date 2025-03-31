@@ -86,7 +86,7 @@
                class(exptA_linop_proj), intent(inout) :: self
             end subroutine
 
-            module subroutine proj_proj(self)
+            module subroutine proj_alpha(self)
                class(exptA_linop_proj), intent(in) :: self
             end subroutine
       
