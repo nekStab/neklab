@@ -1,4 +1,4 @@
-      submodule(neklab_vectors) real_ext_ended_vectors
+      submodule(neklab_vectors) real_extended_vectors
          implicit none
       contains
       
@@ -39,20 +39,36 @@
       
          module procedure nek_ext_drand
          logical :: normalize
-         integer :: i, ieg, iel
+         integer :: ix, iy, iz, iel, ieg, ijke
+         integer :: iface, kx1, kx2, ky1, ky2, kz1, kz2
          real(kind=dp) :: xl(ldim), fcoeff(3), alpha
          normalize = optval(ifnorm, .false.)
-         do i = 1, lv
+      
+         ifield = 1 ! for bcdirvc
+
+         do iel = 1, nelv
+         do iz = 1, lz1
+         do iy = 1, ly1
+         do ix = 1, lx1
             ieg = lglel(iel)
-            xl(1) = xm1(i, 1, 1, 1)
-            xl(2) = ym1(i, 1, 1, 1)
-            if (if3d) xl(3) = zm1(i, 1, 1, 1)
-      
+            xl(1) = xm1(ix, iy, iz, iel)
+            xl(2) = ym1(ix, iy, iz, iel)
+            if (if3d) xl(3) = zm1(ix, iy, iz, iel)
+            ijke = ix + lx1*((iy-1) + ly1*((iz-1) + lz1*(iel-1)))
+            
             call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-            self%vx(i) = self%vx(i) + mth_rand(i, 1, 1, 1, xl, fcoeff)
-      
+            self%vx(ijke) = self%vx(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+            
             call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-            self%vy(i) = self%vy(i) + mth_rand(i, 1, 1, 1, xl, fcoeff)
+            self%vy(ijke) = self%vy(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+            
+            if (if3d) then
+               call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
+               self%vz(ijke) = self%vz(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+            end if
+         end do
+         end do
+         end do
          end do
       
       ! Face averaging.
@@ -63,70 +79,206 @@
          if (if3d) call dsavg(self%vz)
          call bcdirvc(self%vx, self%vy, self%vz, v1mask, v2mask, v3mask)
       
+         call random_number(self%T)
+         
          if (normalize) then
             alpha = self%norm()
             call self%scal(1.0_dp/alpha)
          end if
-      
-         call random_number(self%T)
-      
-         if (optval(ifnorm, .false.)) then
-            alpha = self%norm(); call self%scal(1.0_dp/alpha)
-         end if
          end procedure
       
          module procedure nek_ext_dscal
-         call dscal(lv, alpha, self%vx, 1)
-         call dscal(lv, alpha, self%vy, 1)
-         if (if3d) call dscal(lv, alpha, self%vz, 1)
-         call dscal(lp, alpha, self%pr, 1)
-         if (ifto) call dscal(lv, alpha, self%theta(:, 1), 1)
+         integer :: i, j, n1, n2
+         n1 = nx1*ny1*nz1*nelv
+         n2 = nx2*ny2*nz2*nelv
+         call cmult(self%vx, alpha, n1)
+         call cmult(self%vy, alpha, n1)
+         if (if3d) call cmult(self%vz, alpha, n1)
+         call cmult(self%pr, alpha, n2)
+         if (ifto) call cmult(self%theta(:, 1), alpha, n1)
          self%T = alpha*self%T
+         if (ldimt > 1) then
+            do i = 2, ldimt
+               if (ifpsco(i - 1)) call cmult(self%theta(:, i), alpha, n1)
+            end do
+         end if
+         do j = 1, self%nrst
+            call cmult(self%vxrst(:, j), alpha, n1)
+            call cmult(self%vyrst(:, j), alpha, n1)
+            if (if3d) call cmult(self%vzrst(:, j), alpha, n1)
+            call cmult(self%prrst(:, j), alpha, n2)
+            if (ifto) call cmult(self%thetarst(:, j, 1), alpha, n1)
+            if (ldimt > 1) then
+               do i = 2, ldimt
+                  if (ifpsco(i - 1)) call cmult(self%thetarst(:, j, i), alpha, n1)
+               end do
+            end if
+            self%Trst(j) = alpha*self%Trst(j)
+         end do
          end procedure
       
          module procedure nek_ext_daxpby
-         call self%scal(alpha)
+         integer :: i, j, n1, n2
+         n1 = nx1*ny1*nz1*nelv
+         n2 = nx2*ny2*nz2*nelv
+         call self%scal(beta)
          select type (vec)
          type is (nek_ext_dvector)
-            call daxpy(lv, beta, vec%vx, 1, self%vx, 1)
-            call daxpy(lv, beta, vec%vy, 1, self%vy, 1)
-            if (if3d) call daxpy(lv, beta, vec%vz, 1, self%vz, 1)
-            call daxpy(lp, beta, vec%pr, 1, self%pr, 1)
-            if (ifto) call daxpy(lv, beta, vec%theta(:, 1), 1, self%theta(:, 1), 1)
-            self%T = alpha*self%T + beta*vec%T
+            call add2s2(self%vx, vec%vx, alpha, n1)
+            call add2s2(self%vy, vec%vy, alpha, n1)
+            if (if3d) call add2s2(self%vz, vec%vz, alpha, n1)
+            call add2s2(self%pr, vec%pr, alpha, n2)
+            if (ifto) call add2s2(self%theta(:, 1), vec%theta(:, 1), alpha, n1)
+            self%T = beta*self%T + alpha*vec%T
+            if (ldimt > 1) then
+               do i = 2, ldimt
+                  call add2s2(self%theta(:, i), vec%theta(:, i), alpha, n1)
+               end do
+            end if
+            do j = 1, self%nrst
+               call add2s2(self%vxrst(:, j), vec%vxrst(:, j), alpha, n1)
+               call add2s2(self%vyrst(:, j), vec%vyrst(:, j), alpha, n1)
+               if (if3d) call add2s2(self%vzrst(:, j), vec%vzrst(:, j), alpha, n1)
+               call add2s2(self%prrst(:, j), vec%prrst(:, j), alpha, n2)
+               if (ifto) then
+                  do i = 1, ldimt
+                     call add2s2(self%thetarst(:, j, i), vec%thetarst(:, j, i), alpha, n1)
+                  end do
+               end if
+               self%Trst(j) = beta*self%Trst(j) + alpha*vec%Trst(j)
+               self%nrst = max(self%nrst, vec%nrst)
+            end do
+         class default
+            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
+     & this_module, 'nek_ext_daxpby')
          end select
          end procedure
       
          module procedure nek_ext_ddot
-         real(kind=dp), external :: op_glsc2_wt, glsc3
-         integer :: i
-      
-         ifield = 1
+         real(kind=dp), external :: glsc3
+         integer :: i, n
+         n = nx1*ny1*nz1*nelv
          select type (vec)
          type is (nek_ext_dvector)
-            alpha = op_glsc2_wt(self%vx, self%vy, self%vz, vec%vx, vec%vy, vec%vz, bm1)
+            alpha =         glsc3(self%vx, vec%vx, bm1, n)
+            alpha = alpha + glsc3(self%vy, vec%vy, bm1, n)
+            if (if3d) alpha = alpha + glsc3(self%vz, vec%vz, bm1, n)
             if (ifto) then
-               alpha = alpha + glsc3(self%theta(:, 1), vec%theta(:, 1), bm1, lv)
+               alpha = alpha + glsc3(self%theta(:, 1), vec%theta(:, 1), bm1, n)
             end if
             if (ldimt > 1) then
             do i = 2, ldimt
-               if (ifpsco(i - 1)) alpha = alpha + glsc3(self%theta(:, i), vec%theta(:, i), bm1, lv)
+               if (ifpsco(i - 1)) alpha = alpha + glsc3(self%theta(:, i), vec%theta(:, i), bm1, n)
             end do
             end if
             alpha = alpha + self%T*vec%T
+         class default
+            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
+     & this_module, 'nek_ext_ddot')
          end select
          end procedure
       
          module procedure nek_ext_dsize
-         integer :: i
-         n = 2*lv + lp + 1
-         if (if3d) n = n + lv
-         if (ifto) n = n + lv
+         integer :: i, n1
+         n1 = nx1*ny1*nz1*nelv
+         n = 2*n1 + nx2*ny2*nz2*nelv + 1
+         if (if3d) n = n + n1
+         if (ifto) n = n + n1
          if (ldimt > 1) then
          do i = 2, ldimt
-            if (ifpsco(i - 1)) n = n + lv
+            if (ifpsco(i - 1)) n = n + n1
          end do
          end if
+         end procedure
+
+         module procedure ext_dset_rst
+         integer :: i, n1, n2
+         integer :: irst, torder
+         character(len=128) :: msg
+         n1 = nx1*ny1*nz1*nelv
+         n2 = nx2*ny2*nz2*nelv
+         torder = abs(param(27)) ! integration order in time
+         ! sanity check
+         if (self%nrst == torder - 1) then
+            write(msg,'(2(A,I0),A)') 'Cannot set rst fields ', torder, ' for a simulation of temporal order ', torder, '.'
+            if (nid == 0) print "('ERROR: ',A)", msg
+            call logger%log_error(msg, this_module, 'ext_dset_rst')
+         else
+            self%nrst = self%nrst + 1
+            write(msg,'(A,I0)') 'Setting rst fields: ', self%nrst
+            if (nid == 0) print "('INFO: ',A)", msg
+            call logger%log_debug(msg, this_module, 'ext_dset_rst')
+         end if
+         irst = self%nrst
+         select type (vec_rst)
+         type is (nek_ext_dvector)
+            call copy(self%vxrst(:, irst), vec_rst%vx, n1)
+            call copy(self%vyrst(:, irst), vec_rst%vy, n1)
+            if (if3d) call copy(self%vzrst(:, irst), vec_rst%vz, n1)
+            call copy(self%prrst(:, irst), vec_rst%pr, n2)
+            if (ifto) call copy(self%thetarst(:, irst, 1), vec_rst%theta(:, 1), n1)
+            if (ldimt > 1) then
+               do i = 2, ldimt
+                  if (ifpsco(i - 1)) call copy(self%thetarst(:, irst, i), vec_rst%theta(:, i), n1)
+               end do
+            end if
+            self%Trst(irst) = vec_rst%T
+         class default
+            call stop_error("The intent [IN] argument 'vec_rst' must be of type 'nek_ext_dvector'",
+     & this_module, 'ext_dset_rst')
+         end select
+         end procedure
+
+         module procedure ext_dget_rst
+         integer :: i, n1, n2
+         character(len=128) :: msg
+         n1 = nx1*ny1*nz1*nelv
+         n2 = nx2*ny2*nz2*nelv
+         ! sanity check
+         if (irst < 1) then
+            write(msg,'(A,I0)') 'Invalid input for irst: ', irst
+            if (nid == 0) print "('ERROR: ',A)", msg
+            call logger%log_error(msg, this_module, 'ext_dget_rst')
+         else if (irst > self%nrst) then
+            write(msg,'(A,I0)') 'No rst field to retrieve: ', irst
+            if (nid == 0) print "('WARN: ',A)", msg
+            call logger%log_warning(msg, this_module, 'ext_dget_rst')
+         else
+            write(msg,'(A,I0)') 'Retrieving rst fields: ', irst
+            if (nid == 0) print "('INFO: ',A)", msg
+            call logger%log_information(msg, this_module, 'ext_dget_rst')
+         end if
+         select type (vec_rst)
+         type is (nek_ext_dvector)
+            call copy(vec_rst%vx, self%vxrst(:,irst), n1)
+            call copy(vec_rst%vy, self%vyrst(:,irst), n1)
+            if (if3d) call copy(vec_rst%vz, self%vzrst(:, irst), n1)
+            call copy(vec_rst%pr, self%prrst(:, irst), n2)
+            if (ifto) call copy(vec_rst%theta(:, 1), self%thetarst(:, irst, 1), n1)
+            if (ldimt > 1) then
+               do i = 2, ldimt
+                  if (ifpsco(i - 1)) call copy(vec_rst%theta(:, i), self%thetarst(:, irst, i), n1)
+               end do
+            end if
+            vec_rst%T = self%Trst(irst)
+         class default
+            call stop_error("The intent [OUT] argument 'vec_rst' must be of type 'nek_ext_dvector'",
+     & this_module, 'ext_dget_rst')
+         end select
+         end procedure
+
+         module procedure ext_dhas_rst_fields
+         has_rst_fields = .false.
+         if (self%nrst > 0) has_rst_fields = .true.
+         end procedure  
+   
+
+         module procedure ext_dclear_rst_fields
+         if (self%nrst == 0) then
+            if (nid == 0) print "('INFO: ',A)", 'No rst fields to clear'
+            call logger%log_debug('No rst fields to clear', this_module, 'ext_dclear_rst_fields')
+         end if
+         self%nrst = 0
          end procedure
       
       end submodule
