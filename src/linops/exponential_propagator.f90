@@ -13,14 +13,14 @@
          end procedure
 
          module procedure exptA_matvec
-         integer :: maxrst, itmp
+         integer :: nrst, itmp
          type(nek_dvector) :: vec_rst
          character(len=128) :: msg
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
-               maxrst = abs(param(27)) - 1
+               nrst = abs(param(27)) - 1
                call setup_linear_solver(transpose    = .false., 
      &                                  silent       = .true., 
      &                                  endtime      = self%tau, 
@@ -34,7 +34,7 @@
                do istep = 1, nsteps
                   call nek_advance()
       ! Set restart fields if present
-                  if (istep <= maxrst .and. vec_in%has_rst_fields()) then
+                  if (istep <= nrst .and. vec_in%has_rst_fields()) then
                      call vec_in%get_rst(vec_rst, istep)
                      call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
                   end if
@@ -42,10 +42,12 @@
       ! Copy the final solution to vector.
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
       ! Fill up the restart fields
+               write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
+               call nek_log_information(msg, this_module, 'exptA_matvec')
                itmp_ = nsteps
-               call setup_linear_solver(endtime = self%tau + maxrst*dt)
+               call setup_linear_solver(endtime = self%tau + nrst*dt)
                nsteps = itmp_
-               do istep = nsteps + 1, nsteps + maxrst
+               do istep = nsteps + 1, nsteps + nrst
                   call nek_advance()
                   call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
                   call vec_out%save_rst(vec_rst)
@@ -64,14 +66,14 @@
          end procedure
 
          module procedure exptA_rmatvec
-         integer :: maxrst, itmp
+         integer :: nrst, itmp
          type(nek_dvector) :: vec_rst
          character(len=128) :: msg
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
-               maxrst = abs(param(27)) - 1
+               nrst = abs(param(27)) - 1
                call setup_linear_solver(transpose    = .true., 
      &                                  silent       = .true.,  
      &                                  endtime      = self%tau,  
@@ -86,7 +88,7 @@
                do istep = 1, nsteps
                   call nek_advance()
       ! Set restart fields if present
-                  if (istep <= maxrst .and. vec_in%has_rst_fields()) then
+                  if (istep <= nrst .and. vec_in%has_rst_fields()) then
                      call vec_in%get_rst(vec_rst, istep)
                      call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
                   end if
@@ -94,10 +96,12 @@
       ! Copy the final solution to vector.
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
       ! Fill up the restart fields
+               write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
+               call nek_log_information(msg, this_module, 'exptA_matvec')
                itmp = nsteps
-               call setup_linear_solver(endtime = self%tau + maxrst*dt)
+               call setup_linear_solver(endtime = self%tau + nrst*dt)
                nsteps = itmp
-               do istep = nsteps + 1, nsteps + maxrst
+               do istep = nsteps + 1, nsteps + nrst
                   call nek_advance()
                   call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
                   call vec_out%save_rst(vec_rst)
