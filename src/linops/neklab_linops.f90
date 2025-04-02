@@ -26,6 +26,7 @@
          public :: compute_LNS_gradp
          public :: compute_LNS_laplacian
          public :: apply_Lv, apply_L
+         public :: get_restart, save_restart
       
       !------------------------------------------
       !-----     EXPONENTIAL PROPAGATOR     -----
@@ -305,5 +306,41 @@
             call opsub2(Lux, Luy, Luz, utmpx, utmpy, utmpz)
             return
          end subroutine apply_Lv
+
+         subroutine get_restart(vec_in, istep)
+            type(nek_dvector), intent(in) :: vec_in
+            integer, intent(in) :: istep
+            ! internal
+            type(nek_dvector) :: vec_rst
+            call vec_in%get_rst(vec_rst, istep)
+            call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
+         end subroutine get_restart
+
+         subroutine save_restart(vec_out, nrst)
+            type(nek_dvector), intent(out) :: vec_out
+            integer, intent(in) :: nrst
+            ! internal
+            type(nek_dvector) :: vec_rst
+            integer :: itmp
+            real(dp) :: rtmp
+            character(len=128) :: msg
+            ! Copy the final solution to vector.
+            call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
+            ! Fill up the restart fields
+            write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
+            call nek_log_information(msg, this_module, 'exptA_matvec')
+            itmp = nsteps
+            rtmp = time
+            call setup_linear_solver(endtime = time + nrst*dt)
+            nsteps = itmp
+            do istep = nsteps + 1, nsteps + nrst
+               call nek_advance()
+               call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
+               call vec_out%save_rst(vec_rst)
+            end do
+            ! Reset iteration count and time
+            istep = itmp
+            time  = rtmp
+         end subroutine save_restart
       
       end module neklab_linops

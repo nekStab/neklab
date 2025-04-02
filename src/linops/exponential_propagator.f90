@@ -34,27 +34,12 @@
                do istep = 1, nsteps
                   call nek_advance()
       ! Set restart fields if present
-                  if (istep <= nrst .and. vec_in%has_rst_fields()) then
-                     call vec_in%get_rst(vec_rst, istep)
-                     call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
+                  if (istep <= nrst.and.vec_in%has_rst_fields()) then
+                     call get_restart(vec_in, istep)
                   end if
                end do
-      ! Copy the final solution to vector.
-               call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
-      ! Fill up the restart fields
-               write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
-               call nek_log_information(msg, this_module, 'exptA_matvec')
-               itmp = nsteps
-               call setup_linear_solver(endtime = self%tau + nrst*dt)
-               nsteps = itmp
-               do istep = nsteps + 1, nsteps + nrst
-                  call nek_advance()
-                  call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
-                  call vec_out%save_rst(vec_rst)
-               end do
-      ! Reset iteration count and time
-               istep = nsteps
-               time  = self%tau
+      ! Copy the final solution to vector and compute restart fields
+               call save_restart(vec_out, nrst)
             class default
                call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
      & this_module, 'exptA_matvec')
@@ -88,27 +73,12 @@
                do istep = 1, nsteps
                   call nek_advance()
       ! Set restart fields if present
-                  if (istep <= nrst .and. vec_in%has_rst_fields()) then
-                     call vec_in%get_rst(vec_rst, istep)
-                     call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
+                  if (istep <= nrst.and.vec_in%has_rst_fields()) then
+                     call get_restart(vec_in, istep)
                   end if
                end do
-      ! Copy the final solution to vector.
-               call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
-      ! Fill up the restart fields
-               write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
-               call nek_log_information(msg, this_module, 'exptA_matvec')
-               itmp = nsteps
-               call setup_linear_solver(endtime = self%tau + nrst*dt)
-               nsteps = itmp
-               do istep = nsteps + 1, nsteps + nrst
-                  call nek_advance()
-                  call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
-                  call vec_out%save_rst(vec_rst)
-               end do
-      ! Reset iteration count and time
-               istep = nsteps
-               time  = self%tau
+      ! Copy the final solution to vector and compute restart fields
+               call save_restart(vec_out, nrst)
             class default
                call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
      & this_module, 'exptA_rmatvec')
@@ -118,4 +88,5 @@
      & this_module, 'exptA_rmatvec')
          end select
          end procedure
+      
       end submodule
