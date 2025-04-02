@@ -7,7 +7,7 @@
       !-----     LightKrylov Imports     -----
       !---------------------------------------
       ! Default real kind.
-         use LightKrylov, only: dp, qr, apply_inverse_permutation_matrix
+         use LightKrylov, only: dp
       ! Abstract types for real-valued vectors and utilities
          use LightKrylov, only: abstract_linop_rdp, abstract_vector_rdp
          use LightKrylov, only: orthonormalize_basis, orthogonalize_against_basis, zero_basis, copy, rand_basis, linear_combination

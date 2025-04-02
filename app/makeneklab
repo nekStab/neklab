@@ -2,11 +2,11 @@
 set -a
 
 # Compiler and architecture settings
-FC=""
-CC=""
-FFLAGS=""
-USR_LFLAGS=""
-ar=""
+#FC=""
+#CC=""
+#FFLAGS=""
+#USR_LFLAGS=""
+#ar=""
 
 # Fetch version information for user reference
 N_VERSION=$(git -C $NEK_SOURCE_ROOT describe --tag --long --always)
@@ -61,6 +61,9 @@ fi
 #-------------------------------------------------------------------------------
 # Linking with LAPACK and BLAS
 #-------------------------------------------------------------------------------
+
+export PPLIST="VENDOR_BLAS"
+
 # Lapack is a library of linear algebra routines.
 # Blas (Basic Linear Algebra Subprograms) is used by Lapack.
 
@@ -101,20 +104,24 @@ esac
 FFLAGS+=" -DNVERSION=\"'${N_VERSION}'\" -DNSVERSION=\"'${NS_VERSION}'\""
 export FFLAGS
 
+# Update makefile and static variables
+echo "include $NEKLAB_SOURCE_ROOT/src/makefile_neklab" > makefile_usr.inc
+
 # User-specified object files
 USR="neklab_vectors.o"
 USR+=" real_vectors.o"
 USR+=" real_extended_vectors.o"
 USR+=" complex_vectors.o"
+USR+=" neklab_utils.o"
+USR+=" neklab_nek_setup.o"
+USR+=" neklab_nek_forcing.o"
 USR+=" neklab_linops.o"
 USR+=" exponential_propagator.o"
+USR+=" exponential_propagator_proj.o"
 USR+=" resolvent.o"
 USR+=" neklab_systems.o"
 USR+=" fixed_point.o"
 USR+=" periodic_orbit.o"
-USR+=" neklab_utils.o"
-USR+=" neklab_nek_setup.o"
-USR+=" neklab_nek_forcing.o"
 USR+=" neklab_otd.o"
 USR+=" neklab_analysis.o"
 USR+=" neklab.o"
@@ -130,9 +137,7 @@ echo "      compiler:     $(which $FC)"
 echo "      flags:      $FFLAGS"
 echo "      link-flags: $USR_LFLAGS"
 echo "  USR = $USR"
-
-# Update makefile and static variables
-echo "include $NEKLAB_SOURCE_ROOT/src/makefile_neklab" > makefile_usr.inc
+echo ""
 
 set +a -e
 $NEK_SOURCE_ROOT/bin/nekconfig $@
