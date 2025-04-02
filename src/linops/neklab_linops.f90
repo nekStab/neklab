@@ -8,6 +8,8 @@
          use neklab_vectors
          use neklab_utils, only: nek2vec, vec2nek
          use neklab_nek_setup, only: setup_nonlinear_solver, setup_linear_solver
+         use neklab_nek_setup, only: nek_log_debug, nek_log_message, nek_log_information, nek_stop_error
+         use neklab_nek_forcing, only: set_neklab_forcing
          implicit none
          include "SIZE"
          include "TOTAL"
@@ -117,17 +119,25 @@
                type is (nek_dvector)
                   select type (A)
                   type is (exptA_linop)
-      ! set integration time
+                     ! set integration time
                      A%tau = tau
                      if (transpose) then
                         call A%rmatvec(vec_in, vec_out)
                      else
                         call A%matvec(vec_in, vec_out)
                      end if
+                  class default
+                     call nek_stop_error("The intent [INOUT] argument 'A' must be of type 'exptA_linop', "//
+     & "'exptA_linop_proj', or 'exptA_linop_frc'", this_module, 'apply_exptA')
                   end select
+               class default
+                  call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'", 
+     & this_module, 'apply_exptA')
                end select
+            class default
+               call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'", 
+     & this_module, 'apply_exptA')
             end select
-            return
          end subroutine apply_exptA
       
          subroutine compute_LNS_conv(c_x, c_y, c_z, uxp, uyp, uzp, trans)

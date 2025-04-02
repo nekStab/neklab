@@ -41,7 +41,7 @@
             procedure, pass(self), public :: axpby => nek_daxpby
             procedure, pass(self), public :: dot => nek_ddot
             procedure, pass(self), public :: get_size => nek_dsize
-            procedure, pass(self), public :: set_rst => dset_rst
+            procedure, pass(self), public :: save_rst => dsave_rst
             procedure, pass(self), public :: get_rst => dget_rst
             procedure, pass(self), public :: has_rst_fields => dhas_rst_fields
             procedure, pass(self), public :: clear_rst_fields => dclear_rst_fields
@@ -90,7 +90,7 @@
                class(nek_dvector), intent(in) :: self
             end function
             
-            module subroutine dset_rst(self, vec_rst)
+            module subroutine dsave_rst(self, vec_rst)
                class(nek_dvector), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_rst
             end subroutine
@@ -135,7 +135,7 @@
             procedure, pass(self), public :: axpby => nek_ext_daxpby
             procedure, pass(self), public :: dot => nek_ext_ddot
             procedure, pass(self), public :: get_size => nek_ext_dsize
-            procedure, pass(self), public :: set_rst => ext_dset_rst
+            procedure, pass(self), public :: save_rst => ext_dsave_rst
             procedure, pass(self), public :: get_rst => ext_dget_rst
             procedure, pass(self), public :: has_rst_fields => ext_dhas_rst_fields
             procedure, pass(self), public :: clear_rst_fields => ext_dclear_rst_fields
@@ -185,7 +185,7 @@
                class(nek_ext_dvector), intent(in) :: self
             end function
 
-            module subroutine ext_dset_rst(self, vec_rst)
+            module subroutine ext_dsave_rst(self, vec_rst)
                class(nek_ext_dvector), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_rst
             end subroutine
@@ -224,7 +224,7 @@
             procedure, pass(self), public :: axpby => nek_zaxpby
             procedure, pass(self), public :: dot => nek_zdot
             procedure, pass(self), public :: get_size => nek_zsize
-            procedure, pass(self), public :: set_rst => zset_rst
+            procedure, pass(self), public :: save_rst => zsave_rst
             procedure, pass(self), public :: get_rst => zget_rst
             procedure, pass(self), public :: has_rst_fields => zhas_rst_fields
             procedure, pass(self), public :: clear_rst_fields => zclear_rst_fields
@@ -273,7 +273,7 @@
                class(nek_zvector), intent(in) :: self
             end function
 
-            module subroutine zset_rst(self, vec_rst)
+            module subroutine zsave_rst(self, vec_rst)
                class(nek_zvector), intent(inout) :: self
                class(abstract_vector_cdp), intent(in) :: vec_rst
             end subroutine

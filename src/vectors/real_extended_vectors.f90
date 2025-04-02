@@ -191,7 +191,7 @@
          end if
          end procedure
 
-         module procedure ext_dset_rst
+         module procedure ext_dsave_rst
          integer :: i, n1, n2
          integer :: irst, torder
          character(len=128) :: msg
@@ -200,14 +200,14 @@
          torder = abs(param(27)) ! integration order in time
          ! sanity check
          if (self%nrst == torder - 1) then
-            write(msg,'(2(A,I0),A)') 'Cannot set rst fields ', torder, ' for a simulation of temporal order ', torder, '.'
+            write(msg,'(2(A,I0),A)') 'Cannot save rst fields ', torder, ' for a simulation of temporal order ', torder, '.'
             if (nid == 0) print "('ERROR: ',A)", msg
-            call logger%log_error(msg, this_module, 'ext_dset_rst')
+            call logger%log_error(msg, this_module, 'ext_dsave_rst')
          else
             self%nrst = self%nrst + 1
-            write(msg,'(A,I0)') 'Setting rst fields: ', self%nrst
+            write(msg,'(A,I0)') 'Saving rst fields: ', self%nrst
             if (nid == 0) print "('INFO: ',A)", msg
-            call logger%log_debug(msg, this_module, 'ext_dset_rst')
+            call logger%log_debug(msg, this_module, 'ext_dsave_rst')
          end if
          irst = self%nrst
          select type (vec_rst)
@@ -225,7 +225,7 @@
             self%Trst(irst) = vec_rst%T
          class default
             call stop_error("The intent [IN] argument 'vec_rst' must be of type 'nek_ext_dvector'",
-     & this_module, 'ext_dset_rst')
+     & this_module, 'ext_dsave_rst')
          end select
          end procedure
 

@@ -107,7 +107,7 @@
          end if
          end procedure
 
-         module procedure zset_rst
+         module procedure zsave_rst
          integer :: i, n1, n2
          integer :: irst, torder
          character(len=128) :: msg
@@ -116,12 +116,12 @@
          torder = abs(param(27)) ! integration order in time
          ! sanity check
          if (self%nrst == torder - 1) then
-            write(msg,'(2(A,I0),A)') 'Cannot set rst fields ', torder, ' for a simulation of temporal order ', torder, '.'
-            call logger%log_error(msg, this_module, 'zset_rst')
+            write(msg,'(2(A,I0),A)') 'Cannot save rst fields ', torder, ' for a simulation of temporal order ', torder, '.'
+            call logger%log_error(msg, this_module, 'zsave_rst')
          else
             self%nrst = self%nrst + 1
-            write(msg,'(A,I0)') 'Setting rst fields: ', self%nrst
-            call logger%log_information(msg, this_module, 'zset_rst')
+            write(msg,'(A,I0)') 'Saving rst fields: ', self%nrst
+            call logger%log_information(msg, this_module, 'zsave_rst')
          end if
          irst = self%nrst
          select type (vec_rst)
@@ -151,7 +151,7 @@
             end if
          class default
             call stop_error("The intent [IN] argument 'vec_rst' must be of type 'nek_zvector'",
-     & this_module, 'zset_rst')
+     & this_module, 'zsave_rst')
          end select
          end procedure
    
