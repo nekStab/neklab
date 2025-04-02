@@ -44,9 +44,9 @@
       ! Fill up the restart fields
                write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
                call nek_log_information(msg, this_module, 'exptA_matvec')
-               itmp_ = nsteps
+               itmp = nsteps
                call setup_linear_solver(endtime = self%tau + nrst*dt)
-               nsteps = itmp_
+               nsteps = itmp
                do istep = nsteps + 1, nsteps + nrst
                   call nek_advance()
                   call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
