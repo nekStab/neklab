@@ -54,11 +54,13 @@
       
       ! Implementation of the standard linear operators.
          public :: exptA_linop
+         public :: exptA_linop_temp
          public :: exptA_linop_alpha
          public :: resolvent_linop
       
       ! Implementation of the abstract systems and Jacobians
          public :: nek_system, nek_jacobian
+         public :: nek_system_temp, nek_jacobian_temp
          public :: nek_system_upo, nek_jacobian_upo
       
       ! Data for nek5000 user-defined forcing function

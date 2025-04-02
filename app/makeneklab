@@ -51,13 +51,14 @@ else
     FFLAGS+=" -ffixed-form" # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
     FFLAGS+=" -march=native" # Enables all instruction subsets supported by the local machine.
-    FFLAGS+=" -mtune=native" # Enables all instruction subsets supported by the local machine.
+    #FFLAGS+=" -mtune=native" # Enables all instruction subsets supported by the local machine.
     FFLAGS+=" -g" # Enables debugging information.
     FFLAGS+=" -fbacktrace" # Provides a backtrace in case of errors, useful for debugging.
     FFLAGS+=" -std=legacy -Wall" # Provides a backtrace in case of errors, useful for debugging.
     
 fi
 
+CFLAGS+=" -w" # Disable warnings for C compiler
 #-------------------------------------------------------------------------------
 # Linking with LAPACK and BLAS
 #-------------------------------------------------------------------------------
@@ -67,8 +68,11 @@ export PPLIST="VENDOR_BLAS"
 # Lapack is a library of linear algebra routines.
 # Blas (Basic Linear Algebra Subprograms) is used by Lapack.
 
-export USR_LFLAGS+=" -llapack -lblas"
-
+if [[ $(uname -s) == "Darwin" ]]; then
+    USR_LFLAGS+=" -framework Accelerate"
+else
+    USR_LFLAGS+=" -llapack -lblas"
+fi
 #export USR_LFLAGS+=" -L/usr/local/opt/openblas/lib"
 #export FFLAGS+=" -I/usr/local/opt/openblas/include"
 #export USR_LFLAGS+=" -lopenblas" # OpenBlas is a faster alternative to LAPACK and BLAS
@@ -83,11 +87,15 @@ export FFLAGS+=" -I$HOME/.local/include"
 #-------------------------------------------------------------------------------
 # Architecture Detection
 #-------------------------------------------------------------------------------
+LD="$FC" # Linker (default to Fortran compiler)
 case $(uname -s) in
     Darwin)
-        case $(uname -p) in
-            x86_64) ar="x86_64" ;;
-            arm)    ar="arm" ;; # not compatile with mcmodel=large
+        case $(uname -m) in
+        x86_64)
+            ;;
+        arm64)
+            FFLAGS+=" -mcmodel=small" # no support for large
+            ;;
         esac
         ;;
     Linux)
@@ -117,10 +125,12 @@ USR+=" neklab_nek_setup.o"
 USR+=" neklab_nek_forcing.o"
 USR+=" neklab_linops.o"
 USR+=" exponential_propagator.o"
+USR+=" exponential_propagator_temp.o"
 USR+=" exponential_propagator_proj.o"
 USR+=" resolvent.o"
 USR+=" neklab_systems.o"
 USR+=" fixed_point.o"
+USR+=" fixed_point_temp.o"
 USR+=" periodic_orbit.o"
 USR+=" neklab_otd.o"
 USR+=" neklab_analysis.o"
@@ -145,6 +155,25 @@ if [[ $1 != "clean" ]]; then
  $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
  set -o pipefail
  touch $1.usr 
+ 
+  # First try with 4 procs (default for nek5000)
+ set +e  # Don't exit on error (otherwise we can't retry)
  make -j4 2>&1 | tee -a build.log
+ BUILD_RESULT=$?
+ 
+ # Retry up to 5 times if needed (race condition in parallel build)
+ ATTEMPT=1 # we try then up to 8 passes (1st try + 7 retries)
+ # TODO: improve order of files in makefile_neklab to minimize this
+ while [ $BUILD_RESULT -ne 0 ] && [ $ATTEMPT -lt 8 ]; do
+   ATTEMPT=$((ATTEMPT + 1))
+   echo "Retry $ATTEMPT/8..."
+   make -j4 2>&1 | tee -a build.log
+   BUILD_RESULT=$?
+ done
+ 
  set +o pipefail
+ if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
+     mv *.mod obj
+     mv *.smod obj 2>/dev/null || true
+ fi
 fi

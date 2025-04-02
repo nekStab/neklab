@@ -84,15 +84,15 @@
          end procedure
       
          module procedure nek_zsize
-         integer :: i, n1
+         integer :: n1, m
          n1 = nx1*ny1*nz1*nelv
          n = 2*n1 + nx2*ny2*nz2*nelv
          if (if3d) n = n + n1
          if (ifto) n = n + n1
          if (ldimt > 1) then
-         do i = 2, ldimt
-            if (ifpsco(i - 1)) n = n + n1
-         end do
+            do m = 2, ldimt
+               if (ifpsco(m - 1)) n = n + n1
+            end do
          end if
          end procedure
       

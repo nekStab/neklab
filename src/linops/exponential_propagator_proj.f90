@@ -50,11 +50,11 @@
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
             class default
                call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'", 
-     & this_module, 'exptA_proj_matvec')
+     & this_module, 'exptA_matvec_proj')
             end select
          class default
             call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'", 
-     & this_module, 'exptA_proj_matvec')
+     & this_module, 'exptA_matvec_proj')
          end select
          end procedure
       
@@ -85,11 +85,11 @@
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
             class default
                call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'", 
-     & this_module, 'exptA_proj_rmatvec')
+     & this_module, 'exptA_rmatvec_proj')
             end select
          class default
             call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'", 
-     & this_module, 'exptA_proj_rmatvec')
+     & this_module, 'exptA_rmatvec_proj')
          end select
          end procedure
 

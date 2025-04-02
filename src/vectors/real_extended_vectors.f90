@@ -39,7 +39,7 @@
       
          module procedure nek_ext_drand
          logical :: normalize
-         integer :: ix, iy, iz, iel, ieg, ijke
+         integer :: ix, iy, iz, iel, ieg, ijke, m
          integer :: iface, kx1, kx2, ky1, ky2, kz1, kz2
          real(kind=dp) :: xl(ldim), fcoeff(3), alpha
          normalize = optval(ifnorm, .false.)
@@ -66,6 +66,19 @@
                call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
                self%vz(ijke) = self%vz(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
             end if
+
+            if (ifto) then
+               call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
+               self%theta(ijke, 1) = self%theta(ijke, 1) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+            end if
+
+            if (ldimt > 1) then
+               do m = 2, ldimt
+                  call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
+                  if (ifpsco(m - 1)) self%theta(ijke, m) = self%theta(ijke, m) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+               end do
+            end if
+
          end do
          end do
          end do
@@ -79,6 +92,15 @@
          if (if3d) call dsavg(self%vz)
          call bcdirvc(self%vx, self%vy, self%vz, v1mask, v2mask, v3mask)
       
+         if (ifto) call dsavg(self%theta(:, 1))
+         if (ifto) call bcdirsc(self%theta(:, 1))
+         if (ldimt > 1) then
+            do m = 2, ldimt
+               if (ifpsco(m - 1)) call dsavg(self%theta(:, m))
+               if (ifpsco(m - 1)) call bcdirsc(self%theta(:, m))
+            end do
+         end if
+
          call random_number(self%T)
          
          if (normalize) then
@@ -88,7 +110,7 @@
          end procedure
       
          module procedure nek_ext_dscal
-         integer :: n1, n2
+         integer :: n1, n2, m
          n1 = nx1*ny1*nz1*nelv
          n2 = nx2*ny2*nz2*nelv
          call cmult(self%vx, alpha, n1)
@@ -96,11 +118,16 @@
          if (if3d) call cmult(self%vz, alpha, n1)
          call cmult(self%pr, alpha, n2)
          if (ifto) call cmult(self%theta(:, 1), alpha, n1)
+         if (ldimt > 1) then
+            do m = 2, ldimt
+               if (ifpsco(m - 1)) call cmult(self%theta(:, m), alpha, n1)
+            end do
+         end if
          self%T = alpha*self%T
          end procedure
       
          module procedure nek_ext_daxpby
-         integer :: n1, n2
+         integer :: n1, n2, m
          n1 = nx1*ny1*nz1*nelv
          n2 = nx2*ny2*nz2*nelv
          call self%scal(beta)
@@ -111,6 +138,11 @@
             if (if3d) call add2s2(self%vz, vec%vz, alpha, n1)
             call add2s2(self%pr, vec%pr, alpha, n2)
             if (ifto) call add2s2(self%theta(:, 1), vec%theta(:, 1), alpha, n1)
+            if (ldimt > 1) then
+               do m = 2, ldimt
+                  if (ifpsco(m - 1)) call add2s2(self%theta(:, m), vec%theta(:, m), alpha, n1)
+               end do
+            end if
             self%T = beta*self%T + alpha*vec%T
          class default
             call stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
@@ -121,7 +153,7 @@
       
          module procedure nek_ext_ddot
          real(kind=dp), external :: glsc3
-         integer :: i, n
+         integer :: n, m
          n = nx1*ny1*nz1*nelv
          select type (vec)
          type is (nek_ext_dvector)
@@ -132,9 +164,9 @@
                alpha = alpha + glsc3(self%theta(:, 1), vec%theta(:, 1), bm1, n)
             end if
             if (ldimt > 1) then
-            do i = 2, ldimt
-               if (ifpsco(i - 1)) alpha = alpha + glsc3(self%theta(:, i), vec%theta(:, i), bm1, n)
-            end do
+               do m = 2, ldimt
+                  if (ifpsco(m - 1)) alpha = alpha + glsc3(self%theta(:, m), vec%theta(:, m), bm1, n)
+               end do
             end if
             alpha = alpha + self%T*vec%T
          class default
@@ -145,15 +177,15 @@
          end procedure
       
          module procedure nek_ext_dsize
-         integer :: i, n1
+         integer :: n1, m
          n1 = nx1*ny1*nz1*nelv
          n = 2*n1 + nx2*ny2*nz2*nelv + 1
          if (if3d) n = n + n1
          if (ifto) n = n + n1
          if (ldimt > 1) then
-         do i = 2, ldimt
-            if (ifpsco(i - 1)) n = n + n1
-         end do
+            do m = 2, ldimt
+               if (ifpsco(m - 1)) n = n + n1
+            end do
          end if
          end procedure
       

@@ -60,6 +60,42 @@
             end subroutine
          end interface
 
+
+      !------------------------------------------
+      !-----     EXPONENTIAL PROPAGATOR with TEMP field    -----
+      !------------------------------------------
+      
+      ! --> Type.
+         type, extends(abstract_linop_rdp), public :: exptA_linop_temp
+            real(kind=dp) :: tau
+            type(nek_dvector) :: baseflow
+         contains
+            private
+            procedure, pass(self), public :: init => init_exptA_temp
+            procedure, pass(self), public :: matvec => exptA_matvec_temp
+            procedure, pass(self), public :: rmatvec => exptA_rmatvec_temp
+         end type exptA_linop_temp
+      
+      ! --> Type-bound procedures: exponential_propagator_temp.f90
+         interface
+            module subroutine init_exptA_temp(self)
+               class(exptA_linop_temp), intent(in) :: self
+            end subroutine
+      
+            module subroutine exptA_matvec_temp(self, vec_in, vec_out)
+               class(exptA_linop_temp), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               class(abstract_vector_rdp), intent(out) :: vec_out
+            end subroutine
+      
+            module subroutine exptA_rmatvec_temp(self, vec_in, vec_out)
+               class(exptA_linop_temp), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               class(abstract_vector_rdp), intent(out) :: vec_out
+            end subroutine
+         end interface
+
+
       !-----------------------------------------------------------------------
       !-----     EXPONENTIAL PROPAGATOR with projection on wavenumber    -----
       !-----------------------------------------------------------------------

@@ -1,0 +1,39 @@
+[GENERAL]
+startfrom = 0
+stopAt = endTime
+endTime = 1.0
+userparam06 = 510.0 # Ra
+
+dt = 0
+variabledt = yes
+timestepper = bdf3
+targetcfl = 0.50
+
+writecontrol = runTime #timestep
+writeinterval = 10.
+writedoubleprecision = no
+
+dealiasing = yes
+filtering = explicit
+filterweight = 0.01
+filtercutoffratio = 0.84
+
+[VELOCITY]
+viscosity = -5.0 # Prandtl number directily # param(2)
+residualtol = 1.0E-8
+residualproj = yes
+density = 1.0
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualtol = 1.0E-8
+residualproj = yes
+writetofieldfile = yes
+
+[TEMPERATURE]
+solver = helm
+residualtol = 1.0E-8
+residualproj = yes
+writetofieldfile = yes
+conductivity = 1.0
+rhocp = 1.0
