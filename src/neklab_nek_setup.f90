@@ -345,7 +345,7 @@
                print *, ''
             end if
          end subroutine nek_status
-
+         
          subroutine nek_log_message(msg, module, procedure, fmt)
             character(len=*), intent(in) :: msg
             character(len=*), optional, intent(in) :: module
