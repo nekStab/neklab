@@ -209,12 +209,12 @@
          if (self%nrst == torder - 1) then
             write(msg,'(2(A,I0),A)') 'Cannot save rst fields ', torder, ' for a simulation of temporal order ', torder, '.'
             if (nid == 0) print "('ERROR: ',A)", msg
-            call logger%log_error(msg, this_module, 'ext_dsave_rst')
+            call log_error(msg, this_module, 'ext_dsave_rst')
          else
             self%nrst = self%nrst + 1
             write(msg,'(A,I0)') 'Saving rst fields: ', self%nrst
             if (nid == 0) print "('INFO: ',A)", msg
-            call logger%log_debug(msg, this_module, 'ext_dsave_rst')
+            call log_debug(msg, this_module, 'ext_dsave_rst')
          end if
          irst = self%nrst
          select type (vec_rst)
@@ -245,15 +245,15 @@
          if (irst < 1) then
             write(msg,'(A,I0)') 'Invalid input for irst: ', irst
             if (nid == 0) print "('ERROR: ',A)", msg
-            call logger%log_error(msg, this_module, 'ext_dget_rst')
+            call log_error(msg, this_module, 'ext_dget_rst')
          else if (irst > self%nrst) then
             write(msg,'(A,I0)') 'No rst field to retrieve: ', irst
             if (nid == 0) print "('WARN: ',A)", msg
-            call logger%log_warning(msg, this_module, 'ext_dget_rst')
+            call log_warning(msg, this_module, 'ext_dget_rst')
          else
             write(msg,'(A,I0)') 'Retrieving rst fields: ', irst
             if (nid == 0) print "('INFO: ',A)", msg
-            call logger%log_information(msg, this_module, 'ext_dget_rst')
+            call log_debug(msg, this_module, 'ext_dget_rst')
          end if
          select type (vec_rst)
          type is (nek_ext_dvector)
@@ -283,7 +283,7 @@
          module procedure ext_dclear_rst_fields
          if (self%nrst == 0) then
             if (nid == 0) print "('INFO: ',A)", 'No rst fields to clear'
-            call logger%log_debug('No rst fields to clear', this_module, 'ext_dclear_rst_fields')
+            call log_debug('No rst fields to clear', this_module, 'ext_dclear_rst_fields')
          end if
          self%nrst = 0
          end procedure

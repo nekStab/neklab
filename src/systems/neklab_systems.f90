@@ -160,11 +160,11 @@
             if (target_tol < mintol) then
                tol = mintol
                write(msg,'(A,E11.4)') 'Input tolerance below minimum tolerance! Resetting solver tolerance to mintol= ', tol
-               call nek_log_warning(msg, module=this_module, procedure='nek_constant_tol')
+               call nek_log_warning(msg, this_module, 'nek_constant_tol')
             else
                tol = target_tol
                write(msg,'(A,E11.4)') 'Nek velocity and pressure tolerances set to tol= ', tol
-               call nek_log_information(msg, module=this_module, procedure='nek_constant_tol')
+               call nek_log_information(msg, this_module, 'nek_constant_tol')
             end if
             param(21) = tol; TOLPDF = param(21); call bcast(TOLPDF,wdsize)
             param(22) = tol; TOLHDF = param(22); call bcast(TOLHDF,wdsize)
@@ -193,13 +193,13 @@
 
             if (target_tol < mintol) then
                write(msg,'(A,E11.4)') 'Input target tolerance below minimum tolerance! Resetting target to mintol= ', mintol
-               call nek_log_warning(msg, module=this_module, procedure='nek_dynamic_tol')
+               call nek_log_warning(msg, this_module, 'nek_dynamic_tol')
             end if
             target_tol_ = max(target_tol, mintol)
 
             if (target_tol > maxtol) then
                write(msg,'(A,E11.4)') 'Input target tolerance above maximum tolerance! Resetting target to maxtol= ', maxtol
-               call nek_log_warning(msg, module=this_module, procedure='nek_dynamic_tol')
+               call nek_log_warning(msg, this_module, 'nek_dynamic_tol')
             end if
             target_tol_ = min(target_tol_, maxtol)
 
@@ -207,12 +207,12 @@
             tol = max(0.1_dp*rnorm, target_tol_)
             if (tol < 10*target_tol_) then
                write(msg,'(A,E11.4)') 'Residual is close to target. Setting tolerance to input target= ', target_tol_
-               call nek_log_information(msg, module=this_module, procedure='nek_dynamic_tol')
+               call nek_log_information(msg, this_module, 'nek_dynamic_tol')
                tol = target_tol_
             end if
             if (tol > maxtol) then
                write(msg,'(A,E11.4)') 'Residual is large. Setting tolerance to tol= ', maxtol
-               call nek_log_information(msg, module=this_module, procedure='nek_dynamic_tol')
+               call nek_log_information(msg, this_module, 'nek_dynamic_tol')
             end if
             tol = min(tol, maxtol)
       
@@ -222,14 +222,14 @@
                else
                   write(msg,'(A,E11.4)') 'Nek solver tolerance set to tol= ', tol
                end if
-               call nek_log_information(msg, module=this_module, procedure='nek_dynamic_tol')
+               call nek_log_information(msg, this_module, 'nek_dynamic_tol')
                param(21) = tol; TOLPDF = param(21); call bcast(TOLPDF,wdsize)
                param(22) = tol; TOLHDF = param(22); call bcast(TOLHDF,wdsize)
                restol(:) = param(22); call bcast(restol, (ldimt1+1)*wdsize)
                atol(:) = param(22); call bcast(atol, (ldimt1+1)*wdsize)
             else
                write(msg,'(A,E11.4)') 'Nek solver tolerances unchanged at tol= ', tol_old
-               call nek_log_information(msg, module=this_module, procedure='nek_dynamic_tol')
+               call nek_log_information(msg, this_module, 'nek_dynamic_tol')
             end if
          end subroutine nek_dynamic_tol
                   

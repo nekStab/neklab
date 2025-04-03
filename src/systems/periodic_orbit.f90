@@ -16,7 +16,7 @@
      &                                     vtol         = atol*0.1,
      &                                     ptol         = atol*0.1)
                write (msg, '(A,F9.6)') 'Current period estimate, T = ', vec_in%T
-               call nek_log_message(msg, module=this_module, procedure='nonlinear_map_UPO')
+               call nek_log_message(msg, this_module, 'nonlinear_map_UPO')
 
       ! Set the initial condition for the nonlinear solver.
                call ext_vec2nek(vx, vy, vz, pr, t, vec_in)

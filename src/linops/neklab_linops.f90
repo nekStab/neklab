@@ -314,7 +314,7 @@
       ! Apply the linear operator to the velocity components
             call apply_Lv(Lux, Luy, Luz, ux, uy, uz, trans)
       ! and subtract the pressure gradient term
-            call logger%log_debug(' pressure gradient', module=this_module, procedure='compute_L')
+            call log_debug(' pressure gradient', this_module, 'compute_L')
             call compute_LNS_gradp(utmpx, utmpy, utmpz, pres)
             call opsub2(Lux, Luy, Luz, utmpx, utmpy, utmpz)
          end subroutine apply_L
@@ -334,10 +334,10 @@
       ! apply BCs
             call bcdirvc(ux, uy, uz, v1mask, v2mask, v3mask)
       ! Diffusion term
-            call logger%log_debug('diffusion term', module=this_module, procedure='compute_Lv')
+            call log_debug('diffusion term', this_module, 'compute_Lv')
             call compute_LNS_laplacian(Lux, Luy, Luz, ux, uy, uz)
       ! Convective terms
-            call logger%log_debug('convective term', module=this_module, procedure='compute_Lv')
+            call log_debug('convective term', this_module, 'compute_Lv')
             call compute_LNS_conv(utmpx, utmpy, utmpz, ux, uy, uz, trans)
       ! subtract from output terms
             call opsub2(Lux, Luy, Luz, utmpx, utmpy, utmpz)
