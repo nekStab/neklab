@@ -345,7 +345,7 @@
                print *, ''
             end if
          end subroutine nek_status
-
+         
          subroutine nek_log_message(msg, module, procedure, fmt)
             character(len=*), intent(in) :: msg
             character(len=*), optional, intent(in) :: module
@@ -354,7 +354,7 @@
             ! internal
             character(len=128) :: fmt_
             fmt_ = optval(fmt,default_fmt('', module, procedure))
-            call logger%log_message(msg, module=module, procedure=procedure)
+            call log_message(msg, module, procedure, .true.)
             if (nid == 0) print fmt_, trim(msg)
          end subroutine nek_log_message
 
@@ -368,7 +368,7 @@
             character(len=128) :: fmt_
             fmt_ = optval(fmt,default_fmt("WARNING:", module, procedure))
             call logger%configuration(level=level)
-            call logger%log_warning(msg, module=module, procedure=procedure)
+            call log_warning(msg, module, procedure)
             if (nid == 0 .and. level == warning_level) print fmt_, trim(msg)
          end subroutine nek_log_warning
 
@@ -382,7 +382,7 @@
             character(len=128) :: fmt_
             fmt_ = optval(fmt,default_fmt("DEBUG:", module, procedure))
             call logger%configuration(level=level)
-            call logger%log_debug(msg, module=module, procedure=procedure)
+            call log_debug(msg, module, procedure)
             if (nid == 0 .and. level == debug_level) print fmt_, trim(msg)
          end subroutine nek_log_debug
 
@@ -396,7 +396,7 @@
             character(len=128) :: fmt_
             fmt_ = optval(fmt,default_fmt("INFO:", module, procedure))
             call logger%configuration(level=level)
-            call logger%log_information(msg, module=module, procedure=procedure)
+            call log_information(msg, module, procedure, .true.)
             if (nid == 0 .and. level == information_level) print fmt_, trim(msg)
          end subroutine nek_log_information
 
@@ -410,7 +410,7 @@
             fmt_ = optval(fmt,default_fmt("ERROR:", module, procedure))
             call nekgsync()
             if (nid == 0) print fmt_, trim(msg)
-            call stop_error(msg, module=module, procedure=procedure)
+            call stop_error(msg, module, procedure)
          end subroutine nek_stop_error
 
          function default_fmt(prefix, module, procedure) result(fmt)

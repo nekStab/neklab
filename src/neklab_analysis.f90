@@ -43,8 +43,8 @@
       !! Desired number of eigenpairs to converge.
             logical, intent(in), optional :: adjoint
       !! Whether direct or adjoint analysis should be conducted.
-            type(nek_dvector), optional, intent(in) :: X0
-      !! Initioa guess of the eigenvectors
+		type(nek_dvector), optional, intent(in) :: X0
+      !! Initial guess for the eigenvectors
       
       ! Eigenvalue computation related variables.
             character(len=*), parameter :: this_procedure = 'stability_main'
@@ -99,6 +99,8 @@
             call logger_setup(logfile='lightkrylov_tmr.log', nio=0, log_level=warning_level, log_stdout=.false., log_timestamp=.true.)
             call timer%finalize()
       
+		call nek_log_message('Exiting eigenvalue computation.', this_module, this_procedure)
+      
          end subroutine linear_stability_analysis_fixed_point
       
          subroutine transient_growth_analysis_fixed_point(exptA, nsv, kdim)
@@ -143,6 +145,8 @@
             file_prefix = "prt"; call outpost_dnek(V(:nsv), file_prefix)
             file_prefix = "rsp"; call outpost_dnek(U(:nsv), file_prefix)
 
+            call nek_log_message('Exiting transient growth computation.', this_module, this_procedure)
+      
          end subroutine transient_growth_analysis_fixed_point
       
          subroutine newton_fixed_point_iteration(sys, bf, tol, tol_mode, input_is_fixed_point)
@@ -158,11 +162,11 @@
       !! optional flag to return whether the intial condition is a fixed point (and no new solution is computed)
       
       ! Misc
-            character(len=*), parameter :: this_procedure = 'newton_main'
             integer :: info, tol_mode_
             type(newton_dp_opts) :: opts
             character(len=3) :: file_prefix
             type(newton_dp_metadata) :: meta
+            character(len=*), parameter :: this_procedure = 'newton_main'
       
 		tol_mode_ = optval(tol_mode, 1)
 
@@ -268,6 +272,7 @@
                         call nek_log_debug(msg, this_module, this_procedure)
                      end if
                   end if
+
       ! compute Lu
                   do i = 1, r
                      if (opts%trans) then
@@ -276,6 +281,7 @@
                         call OTD%apply_matvec(OTD%basis(i), Lu(i))
                      end if
                   end do
+
       ! compute reduced operator
                   Lr = innerprod(OTD%basis, Lu)
       
@@ -286,14 +292,17 @@
                         Phi(j, 1) = -Lr(i, j)
                      end do
                   end do
+
       ! output projected modes
                   if (mod(istep, opts%printstep) == 0) then
                      call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec, ifprint=.true.)
                   end if
+
       ! at the end of the step we copy data back to nek2vec
                   do i = 1, r
                      call vec2nek(vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i), OTD%basis(i))
                   end do
+
       ! project basis vectors and output modes
                   if (mod(istep, opts%iostep) == 0) then
                      if (mod(istep, opts%printstep) /= 0) then
@@ -301,15 +310,20 @@
                      end if
                      call OTD%outpost_OTDmodes(eigvec)
                   end if
+
       ! output basis vectors
                   if (mod(istep, opts%iorststep) == 0) then
                      write (file_prefix, '(A)') 'rst'
                      call outpost_dnek(OTD%basis, file_prefix)
                   end if
+
       ! set the forcing
                   call OTD%generate_forcing(Lr, Phi)
+
                end if ! istep >= otd_startstep
             end do ! istep ... nsteps
+
+            call nek_log_message('Exiting OTD computation.', this_module, this_procedure)
          end subroutine otd_analysis
       
          end module neklab_analysis

@@ -27,14 +27,26 @@
             real(kind=dp), dimension(lv) :: vx, vy, vz
             real(kind=dp), dimension(lp) :: pr
             real(kind=dp), dimension(lv, ldimt) :: theta
+            real(kind=dp), dimension(lv,lorder-1), private :: vxrst = 0.0_dp
+            real(kind=dp), dimension(lv,lorder-1), private :: vyrst = 0.0_dp
+            real(kind=dp), dimension(lv,lorder-1), private :: vzrst = 0.0_dp
+            real(kind=dp), dimension(lp,lorder-1), private :: prrst = 0.0_dp
+            real(kind=dp), dimension(lv,lorder-1,ldimt), private :: thetarst = 0.0_dp
+            integer, private :: nrst = 0
          contains
             private
+            ! required basic type-bound procedures
             procedure, pass(self), public :: zero => nek_dzero
             procedure, pass(self), public :: rand => nek_drand
             procedure, pass(self), public :: scal => nek_dscal
             procedure, pass(self), public :: axpby => nek_daxpby
             procedure, pass(self), public :: dot => nek_ddot
             procedure, pass(self), public :: get_size => nek_dsize
+            ! additional type-bound procedures
+            procedure, pass(self), public :: save_rst => dsave_rst
+            procedure, pass(self), public :: get_rst => dget_rst
+            procedure, pass(self), public :: has_rst_fields => dhas_rst_fields
+            procedure, pass(self), public :: clear_rst_fields => dclear_rst_fields
          end type nek_dvector
       
       ! --> Constructor.
@@ -79,6 +91,25 @@
             integer pure module function nek_dsize(self) result(n)
                class(nek_dvector), intent(in) :: self
             end function
+            
+            module subroutine dsave_rst(self, vec_rst)
+               class(nek_dvector), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_rst
+            end subroutine
+            
+            module subroutine dget_rst(self, vec_rst, irst)
+               class(nek_dvector), intent(in) :: self
+               class(abstract_vector_rdp), intent(out) :: vec_rst
+               integer, intent(in) :: irst
+            end subroutine
+            
+            logical pure module function dhas_rst_fields(self) result(has_rst_fields)
+               class(nek_dvector), intent(in) :: self
+            end function
+            
+            module subroutine dclear_rst_fields(self)
+               class(nek_dvector), intent(inout) :: self
+            end subroutine
          end interface
       
       !-------------------------------------------------
@@ -91,14 +122,27 @@
             real(kind=dp), dimension(lp) :: pr
             real(kind=dp), dimension(lv, ldimt) :: theta
             real(kind=dp) :: T
+            real(kind=dp), dimension(lv,lorder-1), private :: vxrst = 0.0_dp
+            real(kind=dp), dimension(lv,lorder-1), private :: vyrst = 0.0_dp
+            real(kind=dp), dimension(lv,lorder-1), private :: vzrst = 0.0_dp
+            real(kind=dp), dimension(lp,lorder-1), private :: prrst = 0.0_dp
+            real(kind=dp), dimension(lv,lorder-1,ldimt), private :: thetarst = 0.0_dp
+            real(kind=dp), private :: Trst(lorder-1) = 0.0_dp
+            integer, private :: nrst = 0
          contains
             private
+            ! required basic type-bound procedures
             procedure, pass(self), public :: zero => nek_ext_dzero
             procedure, pass(self), public :: rand => nek_ext_drand
             procedure, pass(self), public :: scal => nek_ext_dscal
             procedure, pass(self), public :: axpby => nek_ext_daxpby
             procedure, pass(self), public :: dot => nek_ext_ddot
             procedure, pass(self), public :: get_size => nek_ext_dsize
+            ! additional type-bound procedures
+            procedure, pass(self), public :: save_rst => ext_dsave_rst
+            procedure, pass(self), public :: get_rst => ext_dget_rst
+            procedure, pass(self), public :: has_rst_fields => ext_dhas_rst_fields
+            procedure, pass(self), public :: clear_rst_fields => ext_dclear_rst_fields
          end type nek_ext_dvector
       
       ! --> Constructor.
@@ -144,6 +188,25 @@
             integer pure module function nek_ext_dsize(self) result(n)
                class(nek_ext_dvector), intent(in) :: self
             end function
+
+            module subroutine ext_dsave_rst(self, vec_rst)
+               class(nek_ext_dvector), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_rst
+            end subroutine
+
+            module subroutine ext_dget_rst(self, vec_rst, irst)
+               class(nek_ext_dvector), intent(in) :: self
+               class(abstract_vector_rdp), intent(out) :: vec_rst
+               integer, intent(in) :: irst
+            end subroutine
+            
+            logical pure module function ext_dhas_rst_fields(self) result(has_rst_fields)
+               class(nek_ext_dvector), intent(in) :: self
+            end function
+            
+            module subroutine ext_dclear_rst_fields(self)
+               class(nek_ext_dvector), intent(inout) :: self
+            end subroutine
          end interface
       
       !-------------------------------------------
@@ -154,14 +217,23 @@
          type, extends(abstract_vector_cdp), public :: nek_zvector
             type(nek_dvector) :: re
             type(nek_dvector) :: im
+            type(nek_dvector), dimension(lorder-1), private :: re_rst
+            type(nek_dvector), dimension(lorder-1), private :: im_rst
+            integer, private :: nrst
          contains
             private
+            ! required basic type-bound procedures
             procedure, pass(self), public :: zero => nek_zzero
             procedure, pass(self), public :: rand => nek_zrand
             procedure, pass(self), public :: scal => nek_zscal
             procedure, pass(self), public :: axpby => nek_zaxpby
             procedure, pass(self), public :: dot => nek_zdot
             procedure, pass(self), public :: get_size => nek_zsize
+            ! additional type-bound procedures
+            procedure, pass(self), public :: save_rst => zsave_rst
+            procedure, pass(self), public :: get_rst => zget_rst
+            procedure, pass(self), public :: has_rst_fields => zhas_rst_fields
+            procedure, pass(self), public :: clear_rst_fields => zclear_rst_fields
          end type nek_zvector
       
       ! --> Constructor.
@@ -206,6 +278,25 @@
             integer pure module function nek_zsize(self) result(n)
                class(nek_zvector), intent(in) :: self
             end function
+
+            module subroutine zsave_rst(self, vec_rst)
+               class(nek_zvector), intent(inout) :: self
+               class(abstract_vector_cdp), intent(in) :: vec_rst
+            end subroutine
+
+            module subroutine zget_rst(self, vec_rst, irst)
+               class(nek_zvector), intent(in) :: self
+               class(abstract_vector_cdp), intent(out) :: vec_rst
+               integer, intent(in) :: irst
+            end subroutine
+
+            logical pure module function zhas_rst_fields(self) result(has_rst_fields)
+               class(nek_zvector), intent(in) :: self
+            end function
+            
+            module subroutine zclear_rst_fields(self)
+               class(nek_zvector), intent(inout) :: self
+            end subroutine
          end interface
       
       contains
