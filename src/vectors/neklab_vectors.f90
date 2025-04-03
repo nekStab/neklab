@@ -35,12 +35,14 @@
             integer, private :: nrst = 0
          contains
             private
+            ! required basic type-bound procedures
             procedure, pass(self), public :: zero => nek_dzero
             procedure, pass(self), public :: rand => nek_drand
             procedure, pass(self), public :: scal => nek_dscal
             procedure, pass(self), public :: axpby => nek_daxpby
             procedure, pass(self), public :: dot => nek_ddot
             procedure, pass(self), public :: get_size => nek_dsize
+            ! additional type-bound procedures
             procedure, pass(self), public :: save_rst => dsave_rst
             procedure, pass(self), public :: get_rst => dget_rst
             procedure, pass(self), public :: has_rst_fields => dhas_rst_fields
@@ -129,12 +131,14 @@
             integer, private :: nrst = 0
          contains
             private
+            ! required basic type-bound procedures
             procedure, pass(self), public :: zero => nek_ext_dzero
             procedure, pass(self), public :: rand => nek_ext_drand
             procedure, pass(self), public :: scal => nek_ext_dscal
             procedure, pass(self), public :: axpby => nek_ext_daxpby
             procedure, pass(self), public :: dot => nek_ext_ddot
             procedure, pass(self), public :: get_size => nek_ext_dsize
+            ! additional type-bound procedures
             procedure, pass(self), public :: save_rst => ext_dsave_rst
             procedure, pass(self), public :: get_rst => ext_dget_rst
             procedure, pass(self), public :: has_rst_fields => ext_dhas_rst_fields
@@ -218,12 +222,14 @@
             integer, private :: nrst
          contains
             private
+            ! required basic type-bound procedures
             procedure, pass(self), public :: zero => nek_zzero
             procedure, pass(self), public :: rand => nek_zrand
             procedure, pass(self), public :: scal => nek_zscal
             procedure, pass(self), public :: axpby => nek_zaxpby
             procedure, pass(self), public :: dot => nek_zdot
             procedure, pass(self), public :: get_size => nek_zsize
+            ! additional type-bound procedures
             procedure, pass(self), public :: save_rst => zsave_rst
             procedure, pass(self), public :: get_rst => zget_rst
             procedure, pass(self), public :: has_rst_fields => zhas_rst_fields

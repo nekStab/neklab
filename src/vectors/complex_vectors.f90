@@ -34,6 +34,8 @@
       
          module procedure nek_zzero
          call self%scal(zero_cdp)
+      ! clear restart fields if present
+         call self%nrst = 0
          end procedure
       
          module procedure nek_zrand
@@ -42,6 +44,7 @@
          if (optval(ifnorm, .false.)) then
             alpha = self%norm(); call self%scal(one_cdp/alpha)
          end if
+      ! clear restart fields already cleared in nek_drand
          end procedure
       
          module procedure nek_zscal

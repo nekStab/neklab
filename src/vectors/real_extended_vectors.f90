@@ -35,6 +35,8 @@
       
          module procedure nek_ext_dzero
          call self%scal(0.0_dp)
+      ! clear restart fields if present
+         call self%nrst = 0
          end procedure
       
          module procedure nek_ext_drand
@@ -85,6 +87,9 @@
             alpha = self%norm()
             call self%scal(1.0_dp/alpha)
          end if
+         
+      ! clear restart fields if present
+         call self%nrst = 0
          end procedure
       
          module procedure nek_ext_dscal

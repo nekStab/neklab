@@ -329,6 +329,7 @@
             ! Fill up the restart fields
             write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
             call nek_log_information(msg, this_module, 'exptA_matvec')
+            ! We don't need to reset the end time but we do it to get a clean logfile
             itmp = nsteps
             rtmp = time
             call setup_linear_solver(endtime = time + nrst*dt)
