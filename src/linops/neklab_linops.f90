@@ -73,8 +73,8 @@
          contains
             private
             procedure, pass(self), public :: init => init_exptA_temp
-            procedure, pass(self), public :: matvec => exptA_matvec_temp
-            procedure, pass(self), public :: rmatvec => exptA_rmatvec_temp
+            procedure, pass(self), public :: matvec => exptA_temp_matvec
+            procedure, pass(self), public :: rmatvec => exptA_temp_rmatvec
          end type exptA_linop_temp
       
       ! --> Type-bound procedures: exponential_propagator_temp.f90
@@ -83,13 +83,13 @@
                class(exptA_linop_temp), intent(in) :: self
             end subroutine
       
-            module subroutine exptA_matvec_temp(self, vec_in, vec_out)
+            module subroutine exptA_temp_matvec(self, vec_in, vec_out)
                class(exptA_linop_temp), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
       
-            module subroutine exptA_rmatvec_temp(self, vec_in, vec_out)
+            module subroutine exptA_temp_rmatvec(self, vec_in, vec_out)
                class(exptA_linop_temp), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
@@ -102,7 +102,7 @@
       !-----------------------------------------------------------------------
       
       ! --> Type.
-         type, extends(abstract_linop_rdp), public :: exptA_linop_proj
+         type, extends(abstract_linop_rdp), public :: exptA_proj_linop
             real(kind=dp) :: tau
             type(nek_dvector) :: baseflow
             real(kind=dp) :: alpha
@@ -113,28 +113,28 @@
             private
             procedure, pass(self), public :: init => init_exptA_proj
             procedure, pass(self), public :: proj => proj_alpha
-            procedure, pass(self), public :: matvec => exptA_matvec_proj
-            procedure, pass(self), public :: rmatvec => exptA_rmatvec_proj
-         end type exptA_linop_proj
+            procedure, pass(self), public :: matvec => exptA_proj_matvec
+            procedure, pass(self), public :: rmatvec => exptA_proj_rmatvec
+         end type exptA_proj_linop
       
       ! --> Type-bound procedures: exponential_propagator.f90
          interface
             module subroutine init_exptA_proj(self)
-               class(exptA_linop_proj), intent(inout) :: self
+               class(exptA_proj_linop), intent(inout) :: self
             end subroutine
 
             module subroutine proj_alpha(self)
-               class(exptA_linop_proj), intent(in) :: self
+               class(exptA_proj_linop), intent(in) :: self
             end subroutine
       
-            module subroutine exptA_matvec_proj(self, vec_in, vec_out)
-               class(exptA_linop_proj), intent(inout) :: self
+            module subroutine exptA_proj_matvec(self, vec_in, vec_out)
+               class(exptA_proj_linop), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
       
-            module subroutine exptA_rmatvec_proj(self, vec_in, vec_out)
-               class(exptA_linop_proj), intent(inout) :: self
+            module subroutine exptA_proj_rmatvec(self, vec_in, vec_out)
+               class(exptA_proj_linop), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
@@ -206,16 +206,13 @@
                         call A%matvec(vec_in, vec_out)
                      end if
                   class default
-                     call nek_stop_error("The intent [INOUT] argument 'A' must be of type 'exptA_linop', "//
-     & "'exptA_linop_proj', or 'exptA_linop_frc'", this_module, 'apply_exptA')
+                     call type_error('A','exptA_linop','INOUT',this_module,'apply_exptA')
                   end select
                class default
-                  call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'", 
-     & this_module, 'apply_exptA')
+                  call type_error('vec_out','nek_dvector','OUT',this_module,'apply_exptA')
                end select
             class default
-               call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'", 
-     & this_module, 'apply_exptA')
+               call type_error('vec_in','nek_dvector','IN',this_module,'apply_exptA')
             end select
          end subroutine apply_exptA
       

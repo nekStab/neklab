@@ -194,8 +194,7 @@
             self%nrst = max(self%nrst, vec%nrst)
 
          class default
-            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
-     & this_module, 'nek_ext_daxpby')
+            call type_error('vec','nek_dvector','IN',this_module,'nek_ext_daxpby')
          end select
 
          end procedure
@@ -222,8 +221,7 @@
             alpha = alpha + self%T*vec%T
 
          class default
-            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_ext_dvector'",
-     & this_module, 'nek_ext_ddot')
+            call type_error('vec','nek_dvector','IN',this_module,'nek_ext_ddot')
          end select
 
          end procedure
@@ -282,8 +280,7 @@
             self%Trst(irst) = vec_rst%T
 
          class default
-            call stop_error("The intent [IN] argument 'vec_rst' must be of type 'nek_ext_dvector'",
-     & this_module, 'ext_dsave_rst')
+            call type_error('vec_rst','nek_dvector','IN',this_module,'ext_dsave_rst')
          end select
          end procedure
 
@@ -324,8 +321,7 @@
             vec_rst%T = self%Trst(irst)
 
          class default
-            call stop_error("The intent [OUT] argument 'vec_rst' must be of type 'nek_ext_dvector'",
-     & this_module, 'ext_dget_rst')
+            call type_error('vec_rst','nek_dvector','OUT',this_module,'ext_dget_rst')
          end select
          end procedure
 

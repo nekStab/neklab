@@ -90,8 +90,8 @@
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian_temp
          contains
             private
-            procedure, pass(self), public :: matvec => jac_exptA_matvec_temp
-            procedure, pass(self), public :: rmatvec => jac_exptA_rmatvec_temp
+            procedure, pass(self), public :: matvec => jac_exptA_temp_matvec
+            procedure, pass(self), public :: rmatvec => jac_exptA_temp_rmatvec
          end type nek_jacobian_temp
       
       ! --> Type-bound procedures for nek_system & nek_jacobian
@@ -103,17 +103,17 @@
                real(dp), intent(in) :: atol
             end subroutine nonlinear_map_temp
       
-            module subroutine jac_exptA_matvec_temp(self, vec_in, vec_out)
+            module subroutine jac_exptA_temp_matvec(self, vec_in, vec_out)
                class(nek_jacobian_temp), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
-            end subroutine jac_exptA_matvec_temp
+            end subroutine jac_exptA_temp_matvec
       
-            module subroutine jac_exptA_rmatvec_temp(self, vec_in, vec_out)
+            module subroutine jac_exptA_temp_rmatvec(self, vec_in, vec_out)
                class(nek_jacobian_temp), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
-            end subroutine jac_exptA_rmatvec_temp
+            end subroutine jac_exptA_temp_rmatvec
          end interface
 
       !-----------------------------------------------------

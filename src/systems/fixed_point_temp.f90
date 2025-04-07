@@ -31,16 +31,14 @@
                call vec_out%sub(vec_in)
 
             class default
-               call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
-     & this_module, 'nonlinear_map_temp')
+               call type_error('vec_out','nek_dvector','OUT',this_module,'nonlinear_map_temp')
             end select
          class default
-            call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'",
-     & this_module, 'nonlinear_map_temp')
+            call type_error('vec_in','nek_dvector','IN',this_module,'nonlinear_map_temp')
          end select
          end procedure nonlinear_map_temp
       
-         module procedure jac_exptA_matvec_temp
+         module procedure jac_exptA_temp_matvec
       ! internal
          real(dp) :: atol
          select type (vec_in)
@@ -78,17 +76,16 @@
 
       ! Reset tolerances.
                param(22) = atol
+            
             class default
-               call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
-     & this_module, 'jac_exptA_matvec_temp')
+               call type_error('vec_out','nek_dvector','OUT',this_module,'jac_exptA_temp_matvec')
             end select
          class default
-            call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'",
-     & this_module, 'jac_exptA_matvec_temp')
+            call type_error('vec_in','nek_dvector','IN',this_module,'jac_exptA_temp_matvec')
          end select
-         end procedure jac_exptA_matvec_temp
+         end procedure jac_exptA_temp_matvec
       
-         module procedure jac_exptA_rmatvec_temp
+         module procedure jac_exptA_temp_rmatvec
       ! internal
          real(dp) :: atol
          select type (vec_in)
@@ -129,12 +126,10 @@
                param(22) = atol
                
             class default
-               call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'",
-     & this_module, 'jac_exptA_rmatvec_temp')
+               call type_error('vec_out','nek_dvector','OUT',this_module,'jac_exptA_temp_rmatvec')
             end select
          class default
-            call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'",
-     & this_module, 'jac_exptA_rmatvec_temp')
+            call type_error('vec_in','nek_dvector','IN',this_module,'jac_exptA_temp_rmatvec')
          end select
-         end procedure jac_exptA_rmatvec_temp
+         end procedure jac_exptA_temp_rmatvec
       end submodule

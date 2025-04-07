@@ -181,8 +181,7 @@
             self%nrst = max(self%nrst, vec%nrst)
 
          class default
-            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_dvector'",
-     & this_module, 'nek_daxpby')
+            call type_error('vec','nek_dvector','IN',this_module,'nek_daxpby')
          end select
 
          end procedure
@@ -205,8 +204,7 @@
                end do
             end if
          class default
-            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_dvector'",
-     & this_module, 'nek_ddot')
+            call type_error('vec','nek_dvector','IN',this_module,'nek_ddot')
          end select
 
          end procedure
@@ -259,8 +257,7 @@
                end do
             end if
          class default
-            call stop_error("The intent [IN] argument 'vec_rst' must be of type 'nek_dvector'",
-     & this_module, 'dsave_rst')
+            call type_error('vec_rst','nek_dvector','IN',this_module,'dsave_rst')
          end select
          end procedure
 
@@ -299,8 +296,7 @@
                end do
             end if
          class default
-            call stop_error("The intent [OUT] argument 'vec_rst' must be of type 'nek_dvector'",
-     & this_module, 'dget_rst')
+            call type_error('vec_rst','nek_dvector','OUT',this_module,'dget_rst')
          end select
          end procedure
          

@@ -6,7 +6,7 @@
          integer :: idir, nelx, nely, nelz, i
       ! For the baseflow field for dt/nsteps/cfl computation.
          call vec2nek(vx, vy, vz, pr, t, self%baseflow)
-         call nek_log_information("Set self%baseflow -> vx, vy, vz, pr, t", this_module, "init_exptA_alpha")
+         call nek_log_information("Set self%baseflow -> vx, vy, vz, pr, t", this_module, "init_exptA_proj")
       ! Setup Nek5000 for perturbation solver.
          call setup_linear_solver(solve_baseflow = .false.,
      &                            endtime        = self%tau,
@@ -26,7 +26,7 @@
          end do
          end procedure
       
-         module procedure exptA_matvec_proj
+         module procedure exptA_proj_matvec
          integer :: nrst, itmp
          real(dp) :: rtmp
          type(nek_dvector) :: vec_rst
@@ -73,7 +73,7 @@
       
       ! Compute restart fields.
                write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
-               call nek_log_information(msg, this_module, 'exptA_matvec_proj')
+               call nek_log_information(msg, this_module, 'exptA_proj_matvec')
                ! We don't need to reset the end time but we do it to get a clean logfile
                itmp = nsteps
                rtmp = time
@@ -93,16 +93,14 @@
                time  = rtmp
 
             class default
-               call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'", 
-     & this_module, 'exptA_matvec_proj')
+               call type_error('vec_out','nek_dvector','OUT',this_module,'exptA_proj_matvec')
             end select
          class default
-            call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'", 
-     & this_module, 'exptA_matvec_proj')
+            call type_error('vec_in','nek_dvector','IN',this_module,'exptA_proj_matvec')
          end select
          end procedure
       
-         module procedure exptA_rmatvec_proj
+         module procedure exptA_proj_rmatvec
          integer :: nrst, itmp
          real(dp) :: rtmp
          type(nek_dvector) :: vec_rst
@@ -169,12 +167,10 @@
                time  = rtmp
 
             class default
-               call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'", 
-     & this_module, 'exptA_rmatvec_proj')
+               call type_error('vec_out','nek_dvector','OUT',this_module,'exptA_proj_rmatvec')
             end select
          class default
-            call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'", 
-     & this_module, 'exptA_rmatvec_proj')
+            call type_error('vec_in','nek_dvector','IN',this_module,'exptA_proj_rmatvec')
          end select
          end procedure
 

@@ -170,17 +170,9 @@ if [[ $1 != "clean" ]]; then
    make -j4 2>&1 | tee -a build.log
    BUILD_RESULT=$?
  done
- 
  set +o pipefail
- if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
-     mv *.mod obj
-     mv *.smod obj 2>/dev/null || true
- fi
 fi
-
 if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
-    mv *.mod obj/
-fi
-if [ $(ls *.smod 2>/dev/null | wc -l) -gt 0 ]; then
-    mv *.smod obj/
+    mv *.mod obj
+    mv *.smod obj 2>/dev/null || true
 fi

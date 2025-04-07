@@ -83,8 +83,7 @@
             self%nrst = max(self%nrst, wrk%nrst)
 
          class default
-            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_zvector'",
-     & this_module, 'nek_zaxpby')
+            call type_error('vec','nek_zvector','IN',this_module,'nek_zaxpby')
          end select
          end procedure
       
@@ -96,8 +95,7 @@
             alpha_i = self%re%dot(vec%im) - self%im%dot(vec%re)
             alpha = cmplx(alpha_r, alpha_i, kind=dp)
          class default
-            call stop_error("The intent [IN] argument 'vec' must be of type 'nek_zvector'",
-     & this_module, 'nek_zdot')
+            call type_error('vec','nek_zvector','IN',this_module,'nek_zdot')
          end select
          end procedure
       
@@ -162,8 +160,7 @@
             end if
 
          class default
-            call stop_error("The intent [IN] argument 'vec_rst' must be of type 'nek_zvector'",
-     & this_module, 'zsave_rst')
+            call type_error('vec_rst','nek_zvector','IN',this_module,'zsave_rst')
          end select
          end procedure
    
@@ -213,8 +210,7 @@
             end if
 
          class default
-            call stop_error("The intent [OUT] argument 'vec_rst' must be of type 'nek_zvector'",
-     & this_module, 'get_rst')
+            call type_error('vec_rst','nek_zvector','OUT',this_module,'zget_rst')
          end select
          end procedure
 
