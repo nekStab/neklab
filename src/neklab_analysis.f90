@@ -10,6 +10,7 @@
          use LightKrylov_Logger
          use LightKrylov_Timing, only: timer => global_lightkrylov_timer
          use LightKrylov_AbstractVectors, only: abstract_vector_rdp
+         use LightKrylov_AbstractLinops, only: abstract_exptA_linop_rdp
          use LightKrylov_AbstractSystems, only: abstract_system_rdp
          use LightKrylov_NewtonKrylov, only: newton_dp_metadata
          use neklab_vectors
@@ -35,7 +36,7 @@
       contains
       
          subroutine linear_stability_analysis_fixed_point(exptA, kdim, nev, adjoint, X0)
-            type(exptA_linop), intent(inout) :: exptA
+            class(abstract_exptA_linop_rdp), intent(inout) :: exptA
       !! Operator whose stability properties are to be investigated.
             integer, intent(in) :: kdim
       !! Maximum dimension of the Krylov subspace.
@@ -104,7 +105,7 @@
          end subroutine linear_stability_analysis_fixed_point
       
          subroutine transient_growth_analysis_fixed_point(exptA, nsv, kdim)
-            type(exptA_linop), intent(inout) :: exptA
+            class(abstract_exptA_linop_rdp), intent(inout) :: exptA
       !! Operator whose singular value decomposition needs to be computed.
             integer, intent(in) :: nsv
       !! Desired number of singular triplets.

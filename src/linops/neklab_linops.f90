@@ -1,7 +1,7 @@
       module neklab_linops
          use stdlib_optval, only: optval
          use LightKrylov, only: dp, atol_dp, rtol_dp
-         use LightKrylov, only: abstract_linop_rdp, abstract_vector_rdp
+         use LightKrylov, only: abstract_exptA_linop_rdp, abstract_linop_rdp, abstract_vector_rdp
          use LightKrylov, only: abstract_linop_cdp, abstract_vector_cdp
          use LightKrylov, only: cg, cg_dp_opts, cg_dp_metadata
          use LightKrylov_Logger
@@ -32,8 +32,7 @@
       !------------------------------------------
       
       ! --> Type.
-         type, extends(abstract_linop_rdp), public :: exptA_linop
-            real(kind=dp) :: tau
+         type, extends(abstract_exptA_linop_rdp), public :: exptA_linop
             type(nek_dvector) :: baseflow
          contains
             private
@@ -67,8 +66,7 @@
       !---------------------------------------------------------
       
       ! --> Type.
-         type, extends(abstract_linop_rdp), public :: exptA_linop_temp
-            real(kind=dp) :: tau
+         type, extends(abstract_exptA_linop_rdp), public :: exptA_linop_temp
             type(nek_dvector) :: baseflow
          contains
             private
@@ -102,8 +100,7 @@
       !-----------------------------------------------------------------------
       
       ! --> Type.
-         type, extends(abstract_linop_rdp), public :: exptA_proj_linop
-            real(kind=dp) :: tau
+         type, extends(abstract_exptA_linop_rdp), public :: exptA_proj_linop
             type(nek_dvector) :: baseflow
             real(kind=dp) :: alpha
             real(kind=dp), dimension(lx1*ly1*lz1*lelv) :: cv = 0.0_dp
@@ -176,7 +173,7 @@
       !! defined in expmlib.f90
             class(abstract_vector_rdp), intent(out) :: vec_out
       !! Output vector
-            class(abstract_linop_rdp), intent(inout) :: A
+            class(abstract_exptA_linop_rdp), intent(inout) :: A
       !! Linear operator
             class(abstract_vector_rdp), intent(in) :: vec_in
       !! Input vector.
@@ -196,18 +193,12 @@
             type is (nek_dvector)
                select type (vec_out)
                type is (nek_dvector)
-                  select type (A)
-                  type is (exptA_linop)
-                     ! set integration time
-                     A%tau = tau
-                     if (transpose) then
-                        call A%rmatvec(vec_in, vec_out)
-                     else
-                        call A%matvec(vec_in, vec_out)
-                     end if
-                  class default
-                     call type_error('A','exptA_linop','INOUT',this_module,'apply_exptA')
-                  end select
+                  A%tau = tau
+                  if (transpose) then
+                     call A%rmatvec(vec_in, vec_out)
+                  else
+                     call A%matvec(vec_in, vec_out)
+                  end if
                class default
                   call type_error('vec_out','nek_dvector','OUT',this_module,'apply_exptA')
                end select
