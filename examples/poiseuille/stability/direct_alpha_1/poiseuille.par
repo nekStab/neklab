@@ -1,0 +1,25 @@
+[GENERAL]
+stopat = endTime
+endTime = 200.0
+#
+dt = 2.0e-02
+timestepper = bdf2
+writecontrol = runTime
+writeinterval = 5000  
+writeDoublePrecision = yes
+#
+[PROBLEMTYPE]
+equation = incompLinNS
+numberOfPerturbations = 1
+solveBaseflow = no
+variableProperties = no
+#
+[PRESSURE]
+residualtol = 1e-10
+residualproj = no
+#
+[VELOCITY]
+residualtol = 1e-10
+residualproj = no
+density = 1
+viscosity = -7500.0

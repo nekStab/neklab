@@ -9,32 +9,31 @@
 
       ! input/output
       type(nek_dvector) :: bf
-      type(exptA_linop) :: exptA
+      type(exptA_proj_linop) :: exptA
       integer, parameter :: kdim = 128, nev = 20
-
-      real(dp) :: alpha, beta
-      real(dp), allocatable :: eig(:,:)
       character(len=128) :: msg
+      real(dp), allocatable :: eig(:, :)
       integer :: i
       
+      real :: glsc3
+      
       if (istep.eq.0) then
+            call outpost(vx, vy, vz, pr, t, 'bf_')
             call nek2vec(bf, vx, vy, vz, pr, t)
+            ! Exponential propagator with projection onto alpha=1.
+            exptA = exptA_proj_linop(tau=1.0_dp, baseflow=bf, alpha=1.0_dp) ; call exptA%init()
 
-         ! Exponential propagator.
-         exptA = exptA_linop(1.0_dp, bf) ; call exptA%init()
+            ! Stability analysis.
+            call linear_stability_analysis_fixed_point(exptA, kdim, nev)
 
-         ! Stability analysis.
-         call linear_stability_analysis_fixed_point(exptA, kdim, nev)
-
-         ! post-processing
-         call load_npy("dir_eigenspectrum.npy", eig)
-	      call nek_log_message('Converged eigenvalues:', procedure='userchk')
-	      write(msg,'(8X,3(A16))') 'Re(lambda)', 'Im(lambda)', 'residual'
-	      call nek_log_message(msg, procedure='userchk')
-         do i = 1, size(eig(:,1))
-            write(msg,'(3X,I3,A,*(F16.12))') i, ': ', eig(i,:)
-		   call nek_log_message(msg, procedure='userchk')
-         end do
+            call load_npy("dir_eigenspectrum.npy", eig)
+		call nek_log_message('Converged eigenvalues:', procedure='userchk')
+		write(msg,'(8X,3(A16))') 'Re(lambda)', 'Im(lambda)', 'residual'
+		call nek_log_message(msg, procedure='userchk')
+            do i = 1, size(eig(:,1))
+                  write(msg,'(3X,I3,A,*(F16.12))') i, ': ', eig(i,:)
+		      call nek_log_message(msg, procedure='userchk')
+            end do
       end if
       return
       end
@@ -185,8 +184,15 @@ c     This routine to modify element vertices
       end
 c-----------------------------------------------------------------------
       subroutine usrdat2
+      use stdlib_logger, only: debug_level, information_level
+      use LightKrylov_Logger
       implicit none
-      
+      include 'SIZE'
+      include 'TOTAL'
+      if (istep.eq.0) then
+         ! Setup logger
+         call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      end if
       return
       end
 c-----------------------------------------------------------------------
