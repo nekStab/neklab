@@ -54,8 +54,8 @@
       
       ! Implementation of the standard linear operators.
          public :: exptA_linop
-         public :: exptA_linop_temp
-         public :: exptA_linop_alpha
+         public :: exptA_temp_linop
+         public :: exptA_proj_linop
          public :: resolvent_linop
       
       ! Implementation of the abstract systems and Jacobians
