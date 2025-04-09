@@ -1,0 +1,9 @@
+genbox << EOF
+rayBen.box
+EOF
+genmap << EOF
+box
+.01
+EOF
+mv box.re2 rayBen.re2
+mv box.ma2 rayBen.ma2

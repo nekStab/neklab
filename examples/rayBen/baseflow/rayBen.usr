@@ -1,0 +1,157 @@
+
+c-----------------------------------------------------------------------
+      subroutine userchk
+      use stdlib_logger, only: debug_level, information_level
+      use LightKrylov, only: zero_basis
+      use LightKrylov_Logger
+      use neklab
+      include "SIZE"
+      include "TOTAL"
+
+      ! System for which we seek a fixed point
+      type(nek_system_temp), allocatable :: sys
+      type(exptA_linop_temp), allocatable :: exptA_temp
+
+      ! State vectors
+      type(nek_dvector) :: bf
+
+      ! Tolerance for the Newton solver
+      real(dp) :: tol
+      type(nek_dvector), allocatable :: eigvecs(:)
+      complex(kind=dp), allocatable :: eigvals(:)
+      real(kind=dp), allocatable :: residuals(:)
+      integer :: info
+      character(len=3) :: file_prefix
+
+      ! Stability analysis parameters
+      integer, parameter :: kdim = 128, nev = 10
+
+      if (istep.eq.0) then
+      time = 0.0d0
+      !   ! Setup logger
+      !   call logger_setup(nio=0, log_level=information_level, log_stdout=.false., !log_timestamp=.true.)
+      !      
+      !   ! Load initial guess
+      !   !call load_fld('BF_rayBen0.f00001')
+      !   call nek2vec(bf, vx, vy, vz, pr, t)
+      !   
+      !   ! Define system
+      !   sys = nek_system_temp()
+      !   sys%jacobian = nek_jacobian_temp()
+      !   sys%jacobian%X = bf
+	!		
+      !   ! Set Newton tolerance
+      !   tol = 1.0e-8_dp
+      !   
+      !   ! Compute fixed point
+      !   call newton_fixed_point_iteration(sys, bf, tol, tol_mode=2)
+!
+      !   !Outpost solution
+      !   call outpost_dnek(bf, "BF_")
+!
+      !   ! Exponential propagator
+      !   exptA_temp = exptA_linop_temp(1.0_dp, bf) ; call exptA_temp%init()
+      !   allocate (eigvecs(nev)); call zero_basis(eigvecs)
+!
+      !   call eigs(exptA_temp, eigvecs, eigvals, residuals, info, kdim=kdim, !write_intermediate=.true.)
+!
+      !   ! Transform eigenspectrum to continuous-time representation.
+      !   eigvals = log(eigvals)/exptA_temp%tau
+      !
+      !   ! Determine the file prefix.
+      !   file_prefix = "dir"
+      !
+      !   ! Save eigenspectrum to disk.
+      !   call save_eigenspectrum(eigvals, residuals, trim(file_prefix)//!"_eigenspectrum.npy")
+      !
+      !   ! Export eigenfunctions to disk.
+      !   call outpost_dnek(eigvecs(:nev), file_prefix)
+!
+      !   call nek_end()
+      end if
+
+      end
+c-----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      use neklab, only: neklab_forcing
+      implicit none
+      include 'SIZE'
+      include 'SOLN'            ! jp
+      include 'NEKUSE'          ! FFX, FFY, FFZ
+      include 'PARALLEL'        ! GLLEL
+
+      integer ix,iy,iz,ieg,ip,iel
+      real rtmp, uparam, param, rapr
+      logical ifheat
+
+      common /rayleigh_r/ rapr
+ 
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      if(ifheat)then
+      iel = gllel(ieg)
+      ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+      if (jp .eq. 0) rtmp = temp !t(ix, iy, iz, iel, 1)
+      if (jp .eq. 1) rtmp = tp(ip, 1, 1)
+      
+                 ! Pr         ! Ra
+      ffy = rtmp*rapr
+      endif
+      
+      call neklab_forcing(FFX,FFY,FFZ,ix,iy,iz,ieg,jp)
+
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TSTEP'
+      include 'INPUT'
+      include 'NEKUSE'
+      if (JP.eq.0) then         ! velocity
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp= 1.0d0-y
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      if (JP.eq.0) then         ! velocity
+         ux= 0.0d0
+         uy= 0.0d0
+         uz= 0.0d0
+         temp= 1.0d0-y
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      common /rayleigh_r/ rapr
+      Prandtl  = uparam(5)
+      Rayleigh  = uparam(6)
+      param(2) = sqrt(Prandtl/Rayleigh)
+      param(8) = 1.0d0/sqrt(Prandtl*Rayleigh)
+      rapr = Rayleigh*Prandtl
+      
+      end
