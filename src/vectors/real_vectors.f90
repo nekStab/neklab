@@ -162,7 +162,7 @@
             if (ifto) call add2s2(self%theta(:, 1), vec%theta(:, 1), alpha, n1)
             if (ldimt > 1) then
                do m = 2, ldimt
-                  call add2s2(self%theta(:, m), vec%theta(:, m), alpha, n1)
+                  if (ifpsco(m - 1)) call add2s2(self%theta(:, m), vec%theta(:, m), alpha, n1)
                end do
             end if
 
@@ -171,9 +171,10 @@
                call add2s2(self%vyrst(:, irst), vec%vyrst(:, irst), alpha, n1)
                if (if3d) call add2s2(self%vzrst(:, irst), vec%vzrst(:, irst), alpha, n1)
                call add2s2(self%prrst(:, irst), vec%prrst(:, irst), alpha, n2)
-               if (ifto) then
-                  do m = 1, ldimt
-                     call add2s2(self%thetarst(:, irst, m), vec%thetarst(:, irst, m), alpha, n1)
+               if (ifto) call add2s2(self%thetarst(:, irst, 1), vec%thetarst(:, irst, 1), alpha, n1)
+               if (ldimt > 1) then
+                  do m = 2, ldimt
+                     if (ifpsco(m - 1)) call add2s2(self%thetarst(:, irst, m), vec%thetarst(:, irst, m), alpha, n1)
                   end do
                end if
             end do
