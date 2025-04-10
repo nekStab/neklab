@@ -13,7 +13,7 @@
          end procedure
 
          module procedure exptA_temp_matvec
-         integer :: nrst, itmp
+         integer :: nrst, itmp, irst
          real(dp) :: rtmp
          type(nek_dvector) :: vec_rst
          character(len=128) :: msg
@@ -61,7 +61,7 @@
                   call nek_advance()
                   
                   call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
-                  call vec_out%save_rst(vec_rst)
+                  call vec_out%save_rst(vec_rst, irst)
                end do
                ! Reset iteration count and time
                istep = itmp
@@ -79,7 +79,7 @@
          end procedure
 
          module procedure exptA_temp_rmatvec
-         integer :: nrst, itmp
+         integer :: nrst, itmp, irst
          real(dp) :: rtmp
          type(nek_dvector) :: vec_rst
          character(len=128) :: msg
@@ -130,7 +130,7 @@
                   call nek_advance()
                   
                   call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
-                  call vec_out%save_rst(vec_rst)
+                  call vec_out%save_rst(vec_rst, irst)
                end do
                ! Reset iteration count and time
                istep = itmp
