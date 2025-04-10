@@ -51,3 +51,7 @@ Nek5000/
 **/.usr
 **/??_run*/*
 examples/**/*.f
+**/*.log.*
+**/*.log1.*
+**/logfile
+**/SESSION.NAME

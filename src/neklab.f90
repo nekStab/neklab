@@ -54,18 +54,20 @@
       
       ! Implementation of the standard linear operators.
          public :: exptA_linop
+         public :: exptA_linop_temp
+         public :: exptA_linop_alpha
          public :: resolvent_linop
       
       ! Implementation of the abstract systems and Jacobians
-         public :: nek_system, nek_system_upo
-         public :: nek_jacobian, nek_jacobian_upo
+         public :: nek_system, nek_jacobian
+         public :: nek_system_temp, nek_jacobian_temp
+         public :: nek_system_upo, nek_jacobian_upo
       
       ! Data for nek5000 user-defined forcing function
          public :: get_neklab_forcing, set_neklab_forcing, neklab_forcing
       
       ! Baseflow computation
          public :: newton_fixed_point_iteration
-         public :: newton_periodic_orbit
       
       ! Stability analysis exports.
          public :: linear_stability_analysis_fixed_point
@@ -88,5 +90,5 @@
          public :: nek2vec, vec2nek
          public :: nek2ext_vec, ext_vec2nek
          public :: setup_nonlinear_solver, setup_linear_solver
-         public :: outpost_dnek
+         public :: outpost_dnek, outpost_ext_dnek
       end module neklab

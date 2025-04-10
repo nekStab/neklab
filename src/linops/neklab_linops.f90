@@ -1,7 +1,7 @@
       module neklab_linops
          use stdlib_optval, only: optval
          use LightKrylov, only: dp, atol_dp, rtol_dp
-         use LightKrylov, only: abstract_linop_rdp, abstract_vector_rdp
+         use LightKrylov, only: abstract_exptA_linop_rdp, abstract_linop_rdp, abstract_vector_rdp
          use LightKrylov, only: abstract_linop_cdp, abstract_vector_cdp
          use LightKrylov, only: cg, cg_dp_opts, cg_dp_metadata
          use LightKrylov_Logger
@@ -26,15 +26,13 @@
          public :: compute_LNS_gradp
          public :: compute_LNS_laplacian
          public :: apply_Lv, apply_L
-         public :: get_restart, save_restart
       
       !------------------------------------------
       !-----     EXPONENTIAL PROPAGATOR     -----
       !------------------------------------------
       
       ! --> Type.
-         type, extends(abstract_linop_rdp), public :: exptA_linop
-            real(kind=dp) :: tau
+         type, extends(abstract_exptA_linop_rdp), public :: exptA_linop
             type(nek_dvector) :: baseflow
          contains
             private
@@ -57,6 +55,83 @@
       
             module subroutine exptA_rmatvec(self, vec_in, vec_out)
                class(exptA_linop), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               class(abstract_vector_rdp), intent(out) :: vec_out
+            end subroutine
+         end interface
+
+
+      !---------------------------------------------------------
+      !-----     EXPONENTIAL PROPAGATOR with TEMP field    -----
+      !---------------------------------------------------------
+      
+      ! --> Type.
+         type, extends(abstract_exptA_linop_rdp), public :: exptA_linop_temp
+            type(nek_dvector) :: baseflow
+         contains
+            private
+            procedure, pass(self), public :: init => init_exptA_temp
+            procedure, pass(self), public :: matvec => exptA_temp_matvec
+            procedure, pass(self), public :: rmatvec => exptA_temp_rmatvec
+         end type exptA_linop_temp
+      
+      ! --> Type-bound procedures: exponential_propagator_temp.f90
+         interface
+            module subroutine init_exptA_temp(self)
+               class(exptA_linop_temp), intent(in) :: self
+            end subroutine
+      
+            module subroutine exptA_temp_matvec(self, vec_in, vec_out)
+               class(exptA_linop_temp), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               class(abstract_vector_rdp), intent(out) :: vec_out
+            end subroutine
+      
+            module subroutine exptA_temp_rmatvec(self, vec_in, vec_out)
+               class(exptA_linop_temp), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               class(abstract_vector_rdp), intent(out) :: vec_out
+            end subroutine
+         end interface
+
+
+      !-----------------------------------------------------------------------
+      !-----     EXPONENTIAL PROPAGATOR with projection on wavenumber    -----
+      !-----------------------------------------------------------------------
+      
+      ! --> Type.
+         type, extends(abstract_exptA_linop_rdp), public :: exptA_proj_linop
+            type(nek_dvector) :: baseflow
+            real(kind=dp) :: alpha
+            real(kind=dp), dimension(lx1*ly1*lz1*lelv) :: cv = 0.0_dp
+            real(kind=dp), dimension(lx1*ly1*lz1*lelv) :: sv = 0.0_dp
+            integer :: hndl = 0
+         contains
+            private
+            procedure, pass(self), public :: init => init_exptA_proj
+            procedure, pass(self), public :: proj => proj_alpha
+            procedure, pass(self), public :: matvec => exptA_proj_matvec
+            procedure, pass(self), public :: rmatvec => exptA_proj_rmatvec
+         end type exptA_proj_linop
+      
+      ! --> Type-bound procedures: exponential_propagator.f90
+         interface
+            module subroutine init_exptA_proj(self)
+               class(exptA_proj_linop), intent(inout) :: self
+            end subroutine
+
+            module subroutine proj_alpha(self)
+               class(exptA_proj_linop), intent(in) :: self
+            end subroutine
+      
+            module subroutine exptA_proj_matvec(self, vec_in, vec_out)
+               class(exptA_proj_linop), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               class(abstract_vector_rdp), intent(out) :: vec_out
+            end subroutine
+      
+            module subroutine exptA_proj_rmatvec(self, vec_in, vec_out)
+               class(exptA_proj_linop), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
@@ -98,7 +173,7 @@
       !! defined in expmlib.f90
             class(abstract_vector_rdp), intent(out) :: vec_out
       !! Output vector
-            class(abstract_linop_rdp), intent(inout) :: A
+            class(abstract_exptA_linop_rdp), intent(inout) :: A
       !! Linear operator
             class(abstract_vector_rdp), intent(in) :: vec_in
       !! Input vector.
@@ -118,26 +193,17 @@
             type is (nek_dvector)
                select type (vec_out)
                type is (nek_dvector)
-                  select type (A)
-                  type is (exptA_linop)
-                     ! set integration time
-                     A%tau = tau
-                     if (transpose) then
-                        call A%rmatvec(vec_in, vec_out)
-                     else
-                        call A%matvec(vec_in, vec_out)
-                     end if
-                  class default
-                     call nek_stop_error("The intent [INOUT] argument 'A' must be of type 'exptA_linop', "//
-     & "'exptA_linop_proj', or 'exptA_linop_frc'", this_module, 'apply_exptA')
-                  end select
+                  A%tau = tau
+                  if (transpose) then
+                     call A%rmatvec(vec_in, vec_out)
+                  else
+                     call A%matvec(vec_in, vec_out)
+                  end if
                class default
-                  call nek_stop_error("The intent [OUT] argument 'vec_out' must be of type 'nek_dvector'", 
-     & this_module, 'apply_exptA')
+                  call type_error('vec_out','nek_dvector','OUT',this_module,'apply_exptA')
                end select
             class default
-               call nek_stop_error("The intent [IN] argument 'vec_in' must be of type 'nek_dvector'", 
-     & this_module, 'apply_exptA')
+               call type_error('vec_in','nek_dvector','IN',this_module,'apply_exptA')
             end select
          end subroutine apply_exptA
       
@@ -186,7 +252,6 @@
                end if
             end if
             call opadd2(c_x, c_y, c_z, tb1, tb2, tb3) ! add to output
-            return
          end subroutine compute_LNS_conv
       
          subroutine compute_LNS_laplacian(d_x, d_y, d_z, uxp, uyp, uzp)
@@ -204,7 +269,6 @@
             call col2(d_x, vdiff, lv)
             call col2(d_y, vdiff, lv)
             if (if3d) call col2(d_z, vdiff, lv)
-            return
          end subroutine compute_LNS_laplacian
       
          subroutine lap_1D(nabla_u, u)
@@ -241,7 +305,6 @@
                end do
             end if ! if3d
             end do
-            return
          end subroutine lap_1D
       
          subroutine compute_LNS_gradp(gp_x, gp_y, gp_z, pp)
@@ -256,7 +319,6 @@
             call mappr(wrk, pp, ta1, ta2)
       ! compute the gradient on the velocity mesh direclty
             call gradm1(gp_x, gp_y, gp_z, wrk)
-            return
          end subroutine compute_LNS_gradp
       
          subroutine apply_L(Lux, Luy, Luz, ux, uy, uz, pres, trans)
@@ -276,10 +338,9 @@
       ! Apply the linear operator to the velocity components
             call apply_Lv(Lux, Luy, Luz, ux, uy, uz, trans)
       ! and subtract the pressure gradient term
-            call logger%log_debug(' pressure gradient', module=this_module, procedure='compute_L')
+            call log_debug(' pressure gradient', this_module, 'compute_L')
             call compute_LNS_gradp(utmpx, utmpy, utmpz, pres)
             call opsub2(Lux, Luy, Luz, utmpx, utmpy, utmpz)
-            return
          end subroutine apply_L
       
          subroutine apply_Lv(Lux, Luy, Luz, ux, uy, uz, trans)
@@ -297,51 +358,13 @@
       ! apply BCs
             call bcdirvc(ux, uy, uz, v1mask, v2mask, v3mask)
       ! Diffusion term
-            call logger%log_debug('diffusion term', module=this_module, procedure='compute_Lv')
+            call log_debug('diffusion term', this_module, 'compute_Lv')
             call compute_LNS_laplacian(Lux, Luy, Luz, ux, uy, uz)
       ! Convective terms
-            call logger%log_debug('convective term', module=this_module, procedure='compute_Lv')
+            call log_debug('convective term', this_module, 'compute_Lv')
             call compute_LNS_conv(utmpx, utmpy, utmpz, ux, uy, uz, trans)
       ! subtract from output terms
             call opsub2(Lux, Luy, Luz, utmpx, utmpy, utmpz)
-            return
          end subroutine apply_Lv
-
-         subroutine get_restart(vec_in, istep)
-            type(nek_dvector), intent(in) :: vec_in
-            integer, intent(in) :: istep
-            ! internal
-            type(nek_dvector) :: vec_rst
-            call vec_in%get_rst(vec_rst, istep)
-            call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
-         end subroutine get_restart
-
-         subroutine save_restart(vec_out, nrst)
-            type(nek_dvector), intent(out) :: vec_out
-            integer, intent(in) :: nrst
-            ! internal
-            type(nek_dvector) :: vec_rst
-            integer :: itmp
-            real(dp) :: rtmp
-            character(len=128) :: msg
-            ! Copy the final solution to vector.
-            call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
-            ! Fill up the restart fields
-            write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
-            call nek_log_information(msg, this_module, 'exptA_matvec')
-            ! We don't need to reset the end time but we do it to get a clean logfile
-            itmp = nsteps
-            rtmp = time
-            call setup_linear_solver(endtime = time + nrst*dt)
-            nsteps = itmp
-            do istep = nsteps + 1, nsteps + nrst
-               call nek_advance()
-               call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
-               call vec_out%save_rst(vec_rst)
-            end do
-            ! Reset iteration count and time
-            istep = itmp
-            time  = rtmp
-         end subroutine save_restart
       
       end module neklab_linops

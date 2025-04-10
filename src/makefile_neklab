@@ -1,16 +1,34 @@
+# Base module with no dependencies
 $(OBJDIR)/neklab_vectors.o		:$(NEKLAB_SOURCE_ROOT)/src/vectors/neklab_vectors.f90		;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/real_vectors.o		:$(NEKLAB_SOURCE_ROOT)/src/vectors/real_vectors.f90		;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/real_extended_vectors.o	:$(NEKLAB_SOURCE_ROOT)/src/vectors/real_extended_vectors.f90	;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/complex_vectors.o		:$(NEKLAB_SOURCE_ROOT)/src/vectors/complex_vectors.f90		;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/neklab_nek_setup.o		:$(NEKLAB_SOURCE_ROOT)/src/neklab_nek_setup.f90			;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/neklab_utils.o		:$(NEKLAB_SOURCE_ROOT)/src/neklab_utils.f90			;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/neklab_nek_forcing.o		:$(NEKLAB_SOURCE_ROOT)/src/neklab_nek_forcing.f90		;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/neklab_linops.o		:$(NEKLAB_SOURCE_ROOT)/src/linops/neklab_linops.f90		;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/exponential_propagator.o	:$(NEKLAB_SOURCE_ROOT)/src/linops/exponential_propagator.f90	;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/resolvent.o	:$(NEKLAB_SOURCE_ROOT)/src/linops/resolvent.f90	;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/neklab_systems.o		:$(NEKLAB_SOURCE_ROOT)/src/systems/neklab_systems.f90		;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/fixed_point.o			:$(NEKLAB_SOURCE_ROOT)/src/systems/fixed_point.f90		;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/periodic_orbit.o		:$(NEKLAB_SOURCE_ROOT)/src/systems/periodic_orbit.f90		;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/neklab_otd.o			:$(NEKLAB_SOURCE_ROOT)/src/neklab_otd.f90			;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/neklab_analysis.o		:$(NEKLAB_SOURCE_ROOT)/src/neklab_analysis.f90			;$(FC) -c $(FL2) $< -o $@
-$(OBJDIR)/neklab.o			:$(NEKLAB_SOURCE_ROOT)/src/neklab.f90				;$(FC) -c $(FL2) $< -o $@
+
+# First layer dependencies 
+$(OBJDIR)/neklab_nek_setup.o		:$(NEKLAB_SOURCE_ROOT)/src/neklab_nek_setup.f90 $(OBJDIR)/neklab_vectors.o	;$(FC) -c $(FL2) $< -o $@
+
+# Second layer dependencies
+$(OBJDIR)/neklab_utils.o		:$(NEKLAB_SOURCE_ROOT)/src/neklab_utils.f90 $(OBJDIR)/neklab_nek_setup.o	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/real_vectors.o		:$(NEKLAB_SOURCE_ROOT)/src/vectors/real_vectors.f90 $(OBJDIR)/neklab_vectors.o	;$(FC) -c $(FL2) $< -o $@
+
+# Third layer dependencies
+$(OBJDIR)/neklab_nek_forcing.o		:$(NEKLAB_SOURCE_ROOT)/src/neklab_nek_forcing.f90 $(OBJDIR)/neklab_utils.o	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/real_extended_vectors.o	:$(NEKLAB_SOURCE_ROOT)/src/vectors/real_extended_vectors.f90 $(OBJDIR)/real_vectors.o	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/complex_vectors.o		:$(NEKLAB_SOURCE_ROOT)/src/vectors/complex_vectors.f90 $(OBJDIR)/neklab_vectors.o	;$(FC) -c $(FL2) $< -o $@
+
+# Fourth layer dependencies
+$(OBJDIR)/neklab_linops.o		:$(NEKLAB_SOURCE_ROOT)/src/linops/neklab_linops.f90 $(OBJDIR)/neklab_utils.o $(OBJDIR)/neklab_vectors.o	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/neklab_otd.o			:$(NEKLAB_SOURCE_ROOT)/src/neklab_otd.f90 $(OBJDIR)/neklab_vectors.o $(OBJDIR)/neklab_nek_forcing.o	;$(FC) -c $(FL2) $< -o $@
+
+# Fifth layer dependencies
+$(OBJDIR)/exponential_propagator.o	:$(NEKLAB_SOURCE_ROOT)/src/linops/exponential_propagator.f90 $(OBJDIR)/neklab_linops.o	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/exponential_propagator_temp.o	:$(NEKLAB_SOURCE_ROOT)/src/linops/exponential_propagator_temp.f90 $(OBJDIR)/neklab_linops.o	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/resolvent.o			:$(NEKLAB_SOURCE_ROOT)/src/linops/resolvent.f90 $(OBJDIR)/neklab_linops.o	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/neklab_systems.o		:$(NEKLAB_SOURCE_ROOT)/src/systems/neklab_systems.f90 $(OBJDIR)/neklab_linops.o	;$(FC) -c $(FL2) $< -o $@
+
+# Sixth layer dependencies
+$(OBJDIR)/exponential_propagator_proj.o	:$(NEKLAB_SOURCE_ROOT)/src/linops/exponential_propagator_proj.f90 $(OBJDIR)/exponential_propagator.o	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/fixed_point.o			:$(NEKLAB_SOURCE_ROOT)/src/systems/fixed_point.f90 $(OBJDIR)/neklab_systems.o	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/fixed_point_temp.o		:$(NEKLAB_SOURCE_ROOT)/src/systems/fixed_point_temp.f90 $(OBJDIR)/neklab_systems.o	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/periodic_orbit.o		:$(NEKLAB_SOURCE_ROOT)/src/systems/periodic_orbit.f90 $(OBJDIR)/neklab_systems.o	;$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/neklab_analysis.o		:$(NEKLAB_SOURCE_ROOT)/src/neklab_analysis.f90 $(OBJDIR)/neklab_systems.o	;$(FC) -c $(FL2) $< -o $@
+
+# Final layer - main module
+$(OBJDIR)/neklab.o			:$(NEKLAB_SOURCE_ROOT)/src/neklab.f90 $(OBJDIR)/neklab_analysis.o $(OBJDIR)/neklab_otd.o $(OBJDIR)/neklab_systems.o $(OBJDIR)/neklab_linops.o	;$(FC) -c $(FL2) $< -o $@

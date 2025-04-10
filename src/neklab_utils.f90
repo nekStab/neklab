@@ -11,6 +11,7 @@
          use LightKrylov, only: abstract_vector_rdp
       ! Neklab vectors
          use neklab_vectors
+         use neklab_nek_setup
       
          implicit none
          include "SIZE"
@@ -86,10 +87,9 @@
             real(kind=dp), dimension(lv, lpert), intent(in) :: vz_
             real(kind=dp), dimension(lp, lpert), intent(in) :: pr_
             real(kind=dp), dimension(lx1*ly1*lz1*lelt, ldimt, lpert), intent(in) :: t_
-      
+
             call nopcopy(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1))
-      
-            return
+
          end subroutine nek2vec_prt
       
          subroutine nek2vec_std(vec, vx_, vy_, vz_, pr_, t_)
@@ -100,10 +100,9 @@
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(in) :: vz_
             real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(in) :: pr_
             real(kind=dp), dimension(lx1, ly1, lz1, lelt, ldimt), intent(in) :: t_
-      
+
             call nopcopy(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, vx_, vy_, vz_, pr_, t_)
-      
-            return
+
          end subroutine nek2vec_std
       
          subroutine vec2nek_std(vx_, vy_, vz_, pr_, t_, vec)
@@ -117,7 +116,6 @@
       
             call nopcopy(vx_, vy_, vz_, pr_, t_, vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
       
-            return
          end subroutine vec2nek_std
       
          subroutine vec2nek_prt(vx_, vy_, vz_, pr_, t_, vec)
@@ -131,7 +129,6 @@
       
             call nopcopy(vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1), vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
       
-            return
          end subroutine vec2nek_prt
       
          subroutine abstract_vec2nek_std(vx_, vy_, vz_, pr_, t_, vec)
@@ -144,9 +141,12 @@
             real(kind=dp), dimension(lx1, ly1, lz1, lelt, ldimt), intent(out) :: t_
             select type (vec)
             type is (nek_dvector)
+
                call nopcopy(vx_, vy_, vz_, pr_, t_, vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
+
+            class default
+               call type_error('vec','nek_dvector','IN',this_module,'abstract_vec2nek_std')
             end select
-            return
          end subroutine abstract_vec2nek_std
       
          subroutine abstract_vec2nek_prt(vx_, vy_, vz_, pr_, t_, vec)
@@ -159,9 +159,12 @@
             real(kind=dp), dimension(lt, ldimt, 1), intent(out) :: t_
             select type (vec)
             type is (nek_dvector)
+
                call nopcopy(vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1), vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
+
+            class default
+               call type_error('vec','nek_dvector','IN',this_module,'abstract_vec2nek_prt')
             end select
-            return
          end subroutine abstract_vec2nek_prt
       
       ! EXTENDED
@@ -177,7 +180,6 @@
       
             call nopcopy(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1))
       
-            return
          end subroutine nek2ext_vec_prt
       
          subroutine nek2ext_vec_std(vec, vx_, vy_, vz_, pr_, t_)
@@ -191,7 +193,6 @@
       
             call nopcopy(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, vx_, vy_, vz_, pr_, t_)
       
-            return
          end subroutine nek2ext_vec_std
       
          subroutine ext_vec2nek_std(vx_, vy_, vz_, pr_, t_, vec)
@@ -205,7 +206,6 @@
       
             call nopcopy(vx_, vy_, vz_, pr_, t_, vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
       
-            return
          end subroutine ext_vec2nek_std
       
          subroutine ext_vec2nek_prt(vx_, vy_, vz_, pr_, t_, vec)
@@ -219,7 +219,6 @@
       
             call nopcopy(vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1), vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
       
-            return
          end subroutine ext_vec2nek_prt
       
          subroutine abstract_ext_vec2nek_std(vx_, vy_, vz_, pr_, t_, vec)
@@ -232,9 +231,12 @@
             real(kind=dp), dimension(lx1, ly1, lz1, lelt, ldimt), intent(out) :: t_
             select type (vec)
             type is (nek_ext_dvector)
+
                call nopcopy(vx_, vy_, vz_, pr_, t_, vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
+
+            class default
+               call type_error('vec','nek_ext_dvector','IN',this_module,'abstract_ext_vec2nek_std')
             end select
-            return
          end subroutine abstract_ext_vec2nek_std
       
          subroutine abstract_ext_vec2nek_prt(vx_, vy_, vz_, pr_, t_, vec)
@@ -247,16 +249,23 @@
             real(kind=dp), dimension(lt, ldimt, 1), intent(out) :: t_
             select type (vec)
             type is (nek_ext_dvector)
+
                call nopcopy(vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1), vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
+
+            class default
+               call type_error('vec','nek_ext_dvector','IN',this_module,'abstract_ext_vec2nek_prt')
             end select
-            return
          end subroutine abstract_ext_vec2nek_prt
       
-         pure real(dp) function get_period_abs(vec) result(period)
+         real(dp) function get_period_abs(vec) result(period)
             class(abstract_vector_rdp), intent(in) :: vec
             select type (vec)
             type is (nek_ext_dvector)
+
                period = vec%T
+
+            class default
+               call type_error('vec','nek_ext_dvector','IN',this_module,'get_period_abs')
             end select
          end function get_period_abs
       
@@ -273,24 +282,28 @@
             real(kind=dp), intent(inout) :: a1(1), a2(1), a3(1), a4(1), a5(lx1*ly1*lz1*lelt, 1)
             real(kind=dp), intent(in) :: b1(1), b2(1), b3(1), b4(1), b5(lx1*ly1*lz1*lelt, 1)
             n = nx1*ny1*nz1*nelv
+
             call copy(a1, b1, n)
             call copy(a2, b2, n)
             if (if3D) call copy(a3, b3, n)
+
             if (ifpo) call copy(a4, b4, nx2*ny2*nz2*nelv)
+
             if (ifto) call copy(a5(1, 1), b5(1, 1), lx1*ly1*lz1*nelfld(2))
+
             if (ldimt > 1) then
             do k = 1, npscal
                if (ifpsco(k)) call copy(a5(1, k + 1), b5(1, k + 1), lx1*ly1*lz1*nelfld(k + 2))
             end do
             end if
-            return
          end subroutine nopcopy
       
          subroutine outpost_dnek_vector(vec, prefix)
             type(nek_dvector), intent(in) :: vec
             character(len=3), intent(in) :: prefix
+
             call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
-            return
+
          end subroutine outpost_dnek_vector
       
          subroutine outpost_dnek_abs_vector(vec, prefix)
@@ -298,9 +311,12 @@
             character(len=3), intent(in) :: prefix
             select type (vec)
             type is (nek_dvector)
+
                call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
+               
+            class default
+               call type_error('vec','nek_dvector','IN',this_module,'outpost_dnek_abs_vector')
             end select
-            return
          end subroutine outpost_dnek_abs_vector
       
          subroutine outpost_dnek_basis(vec, prefix)
@@ -310,14 +326,12 @@
             do i = 1, size(vec)
                call outpost_dnek_vector(vec(i), prefix)
             end do
-            return
          end subroutine outpost_dnek_basis
       
          subroutine outpost_ext_dnek_vector(vec, prefix)
             type(nek_ext_dvector), intent(in) :: vec
             character(len=3), intent(in) :: prefix
             call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
-            return
          end subroutine outpost_ext_dnek_vector
       
          subroutine outpost_ext_dnek_basis(vec, prefix)
@@ -327,6 +341,6 @@
             do i = 1, size(vec)
                call outpost_ext_dnek_vector(vec(i), prefix)
             end do
-            return
          end subroutine outpost_ext_dnek_basis
+
       end module neklab_utils

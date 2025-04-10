@@ -310,7 +310,6 @@
             mth_rand = 1.0e3_dp*sin(mth_rand)
             mth_rand = 1.0e3_dp*sin(mth_rand)
             mth_rand = cos(mth_rand)
-            return
          end function mth_rand
       
       end module neklab_vectors

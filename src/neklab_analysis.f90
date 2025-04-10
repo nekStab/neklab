@@ -10,6 +10,7 @@
          use LightKrylov_Logger
          use LightKrylov_Timing, only: timer => global_lightkrylov_timer
          use LightKrylov_AbstractVectors, only: abstract_vector_rdp
+         use LightKrylov_AbstractLinops, only: abstract_exptA_linop_rdp
          use LightKrylov_AbstractSystems, only: abstract_system_rdp
          use LightKrylov_NewtonKrylov, only: newton_dp_metadata
          use neklab_vectors
@@ -35,7 +36,7 @@
       contains
       
          subroutine linear_stability_analysis_fixed_point(exptA, kdim, nev, adjoint, X0)
-            type(exptA_linop), intent(inout) :: exptA
+            class(abstract_exptA_linop_rdp), intent(inout) :: exptA
       !! Operator whose stability properties are to be investigated.
             integer, intent(in) :: kdim
       !! Maximum dimension of the Krylov subspace.
@@ -44,7 +45,7 @@
             logical, intent(in), optional :: adjoint
       !! Whether direct or adjoint analysis should be conducted.
 		type(nek_dvector), optional, intent(in) :: X0
-		!! Initial guess for the eigenvectors
+      !! Initial guess for the eigenvectors
       
       ! Eigenvalue computation related variables.
             character(len=*), parameter :: this_procedure = 'stability_main'
@@ -61,6 +62,9 @@
       
       ! Set up logging
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      ! Initialize timers
+            call timer%initialize()
+            call timer%add_timer('Linear Stability Fixed Point', start=.true.)
       
       ! Optional parameters.
             if (present(adjoint)) then
@@ -73,7 +77,7 @@
             allocate (eigvecs(nev)); call zero_basis(eigvecs)
       
       ! Run the eigenvalue analysis.
-		call eigs(exptA, eigvecs, eigvals, residuals, info, x0=X0, kdim=kdim, 
+            call eigs(exptA, eigvecs, eigvals, residuals, info, x0=X0, kdim=kdim,
      &                  transpose=adjoint_, write_intermediate=.true.)
       
       ! Transform eigenspectrum to continuous-time representation.
@@ -87,13 +91,21 @@
       
       ! Export eigenfunctions to disk.
             call outpost_dnek(eigvecs(:nev), file_prefix)
+
+            call nek_log_message('Exiting eigenvalue computation.', this_module, this_procedure)
+
+      ! Finalize exptA timings
+            call exptA%finalize_timer()
+      ! Finalize timing
+            call logger_setup(logfile='lightkrylov_tmr.log', nio=0, log_level=warning_level, log_stdout=.false., log_timestamp=.true.)
+            call timer%finalize()
       
 		call nek_log_message('Exiting eigenvalue computation.', this_module, this_procedure)
       
          end subroutine linear_stability_analysis_fixed_point
       
          subroutine transient_growth_analysis_fixed_point(exptA, nsv, kdim)
-            type(exptA_linop), intent(inout) :: exptA
+            class(abstract_exptA_linop_rdp), intent(inout) :: exptA
       !! Operator whose singular value decomposition needs to be computed.
             integer, intent(in) :: nsv
       !! Desired number of singular triplets.
@@ -112,7 +124,10 @@
       
       ! Set up logging
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
-      
+      ! Initialize timers
+            call timer%initialize()
+            call timer%add_timer('Transient Growth Fixed Point', start=.true.)
+
       ! Allocate singular vectors.
             allocate (U(nsv)); call initialize_krylov_subspace(U)
             allocate (V(nsv)); call initialize_krylov_subspace(V)
@@ -165,15 +180,15 @@
             if (tol_mode_ == 1) then
                call newton(sys, bf, gmres_rdp, info, atol=tol, options=opts, scheduler=nek_constant_tol, meta=meta)
             else
-		         call newton(sys, bf, gmres_rdp, info, atol=tol, options=opts, scheduler=nek_dynamic_tol, meta=meta)
-		      end if
+		   call newton(sys, bf, gmres_rdp, info, atol=tol, options=opts, scheduler=nek_dynamic_tol, meta=meta)
+		end if
       
       ! Outpost initial condition.
             file_prefix = 'nwt'
             call set_fldindex(file_prefix, 1)
             select type (bf)
             type is (nek_dvector)
-            call outpost_dnek(bf, file_prefix)
+               call outpost_dnek(bf, file_prefix)
             type is (nek_ext_dvector)
                call outpost_ext_dnek(bf, file_prefix)
             class default
@@ -184,7 +199,7 @@
                input_is_fixed_point = meta%input_is_fixed_point
             end if
 
-		      call nek_log_message('Exiting newton iteration.', this_module, this_procedure)
+		call nek_log_message('Exiting newton iteration.', this_module, this_procedure)
       
          end subroutine newton_fixed_point_iteration
       
@@ -228,10 +243,12 @@
             do istep = 1, nsteps
                call nek_advance()
                if (istep >= opts%startstep) then
+
       ! load perturbations
                   do i = 1, r
                      call nek2vec(OTD%basis(i), vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i))
                   end do
+
       ! orthonormalize
                   if ((istep <= opts%startstep + 10) .or.
      &               mod(istep, opts%orthostep) == 0 .or.
@@ -246,58 +263,67 @@
                         write (msg, '(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': ortho. err pre: ', ((G(i,j), j=i+1, r), i=1, r)
                         call nek_log_information(msg, this_module, this_procedure)
                      end if
-      
-                  call orthonormalize_basis(OTD%basis)
-      
+         
+                     call orthonormalize_basis(OTD%basis)
+
                      if (log_level <= debug_level) then
                         write (msg, '(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': norm.  err post:',  (G(i,i) - 1.0_dp, i=1, r)
                         call nek_log_debug(msg, this_module, this_procedure)
                         write (msg, '(A,I5,A,*(1X,E10.3))') 'Step ', istep, ': ortho. err post:', ((G(i,j), j=i+1, r), i=1, r)
                         call nek_log_debug(msg, this_module, this_procedure)
                      end if
-               end if
+                  end if
+
       ! compute Lu
-               do i = 1, r
-               if (opts%trans) then
-                  call OTD%apply_rmatvec(OTD%basis(i), Lu(i))
-               else
-                  call OTD%apply_matvec(OTD%basis(i), Lu(i))
-               end if
-               end do
+                  do i = 1, r
+                     if (opts%trans) then
+                        call OTD%apply_rmatvec(OTD%basis(i), Lu(i))
+                     else
+                        call OTD%apply_matvec(OTD%basis(i), Lu(i))
+                     end if
+                  end do
+
       ! compute reduced operator
                   Lr = innerprod(OTD%basis, Lu)
       
-               Phi = 0.0_dp
-               do i = 1, r
-               do j = i + 1, r
-                  Phi(i, j) = Lr(i, j)
-                  Phi(j, 1) = -Lr(i, j)
-               end do
-               end do
+                  Phi = 0.0_dp
+                  do i = 1, r
+                     do j = i + 1, r
+                        Phi(i, j) = Lr(i, j)
+                        Phi(j, 1) = -Lr(i, j)
+                     end do
+                  end do
+
       ! output projected modes
-               if (mod(istep, opts%printstep) == 0) then
-                  call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec, ifprint=.true.)
-               end if
+                  if (mod(istep, opts%printstep) == 0) then
+                     call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec, ifprint=.true.)
+                  end if
+
       ! at the end of the step we copy data back to nek2vec
-               do i = 1, r
-                  call vec2nek(vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i), OTD%basis(i))
-               end do
+                  do i = 1, r
+                     call vec2nek(vxp(:, i:i), vyp(:, i:i), vzp(:, i:i), prp(:, i:i), tp(:, :, i:i), OTD%basis(i))
+                  end do
+
       ! project basis vectors and output modes
-               if (mod(istep, opts%iostep) == 0) then
-               if (mod(istep, opts%printstep) /= 0) then
-                  call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec, ifprint=.false.)
-               end if
-               call OTD%outpost_OTDmodes(eigvec)
-               end if
+                  if (mod(istep, opts%iostep) == 0) then
+                     if (mod(istep, opts%printstep) /= 0) then
+                        call OTD%spectral_analysis(Lr, sigma, svec, lambda, eigvec, ifprint=.false.)
+                     end if
+                     call OTD%outpost_OTDmodes(eigvec)
+                  end if
+
       ! output basis vectors
-               if (mod(istep, opts%iorststep) == 0) then
-                  write (file_prefix, '(A)') 'rst'
-                  call outpost_dnek(OTD%basis, file_prefix)
-               end if
+                  if (mod(istep, opts%iorststep) == 0) then
+                     write (file_prefix, '(A)') 'rst'
+                     call outpost_dnek(OTD%basis, file_prefix)
+                  end if
+
       ! set the forcing
-               call OTD%generate_forcing(Lr, Phi)
+                  call OTD%generate_forcing(Lr, Phi)
+
                end if ! istep >= otd_startstep
             end do ! istep ... nsteps
+
             call nek_log_message('Exiting OTD computation.', this_module, this_procedure)
          end subroutine otd_analysis
       

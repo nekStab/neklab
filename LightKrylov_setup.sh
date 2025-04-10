@@ -79,7 +79,7 @@ if command -v mpiifort >/dev/null 2>&1; then
     FPM_FFLAGS="-Ofast -xHost -g -traceback"
     FPM_FC="mpiifort"
 else
-    FPM_FFLAGS="-march=native -O3 -funroll-loops -ffast-math"
+    FPM_FFLAGS="-march=native -O3 -funroll-loops -DMPI"
     FPM_FC="mpifort"
 fi
 

@@ -1,6 +1,7 @@
       module neklab_nek_forcing
          use LightKrylov, only: dp
          use LightKrylov_Logger
+         use neklab_nek_setup, only: nek_log_message, nek_log_debug
          implicit none
          include "SIZE"
          include "TOTAL"
@@ -26,11 +27,10 @@
             integer :: ipert
             character(len=128) :: msg
             write (msg, *) 'Setting all neklab_forcing vectors to zero.'
-            call logger%log_debug(msg, module=this_module, procedure='zero_neklab_forcing')
+            call nek_log_debug(msg, this_module, procedure='zero_neklab_forcing')
             neklab_ffx = 0.0_dp
             neklab_ffy = 0.0_dp
             neklab_ffz = 0.0_dp
-            return
          end subroutine zero_neklab_forcing
       
          subroutine get_neklab_forcing(fx, fy, fz, ipert)
@@ -42,17 +42,16 @@
             character(len=128) :: msg
             if (ipert < 0 .or. ipert > lpert) then
                write (msg, '(A,I0)') 'Invalid value for ipert specified! ipert = ', ipert
-               call logger%log_message(msg, module=this_module, procedure='get_neklab_forcing')
+               call nek_log_message(msg, this_module, procedure='get_neklab_forcing')
                if (nid == 0) print *, trim(msg)
                call nek_end()
             else
                write (msg, '(A,I0)') 'Retrieving value of the neklab forcing. ipert = ', ipert
-               call logger%log_debug(msg, module=this_module, procedure='get_neklab_forcing')
+               call nek_log_debug(msg, this_module, procedure='get_neklab_forcing')
             end if
             fx = neklab_ffx(:, ipert + 1)
             fy = neklab_ffy(:, ipert + 1)
             fz = neklab_ffz(:, ipert + 1)
-            return
          end subroutine get_neklab_forcing
       
          subroutine set_neklab_forcing(fx, fy, fz, ipert)
@@ -64,17 +63,16 @@
             character(len=128) :: msg
             if (ipert < 0 .or. ipert > lpert) then
                write (msg, '(A,I0)') 'Invalid value for ipert specified! ipert = ', ipert
-               call logger%log_message(msg, module=this_module, procedure='set_neklab_forcing')
+               call nek_log_message(msg, this_module, procedure='set_neklab_forcing')
                if (nid == 0) print *, trim(msg)
                call nek_end()
             else
                write (msg, '(A,I0)') 'Setting value of the neklab forcing. ipert = ', ipert
-               call logger%log_debug(msg, module=this_module, procedure='get_neklab_forcing')
+               call nek_log_debug(msg, this_module, procedure='get_neklab_forcing')
             end if
             neklab_ffx(:, ipert + 1) = fx
             neklab_ffy(:, ipert + 1) = fy
             neklab_ffz(:, ipert + 1) = fz
-            return
          end subroutine set_neklab_forcing
       
          subroutine zero_neklab_forcing_ipert(ipert)
@@ -83,17 +81,16 @@
             character(len=128) :: msg
             if (ipert < 0 .or. ipert > lpert) then
                write (msg, '(A,I0)') 'Invalid value for ipert specified! ipert = ', ipert
-               call logger%log_message(msg, module=this_module, procedure='zero_neklab_forcing_ipert')
+               call nek_log_message(msg, this_module, procedure='zero_neklab_forcing_ipert')
                if (nid == 0) print *, trim(msg)
                call nek_end()
             else
                write (msg, '(A,I0)') 'Setting value of the neklab forcing to zero. ipert = ', ipert
-               call logger%log_debug(msg, module=this_module, procedure='zero_neklab_forcing_ipert')
+               call nek_log_debug(msg, this_module, procedure='zero_neklab_forcing_ipert')
             end if
             neklab_ffx(:, ipert + 1) = 0.0_dp
             neklab_ffy(:, ipert + 1) = 0.0_dp
             neklab_ffz(:, ipert + 1) = 0.0_dp
-            return
          end subroutine zero_neklab_forcing_ipert
       
          subroutine neklab_forcing(ffx, ffy, ffz, ix, iy, iz, ieg, ipert)
@@ -114,6 +111,5 @@
             ffx = ffx + neklab_ffx(ijke, ipert + 1)
             ffy = ffy + neklab_ffy(ijke, ipert + 1)
             ffz = ffz + neklab_ffz(ijke, ipert + 1)
-            return
          end subroutine neklab_forcing
       end module neklab_nek_forcing
