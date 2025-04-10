@@ -35,7 +35,7 @@
          module procedure nek_zzero
          call self%scal(zero_cdp)
       ! clear restart fields if present
-         call self%nrst = 0
+         self%nrst = 0
          end procedure
       
          module procedure nek_zrand

@@ -37,7 +37,7 @@
          module procedure nek_dzero
          call self%scal(0.0_dp)
       ! clear restart fields if present
-         call self%nrst = 0
+         self%nrst = 0
          end procedure
       
          module procedure nek_drand
@@ -88,7 +88,7 @@
          end if
 
       ! clear restart fields if present
-         call self%nrst = 0
+         self%nrst = 0
          end procedure
       
          module procedure nek_dscal
@@ -189,14 +189,6 @@
             if (ifpsco(i - 1)) n = n + n1
          end do
          end if
-         end procedure
-
-         module procedure dto_nek
-
-         end procedure
-
-         module procedure dfrom_nek
-
          end procedure
 
          module procedure dsave_rst
