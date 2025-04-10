@@ -76,8 +76,8 @@
             call nek_daxpby(1.0_dp, wrk%im, 1.0_dp, self%im)
 
             do i = 1, self%nrst
-               call nek_daxpby(1.0_dp, wrk%re(i), 1.0_dp, self%re_rst(i))
-               call nek_daxpby(1.0_dp, wrk%im(i), 1.0_dp, self%im_rst(i))
+               call nek_daxpby(1.0_dp, wrk%re, 1.0_dp, self%re_rst(i))
+               call nek_daxpby(1.0_dp, wrk%im, 1.0_dp, self%im_rst(i))
             end do
 
          class default
