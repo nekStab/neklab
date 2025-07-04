@@ -10,13 +10,12 @@
             type is (nek_ext_dvector)
 
       ! Set appropriate tolerances and Nek status.
-               call setup_nonlinear_solver(recompute_dt = .true., 
-     &                                     endtime      = vec_in%T,
-     &                                     cfl_limit    = 0.4_dp,
-     &                                     vtol         = atol*0.1,
-     &                                     ptol         = atol*0.1)
                write (msg, '(A,F9.6)') 'Current period estimate, T = ', vec_in%T
                call nek_log_message(msg, this_module, 'nonlinear_map_UPO')
+               self%nek_opts%endtime = vec_in%T
+               self%nek_opts%vtol    = atol*self%tolrv
+               self%nek_opts%ptol    = atol*self%tolrp
+               call set_nek_opts(self%nek_opts)
 
       ! Set the initial condition for the nonlinear solver.
                call ext_vec2nek(vx, vy, vz, pr, t, vec_in)
@@ -53,15 +52,12 @@
             select type (vec_out)
             type is (nek_ext_dvector)
 
-               atol = param(22)
-      ! Ensure correct nek status -> set end time.
-               call setup_linear_solver(solve_baseflow = .true.,
-     &                                  transpose      = .false.,
-     &                                  recompute_dt   = .true.,
-     &                                  endtime        = get_period_abs(self%X),
-     &                                  cfl_limit      = 0.4_dp, 
-     &                                  vtol           = atol*0.1,
-     &                                  ptol           = atol*0.1)
+      ! Ensure correct nek status
+               atol = param(22)                                      ! save current tolerance
+               self%nek_opts%endtime = get_period_abs(self%X)        ! set endtime
+               self%nek_opts%vtol    = atol*self%tolrv               ! set velocity tolerance
+               self%nek_opts%ptol    = atol*self%tolrp               ! set pressure tolerance
+               call set_nek_opts(self%nek_opts, transpose = .false.)
 
       ! Set baseflow.
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
@@ -114,16 +110,13 @@
          type is (nek_ext_dvector)
             select type (vec_out)
             type is (nek_ext_dvector)
-               atol = param(22)
 
-      ! Ensure correct nek status -> set end time
-               call setup_linear_solver(solve_baseflow = .true.,
-     &                                  transpose      = .true.,
-     &                                  recompute_dt   = .true.,
-     &                                  endtime        = get_period_abs(self%X),
-     &                                  cfl_limit      = 0.4_dp, 
-     &                                  vtol           = atol*0.5,
-     &                                  ptol           = atol*0.5)
+      ! Ensure correct nek status
+               atol = param(22)                                      ! save current tolerance
+               self%nek_opts%endtime = get_period_abs(self%X)        ! set endtime
+               self%nek_opts%vtol    = atol*self%tolrv               ! set velocity tolerance
+               self%nek_opts%ptol    = atol*self%tolrp               ! set pressure tolerance
+               call set_nek_opts(self%nek_opts, transpose = .true.)
 
       ! Set baseflow.
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)

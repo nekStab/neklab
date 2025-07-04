@@ -8,10 +8,9 @@
             type is (nek_dvector)
 
       ! Set appropriate tolerances.
-               call setup_nonlinear_solver(recompute_dt = .true., 
-     &                                     cfl_limit    = 0.4_dp,
-     &                                     vtol         = atol*0.1,
-     &                                     ptol         = atol*0.1)
+               self%nek_opts%vtol = atol*self%tolrv   ! set velocity tolerance
+               self%nek_opts%ptol = atol*self%tolrp   ! set pressure tolerance
+               call set_nek_opts(self%nek_opts)
 
       ! Set the initial condition for the nonlinear solver.
                call vec2nek(vx, vy, vz, pr, t, vec_in)
@@ -47,12 +46,10 @@
             type is (nek_dvector)
             
       ! Ensure correct nek status
-               atol = param(22)
-               call setup_linear_solver(solve_baseflow = .false.,
-     &                                  recompute_dt   = .true.,
-     &                                  cfl_limit      = 0.5_dp, 
-     &                                  vtol           = atol*0.5,
-     &                                  ptol           = atol*0.5)
+               atol = param(22)                                      ! save current tolerance
+               self%nek_opts%vtol = atol*self%tolrv                  ! set velocity tolerance
+               self%nek_opts%ptol = atol*self%tolrp                  ! set pressure tolerance
+               call set_nek_opts(self%nek_opts, transpose = .false.) 
       
       ! Set baseflow.
                call abs_vec2nek(vx, vy, vz, pr, t, self%X)
@@ -94,13 +91,10 @@
             type is (nek_dvector)
       
       ! Ensure correct nek status.
-               atol = param(22)
-               call setup_linear_solver(transpose      = .true., 
-     &                                  solve_baseflow = .false.,
-     &                                  recompute_dt   = .true.,
-     &                                  cfl_limit      = 0.5_dp, 
-     &                                  vtol           = atol*0.5,
-     &                                  ptol           = atol*0.5)
+               atol = param(22)                                      ! save current tolerance
+               self%nek_opts%vtol = atol*0.5                         ! set velocity tolerance
+               self%nek_opts%ptol = atol*0.5                         ! set pressure tolerance
+               call set_nek_opts(self%nek_opts, transpose = .true.)
 
       ! Set baseflow.
                call abs_vec2nek(vx, vy, vz, pr, t, self%X)

@@ -6,7 +6,7 @@
          use LightKrylov, only: cg, cg_dp_opts, cg_dp_metadata
          use LightKrylov_Logger
          use neklab_vectors
-         use neklab_utils, only: nek2vec, vec2nek
+         use neklab_utils, only: nek_lin_opts, set_nek_opts, nek2vec, vec2nek
          use neklab_nek_setup, only: setup_nonlinear_solver, setup_linear_solver
          use neklab_nek_setup, only: nek_log_debug, nek_log_message, nek_log_information, nek_stop_error
          use neklab_nek_forcing, only: set_neklab_forcing
@@ -34,6 +34,7 @@
       ! --> Type.
          type, extends(abstract_exptA_linop_rdp), public :: exptA_linop
             type(nek_dvector) :: baseflow
+            type(nek_lin_opts) :: nek_opts
          contains
             private
             procedure, pass(self), public :: init => init_exptA
@@ -42,11 +43,11 @@
          end type exptA_linop
       
       ! --> Type-bound procedures: exponential_propagator.f90
-         interface
+         interface      
             module subroutine init_exptA(self)
-               class(exptA_linop), intent(in) :: self
+               class(exptA_linop), intent(inout) :: self
             end subroutine
-      
+
             module subroutine exptA_matvec(self, vec_in, vec_out)
                class(exptA_linop), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
@@ -68,6 +69,7 @@
       ! --> Type.
          type, extends(abstract_exptA_linop_rdp), public :: exptA_linop_temp
             type(nek_dvector) :: baseflow
+            type(nek_lin_opts) :: nek_opts
          contains
             private
             procedure, pass(self), public :: init => init_exptA_temp
@@ -78,9 +80,9 @@
       ! --> Type-bound procedures: exponential_propagator_temp.f90
          interface
             module subroutine init_exptA_temp(self)
-               class(exptA_linop_temp), intent(in) :: self
+               class(exptA_linop_temp), intent(inout) :: self
             end subroutine
-      
+
             module subroutine exptA_temp_matvec(self, vec_in, vec_out)
                class(exptA_linop_temp), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
@@ -102,9 +104,10 @@
       ! --> Type.
          type, extends(abstract_exptA_linop_rdp), public :: exptA_proj_linop
             type(nek_dvector) :: baseflow
-            real(kind=dp) :: alpha
-            real(kind=dp), dimension(lx1*ly1*lz1*lelv) :: cv = 0.0_dp
-            real(kind=dp), dimension(lx1*ly1*lz1*lelv) :: sv = 0.0_dp
+            type(nek_lin_opts) :: nek_opts
+            real(dp) :: alpha
+            real(dp), dimension(lx1*ly1*lz1*lelv) :: cv = 0.0_dp
+            real(dp), dimension(lx1*ly1*lz1*lelv) :: sv = 0.0_dp
             integer :: hndl = 0
          contains
             private
@@ -143,8 +146,8 @@
       
       ! --> Type.
          type, extends(abstract_linop_cdp), public :: resolvent_linop
-            real(kind=dp) :: omega
             type(nek_dvector) :: baseflow
+            real(kind=dp) :: omega
          contains
             private
             procedure, pass(self), public :: matvec => resolvent_matvec

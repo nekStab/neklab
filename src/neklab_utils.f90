@@ -9,9 +9,10 @@
          use LightKrylov_Logger
       ! Abstract types for real-valued vectors.
          use LightKrylov, only: abstract_vector_rdp
+         use LightKrylov_Utils, only: abstract_opts
       ! Neklab vectors
          use neklab_vectors
-         use neklab_nek_setup
+         use neklab_nek_setup, only: setup_nek
       
          implicit none
          include "SIZE"
@@ -33,7 +34,31 @@
          public :: nek2ext_vec, ext_vec2nek, abs_ext_vec2nek, outpost_ext_dnek
          public :: get_period, get_period_abs
       ! miscellaneous
-         public :: nopcopy
+         public :: set_nek_opts, init_nek_opts, nopcopy
+
+		! nek5000 setup options
+         type, extends(abstract_opts), public :: nek_nnl_opts
+            !! General Nek5000 solver options
+				logical :: recompute_dt = .true.
+				! Recompute timestep based on baseflow and CFL limit (default: .true.).
+				logical :: variable_dt = .false.
+				! Allow for variable timestep during integration (default: .false.).
+				real(dp) :: endtime = 0.0
+				! Integration time (default: taken from .par file)
+				real(dp) :: ptol = 0.0_dp
+				! tolerance setting for the pressure solves (default: taken from .par file)
+				real(dp) :: vtol = 0.0_dp
+				! tolerance setting for the velocity solves (default: taken from .par file)
+				real(dp) :: cfl_limit = 0.5_dp	
+				! CFL limit used to determine maximum dt (default: taken from .par file)
+				logical, private :: is_initialized = .false.
+         end type
+		
+         type, extends(nek_nnl_opts), public :: nek_lin_opts
+            !! Specific Nek5000 solver options for linear simulations
+				logical :: solve_baseflow = .false.
+				! Solve baseflow and perturbations simultaneously (default: .false.).
+         end type
       
       ! Nek vector utilities
          interface nek2vec
@@ -76,9 +101,51 @@
             module procedure outpost_ext_dnek_vector
             module procedure outpost_ext_dnek_basis
          end interface
+
+		! Set nek opts
+			interface set_nek_opts
+            module procedure set_nek_opts_std
+            module procedure set_nek_opts_lin
+         end interface
+
+			interface init_nek_opts
+				module procedure init_nek_opts_std
+				module procedure init_nek_opts_lin
+			end interface
       
       contains
-      
+
+			subroutine set_nek_opts_std(opts, silent)
+				type(nek_nnl_opts), intent(in) :: opts
+				logical, optional, intent(in) :: silent
+				call setup_nek(LNS = .false.,recompute_dt = opts%recompute_dt, variable_dt = opts%variable_dt, endtime = opts%endtime, vtol = opts%vtol, ptol = opts%ptol, cfl_limit = opts%cfl_limit, silent = silent)
+			end subroutine set_nek_opts_std
+
+			subroutine init_nek_opts_std(opt)
+				type(nek_nnl_opts), intent(inout) :: opt
+				opt%endtime    = param(10)
+				opt%ptol       = param(21)
+				opt%vtol       = param(22)
+				opt%cfl_limit  = param(26)
+				opt%is_initialized = .true.
+			end subroutine init_nek_opts_std
+
+			subroutine set_nek_opts_lin(opts, transpose, silent)
+				type(nek_lin_opts), intent(in) :: opts
+				logical, optional, intent(in) :: transpose
+				logical, optional, intent(in) :: silent
+				call setup_nek(LNS = .true.,transpose = transpose, solve_baseflow = opts%solve_baseflow, recompute_dt = opts%recompute_dt, variable_dt = opts%variable_dt, endtime = opts%endtime,vtol = opts%vtol, ptol = opts%ptol, cfl_limit = opts%cfl_limit, silent = silent)
+			end subroutine set_nek_opts_lin
+			
+			subroutine init_nek_opts_lin(opt)
+				type(nek_lin_opts), intent(inout) :: opt
+				opt%endtime    = param(10)
+				opt%ptol       = param(21)
+				opt%vtol       = param(22)
+				opt%cfl_limit  = param(26)
+				opt%is_initialized = .true.
+			end subroutine init_nek_opts_lin
+
          subroutine nek2vec_prt(vec, vx_, vy_, vz_, pr_, t_)
             include "SIZE"
             type(nek_dvector), intent(out) :: vec

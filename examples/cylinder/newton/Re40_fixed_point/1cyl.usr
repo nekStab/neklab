@@ -3,6 +3,7 @@ c-----------------------------------------------------------------------
       use stdlib_logger, only: debug_level, information_level
       use LightKrylov_Logger
       use neklab
+      implicit none
       include "SIZE"
       include "TOTAL"
 
@@ -10,6 +11,9 @@ c-----------------------------------------------------------------------
       type(nek_system), allocatable :: sys
       ! State vectors
       type(nek_dvector) :: bf
+      ! Nek options
+      type(nek_nnl_opts) :: nonlinear_opts
+      type(nek_lin_opts) :: linear_opts
       ! Tolerance for the Newton solver
       real(dp) :: tol
       
@@ -22,8 +26,10 @@ c-----------------------------------------------------------------------
          call nek2vec(bf, vx, vy, vz, pr, t)
          
          ! Define system
-         sys = nek_system()
-         sys%jacobian = nek_jacobian()
+         call init_nek_opts(nonlinear_opts)
+         sys = nek_system(nek_opts = nonlinear_opts)
+         call init_nek_opts(linear_opts)
+         sys%jacobian = nek_jacobian(nek_opts = linear_opts)
          sys%jacobian%X = bf
 			
          ! Set Newton tolerance

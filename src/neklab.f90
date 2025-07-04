@@ -87,8 +87,8 @@
          public :: neklab_forcing
       
       ! Various utilities.
+         public :: nek_nnl_opts, nek_lin_opts, init_nek_opts, set_nek_opts, setup_nonlinear_solver, setup_linear_solver
          public :: nek2vec, vec2nek
          public :: nek2ext_vec, ext_vec2nek
-         public :: setup_nonlinear_solver, setup_linear_solver
          public :: outpost_dnek, outpost_ext_dnek
       end module neklab

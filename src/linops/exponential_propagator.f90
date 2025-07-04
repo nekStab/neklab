@@ -5,11 +5,9 @@
       ! For the baseflow field for dt/nsteps/cfl computation.
          call vec2nek(vx, vy, vz, pr, t, self%baseflow)
          call nek_log_information("Set self%baseflow -> vx, vy, vz, pr, t", this_module, "init_exptA")
-      ! Setup Nek5000 for perturbation solver.
-         call setup_linear_solver(solve_baseflow = .false., 
-     &                            endtime        = self%tau, 
-     &                            recompute_dt   = .true., 
-     &                            cfl_limit      = 0.5_dp)
+      ! Ensure correct nek status
+         self%nek_opts%endtime = self%tau          ! Set endtime
+         call set_nek_opts(self%nek_opts)
          end procedure
 
          module procedure exptA_matvec
@@ -23,11 +21,10 @@
             type is (nek_dvector)
 
                nrst = abs(param(27)) - 1      
-               call setup_linear_solver(transpose    = .false., 
-     &                                  silent       = .true., 
-     &                                  endtime      = self%tau, 
-     &                                  recompute_dt = .true., 
-     &                                  cfl_limit    = 0.5_dp)
+      ! Ensure correct nek status
+               self%nek_opts%endtime = self%tau          ! Set endtime
+               call set_nek_opts(self%nek_opts, transpose= .false., silent = .true.)
+
       ! Set baseflow.         
                call vec2nek(vx, vy, vz, pr, t, self%baseflow)
       
@@ -47,22 +44,20 @@
                   end if
 
                end do
-      
-      ! Copy the final solution to vector.
-               call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
-      
+               
       ! Compute restart fields.
                write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
                call nek_log_debug(msg, this_module, 'exptA_matvec')
                ! We don't need to reset the end time but we do it to get a clean logfile
                itmp = nsteps
                rtmp = time
-               call setup_linear_solver(endtime = time + nrst*dt)
+               self%nek_opts%endtime = time + nrst*dt
+               call set_nek_opts(self%nek_opts, transpose= .false., silent = .true.)
                nsteps = itmp
                do istep = nsteps + 1, nsteps + nrst
-
+                  
                   call nek_advance()
-
+                  
                   irst = istep - nsteps
                   call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
                   call vec_out%save_rst(vec_rst, irst)
@@ -70,6 +65,9 @@
                ! Reset iteration count and time
                istep = itmp
                time  = rtmp
+      
+      ! Copy the final solution to vector.
+               call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
 
             class default
                call type_error('vec_out','nek_dvector','OUT',this_module,'exptA_matvec')
@@ -90,11 +88,10 @@
             type is (nek_dvector)
             
                nrst = abs(param(27)) - 1
-               call setup_linear_solver(transpose    = .true., 
-     &                                  silent       = .true.,  
-     &                                  endtime      = self%tau,  
-     &                                  recompute_dt = .true.,  
-     &                                  cfl_limit    = 0.5_dp)
+      ! Ensure correct nek status
+               self%nek_opts%endtime = self%tau       ! Set endtime
+               call set_nek_opts(self%nek_opts, transpose= .true., silent = .true.)
+
       ! Set baseflow.  
                call vec2nek(vx, vy, vz, pr, t, self%baseflow)
       
@@ -115,16 +112,14 @@
 
                end do
       
-      ! Copy the final solution to vector.
-               call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
-      
       ! Compute restart fields.
                write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
                call nek_log_debug(msg, this_module, 'exptA_matvec')
                ! We don't need to reset the end time but we do it to get a clean logfile
                itmp = nsteps
                rtmp = time
-               call setup_linear_solver(endtime = time + nrst*dt)
+               self%nek_opts%endtime = time + nrst*dt
+               call set_nek_opts(self%nek_opts, transpose= .true., silent = .true.)
                nsteps = itmp
                do istep = nsteps + 1, nsteps + nrst
 
@@ -137,6 +132,9 @@
                ! Reset iteration count and time
                istep = itmp
                time  = rtmp
+      
+      ! Copy the final solution to vector.
+               call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
        
             class default
                call type_error('vec_out','nek_dvector','OUT',this_module,'exptA_rmatvec')

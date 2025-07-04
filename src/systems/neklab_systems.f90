@@ -40,6 +40,9 @@
       
       ! --> Type: nek_system
          type, extends(abstract_system_rdp), public :: nek_system
+            type(nek_nnl_opts) :: nek_opts
+            real(dp) :: tolrv = 0.1_dp
+            real(dp) :: tolrp = 0.1_dp
          contains
             private
             procedure, pass(self), public :: response => nonlinear_map
@@ -47,6 +50,9 @@
       
       ! --> Type: nek_jacobian
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian
+            type(nek_lin_opts) :: nek_opts
+            real(dp) :: tolrv = 0.5_dp
+            real(dp) :: tolrp = 0.5_dp
          contains
             private
             procedure, pass(self), public :: matvec => jac_exptA_matvec
@@ -61,7 +67,7 @@
                class(abstract_vector_rdp), intent(out) :: vec_out
                real(dp), intent(in) :: atol
             end subroutine nonlinear_map
-      
+
             module subroutine jac_exptA_matvec(self, vec_in, vec_out)
                class(nek_jacobian), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
@@ -81,6 +87,9 @@
       
       ! --> Type: nek_system
          type, extends(abstract_system_rdp), public :: nek_system_temp
+            type(nek_nnl_opts) :: nek_opts
+            real(dp) :: tolrv = 0.1_dp
+            real(dp) :: tolrp = 0.1_dp
          contains
             private
             procedure, pass(self), public :: response => nonlinear_map_temp
@@ -88,6 +97,9 @@
       
       ! --> Type: nek_jacobian
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian_temp
+            type(nek_lin_opts) :: nek_opts
+            real(dp) :: tolrv = 0.5_dp
+            real(dp) :: tolrp = 0.5_dp
          contains
             private
             procedure, pass(self), public :: matvec => jac_exptA_temp_matvec
@@ -102,7 +114,7 @@
                class(abstract_vector_rdp), intent(out) :: vec_out
                real(dp), intent(in) :: atol
             end subroutine nonlinear_map_temp
-      
+
             module subroutine jac_exptA_temp_matvec(self, vec_in, vec_out)
                class(nek_jacobian_temp), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
@@ -121,12 +133,18 @@
       !-----------------------------------------------------
       
          type, extends(abstract_system_rdp), public :: nek_system_upo
+            type(nek_nnl_opts) :: nek_opts
+            real(dp) :: tolrv = 0.1_dp
+            real(dp) :: tolrp = 0.1_dp
          contains
             private
             procedure, pass(self), public :: response => nonlinear_map_upo
          end type nek_system_upo
       
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian_upo
+            type(nek_lin_opts) :: nek_opts
+            real(dp) :: tolrv = 0.5_dp
+            real(dp) :: tolrp = 0.5_dp
          contains
             private
             procedure, pass(self), public :: matvec => jac_direct_map

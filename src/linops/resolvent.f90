@@ -12,8 +12,7 @@
          real(dp), parameter :: pi_dp = 4.0_dp*atan(1.0_dp)
          type(nek_zvector) :: resolvent_forcing
       
-      contains
-      
+      contains      
          module procedure resolvent_matvec
          type(exptA_linop) :: exptA
          type(nek_dvector) :: b
