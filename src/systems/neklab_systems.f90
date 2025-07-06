@@ -40,7 +40,7 @@
       
       ! --> Type: nek_system
          type, extends(abstract_system_rdp), public :: nek_system
-            type(nek_nnl_opts) :: nek_opts
+            type(nek_opts_std) :: nek_opts
             real(dp) :: tolrv = 0.1_dp
             real(dp) :: tolrp = 0.1_dp
          contains
@@ -50,7 +50,7 @@
       
       ! --> Type: nek_jacobian
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian
-            type(nek_lin_opts) :: nek_opts
+            type(nek_opts_prt) :: nek_opts
             real(dp) :: tolrv = 0.5_dp
             real(dp) :: tolrp = 0.5_dp
          contains
@@ -87,7 +87,7 @@
       
       ! --> Type: nek_system
          type, extends(abstract_system_rdp), public :: nek_system_temp
-            type(nek_nnl_opts) :: nek_opts
+            type(nek_opts_std) :: nek_opts
             real(dp) :: tolrv = 0.1_dp
             real(dp) :: tolrp = 0.1_dp
          contains
@@ -97,7 +97,7 @@
       
       ! --> Type: nek_jacobian
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian_temp
-            type(nek_lin_opts) :: nek_opts
+            type(nek_opts_prt) :: nek_opts
             real(dp) :: tolrv = 0.5_dp
             real(dp) :: tolrp = 0.5_dp
          contains
@@ -133,7 +133,7 @@
       !-----------------------------------------------------
       
          type, extends(abstract_system_rdp), public :: nek_system_upo
-            type(nek_nnl_opts) :: nek_opts
+            type(nek_opts_std) :: nek_opts
             real(dp) :: tolrv = 0.1_dp
             real(dp) :: tolrp = 0.1_dp
          contains
@@ -142,7 +142,7 @@
          end type nek_system_upo
       
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian_upo
-            type(nek_lin_opts) :: nek_opts
+            type(nek_opts_prt) :: nek_opts
             real(dp) :: tolrv = 0.5_dp
             real(dp) :: tolrp = 0.5_dp
          contains
