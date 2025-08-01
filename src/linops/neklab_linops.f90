@@ -60,7 +60,6 @@
             end subroutine
          end interface
 
-
       !---------------------------------------------------------
       !-----     EXPONENTIAL PROPAGATOR with TEMP field    -----
       !---------------------------------------------------------
@@ -93,7 +92,6 @@
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine
          end interface
-
 
       !-----------------------------------------------------------------------
       !-----     EXPONENTIAL PROPAGATOR with projection on wavenumber    -----
@@ -173,7 +171,7 @@
       !! defined in expmlib.f90
             class(abstract_vector_rdp), intent(out) :: vec_out
       !! Output vector
-            class(abstract_exptA_linop_rdp), intent(inout) :: A
+            class(abstract_linop_rdp), intent(inout) :: A
       !! Linear operator
             class(abstract_vector_rdp), intent(in) :: vec_in
       !! Input vector.
@@ -193,12 +191,17 @@
             type is (nek_dvector)
                select type (vec_out)
                type is (nek_dvector)
-                  A%tau = tau
-                  if (transpose) then
-                     call A%rmatvec(vec_in, vec_out)
-                  else
-                     call A%matvec(vec_in, vec_out)
-                  end if
+                  select type (A)
+                  class is (abstract_exptA_linop_rdp)
+                     A%tau = tau
+                     if (transpose) then
+                        call A%rmatvec(vec_in, vec_out)
+                     else
+                        call A%matvec(vec_in, vec_out)
+                     end if
+                  class default
+                     call type_error('A','abstract_exptA_linop','INOUT',this_module,'apply_exptA')
+                  end select
                class default
                   call type_error('vec_out','nek_dvector','OUT',this_module,'apply_exptA')
                end select
