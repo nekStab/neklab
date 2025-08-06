@@ -23,16 +23,18 @@
             type is (nek_dvector)
 
                nrst = abs(param(27)) - 1
+      ! Set baseflow.
+               call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+      
+      ! Set initial condition for the linearized solver.
+               call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
+      
+      ! Set nek configuration (after the v[xzy] and v[xyz]p fields are updated)
                call setup_linear_solver(transpose     = .false.,
      &                                  silent        = .false.,
      &                                  endtime       = self%tau,
      &                                  recompute_dt  = .true.,
      &                                  cfl_limit     = 0.5_dp)
-      ! Set baseflow.
-               call vec2nek(vx, vy, vz, pr, t, self%baseflow)
-
-      ! Set initial condition for the linearized solver.
-               call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
 
       ! Integrate the equations forward in time.
                time = 0.0_dp
@@ -60,6 +62,7 @@
 
                   call nek_advance()
                   
+                  irst = istep - nsteps
                   call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
                   call vec_out%save_rst(vec_rst, irst)
                end do
@@ -89,18 +92,20 @@
             type is (nek_dvector)
 
                nrst = abs(param(27)) - 1
+      ! Set baseflow.
+               call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+      
+      ! Set initial condition for the linearized solver.
+               call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
+      
+      ! Set nek configuration (after the v[xzy] and v[xyz]p fields are updated)
                call setup_linear_solver(transpose     = .true.,
      &                                  silent        = .false.,
      &                                  endtime       = self%tau,
      &                                  recompute_dt  = .true.,
      &                                  cfl_limit     = 0.5_dp)
-         ! Set baseflow.
-               call vec2nek(vx, vy, vz, pr, t, self%baseflow)
 
-         ! Set initial condition for the linearized solver.
-               call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
-
-         ! Integrate the equations forward in time.
+      ! Integrate the equations forward in time.
                time = 0.0_dp
                do istep = 1, nsteps
 
@@ -114,10 +119,10 @@
 
                end do
 
-         ! Copy the final solution to vector.
+      ! Copy the final solution to vector.
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
 
-         ! Compute restart fields.
+      ! Compute restart fields.
                write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
                call nek_log_debug(msg, this_module, 'exptA_temp_rmatvec')
                ! We don't need to reset the end time but we do it to get a clean logfile
@@ -129,6 +134,7 @@
 
                   call nek_advance()
                   
+                  irst = istep - nsteps
                   call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
                   call vec_out%save_rst(vec_rst, irst)
                end do

@@ -22,17 +22,19 @@
             select type (vec_out)
             type is (nek_dvector)
 
-               nrst = abs(param(27)) - 1      
+               nrst = abs(param(27)) - 1
+      ! Set baseflow.
+               call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+      
+      ! Set initial condition for the linearized solver.
+               call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
+      
+      ! Set nek configuration (after the v[xzy] and v[xyz]p fields are updated)   
                call setup_linear_solver(transpose    = .false., 
      &                                  silent       = .true., 
      &                                  endtime      = self%tau, 
      &                                  recompute_dt = .true., 
      &                                  cfl_limit    = 0.5_dp)
-      ! Set baseflow.         
-               call vec2nek(vx, vy, vz, pr, t, self%baseflow)
-      
-      ! Set initial condition for the linearized solver.
-               call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       
       ! Integrate the equations forward in time.
                time = 0.0_dp
@@ -90,16 +92,18 @@
             type is (nek_dvector)
             
                nrst = abs(param(27)) - 1
+      ! Set baseflow.
+               call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+      
+      ! Set initial condition for the linearized solver.
+               call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
+      
+      ! Set nek configuration (after the v[xzy] and v[xyz]p fields are updated)
                call setup_linear_solver(transpose    = .true., 
      &                                  silent       = .true.,  
      &                                  endtime      = self%tau,  
      &                                  recompute_dt = .true.,  
      &                                  cfl_limit    = 0.5_dp)
-      ! Set baseflow.  
-               call vec2nek(vx, vy, vz, pr, t, self%baseflow)
-      
-      ! Set initial condition for the linearized solver.
-               call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       
       ! Integrate the equations forward in time.
                time = 0.0_dp
