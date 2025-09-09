@@ -12,7 +12,7 @@
          use LightKrylov_Utils, only: abstract_opts
       ! Neklab vectors
          use neklab_vectors
-         use neklab_nek_setup, only: setup_nek, nek_stop_error
+         use neklab_nek_setup, only: setup_nek, nek_stop_error, nek_log_message
       
          implicit none
          include "SIZE"
@@ -58,6 +58,7 @@
          contains
             procedure :: init           => init_nek_opts_std
             procedure :: is_initialized => is_initialized_nek_opts_std
+            procedure :: print          => print_nek_opts_std
          end type
             
          type, extends(abstract_nek_opts), public :: nek_opts_prt
@@ -67,6 +68,7 @@
          contains
             procedure :: init           => init_nek_opts_prt
             procedure :: is_initialized => is_initialized_nek_opts_prt
+            procedure :: print          => print_nek_opts_prt
          end type
       
       ! Nek vector utilities
@@ -119,7 +121,9 @@
 
       contains
 
+      !---------------------------------------------------------------------
       ! Type bound procedures for opts
+      !---------------------------------------------------------------------
 
 			subroutine init_nek_opts_std(self, recompute_dt, variable_dt, endtime, ptol, vtol, cfl_limit)
 				class(nek_opts_std), intent(inout) :: self
@@ -129,6 +133,9 @@
 				real(dp), optional, intent(in) :: ptol
 				real(dp), optional, intent(in) :: vtol
 				real(dp), optional, intent(in) :: cfl_limit
+            ! internal
+            character(len=*), parameter :: this_procedure = 'init_nek_opts_std'
+            
             ! Defaults
             self%recompute_dt = optval(recompute_dt, .true.)
             self%variable_dt  = optval(variable_dt,  .false.)
@@ -137,6 +144,11 @@
 				self%ptol         = optval(ptol,         param(21))
 				self%vtol         = optval(vtol,         param(22))
 				self%cfl_limit    = optval(cfl_limit,    param(26))
+            
+            if (.not. self%initialized) then
+               call nek_log_message('options structure initialized.', this_module, this_procedure)
+            end if
+
 				self%initialized  = .true.
 			end subroutine init_nek_opts_std
 
@@ -144,6 +156,27 @@
             class(nek_opts_std), intent(in) :: self
             is_initialized = self%initialized
          end function is_initialized_nek_opts_std
+
+         subroutine print_nek_opts_std(self)
+            class(nek_opts_std), intent(in) :: self
+            ! internal
+            character(len=128) :: msg
+            ! print info
+            call nek_log_message('##  NEK OPTS STD ##', module=this_module)
+            write (msg, '(A,L15)') padl('recompute_dt:', 20), self%recompute_dt
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            write (msg, '(A,L15)') padl('variable_dt:', 20), self%variable_dt
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            write (msg, '(A,F15.8)') padl('endtime:', 20), self%endtime
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            write (msg, '(A,F15.8)') padl('cfl_limit:', 20), self%cfl_limit
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')            
+            write (msg, '(A,E15.8)') padl('vtol:', 20), self%vtol
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            write (msg, '(A,E15.8)') padl('ptol:', 20), self%ptol
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            call nek_log_message('##  NEK OPTS STD ##', module=this_module)
+         end subroutine print_nek_opts_std
 
          subroutine init_nek_opts_prt(self, solve_baseflow, recompute_dt, variable_dt, endtime, ptol, vtol, cfl_limit)
 				class(nek_opts_prt), intent(inout) :: self
@@ -154,15 +187,23 @@
 				real(dp), optional, intent(in) :: ptol
 				real(dp), optional, intent(in) :: vtol
 				real(dp), optional, intent(in) :: cfl_limit
+            ! internal
+            character(len=*), parameter :: this_procedure = 'init_nek_opts_prt'
+            character(len=128) :: msg
             ! Defaults
             self%solve_baseflow = optval(solve_baseflow, .false.)
-            self%recompute_dt = optval(recompute_dt, .true.)
-            self%variable_dt  = optval(variable_dt, .false.)
+            self%recompute_dt   = optval(recompute_dt, .true.)
+            self%variable_dt    = optval(variable_dt, .false.)
             ! involving param
-				self%endtime    = optval(endtime,      param(10))
-				self%ptol       = optval(ptol,         param(21))
-				self%vtol       = optval(vtol,         param(22))
-				self%cfl_limit  = optval(cfl_limit,    param(26))
+				self%endtime        = optval(endtime,      param(10))
+				self%ptol           = optval(ptol,         param(21))
+				self%vtol           = optval(vtol,         param(22))
+				self%cfl_limit      = optval(cfl_limit,    param(26))
+
+            if (.not. self%initialized) then
+               call nek_log_message('options structure initialized.', this_module, this_procedure)
+            end if
+
 				self%initialized = .true.
 			end subroutine init_nek_opts_prt
 
@@ -171,31 +212,64 @@
             is_initialized = self%initialized
          end function is_initialized_nek_opts_prt
 
-         subroutine set_nek_opts_std(opts, silent)
-				type(nek_opts_std), intent(in) :: opts
-				logical, optional, intent(in) :: silent
+         subroutine print_nek_opts_prt(self)
+            class(nek_opts_prt), intent(in) :: self
             ! internal
             character(len=128) :: msg
-            if (opts%is_initialized()) then
-				   call setup_nek(LNS = .false., recompute_dt = opts%recompute_dt, variable_dt = opts%variable_dt, endtime = opts%endtime, vtol = opts%vtol, ptol = opts%ptol, cfl_limit = opts%cfl_limit, silent = silent)
-            else
-               msg = 'nek_opts_std not correctly initialized. Call opts%init() and try again.'
-               call nek_stop_error(msg, this_module, 'set_nek_opts_std')
-            end if
+            ! print info
+            call nek_log_message('##  NEK OPTS PRT ##', module=this_module)
+            write (msg, '(A,L15)') padl('solve_baseflow:', 20), self%solve_baseflow
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            write (msg, '(A,L15)') padl('recompute_dt:', 20), self%recompute_dt
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            write (msg, '(A,L15)') padl('variable_dt:', 20), self%variable_dt
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            write (msg, '(A,F15.8)') padl('endtime:', 20), self%endtime
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            write (msg, '(A,F15.8)') padl('cfl_limit:', 20), self%cfl_limit
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')            
+            write (msg, '(A,E15.8)') padl('vtol:', 20), self%vtol
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            write (msg, '(A,E15.8)') padl('ptol:', 20), self%ptol
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            call nek_log_message('##  NEK OPTS PRT ##', module=this_module)
+         end subroutine print_nek_opts_prt
+
+         subroutine set_nek_opts_std(opts, silent)
+				type(nek_opts_std), intent(inout) :: opts
+				logical, optional, intent(in) :: silent
+            ! internal
+            logical :: silent_
+            
+            ! optional arguments
+            silent_ = optval(silent, .false.)
+
+            ! safety check
+            if (.not. opts%is_initialized()) call opts%init()
+            if (.not. silent_) call opts%print()
+            
+            ! set opts
+				call setup_nek(LNS = .false., recompute_dt = opts%recompute_dt, variable_dt = opts%variable_dt, endtime = opts%endtime, vtol = opts%vtol, ptol = opts%ptol, cfl_limit = opts%cfl_limit, silent = silent)
+
 			end subroutine set_nek_opts_std
 
 			subroutine set_nek_opts_prt(opts, transpose, silent)
-				type(nek_opts_prt), intent(in) :: opts
+				type(nek_opts_prt), intent(inout) :: opts
 				logical, optional, intent(in) :: transpose
 				logical, optional, intent(in) :: silent
             ! internal
-            character(len=128) :: msg
-            if (opts%is_initialized()) then
-				   call setup_nek(LNS = .true., transpose = transpose, solve_baseflow = opts%solve_baseflow, recompute_dt = opts%recompute_dt, variable_dt = opts%variable_dt, endtime = opts%endtime,vtol = opts%vtol, ptol = opts%ptol, cfl_limit = opts%cfl_limit, silent = silent)
-            else
-               msg = 'nek_opts_prt not correctly initialized. Call opts%init() and try again.'
-               call nek_stop_error(msg, this_module, 'set_nek_opts_prt')
-            end if
+            logical :: silent_
+            
+            ! optional arguments
+            silent_ = optval(silent, .false.)
+
+            ! safety check
+            if (.not. opts%is_initialized()) call opts%init()
+            if (.not. silent_) call opts%print()
+
+            ! set opts
+				call setup_nek(LNS = .true., transpose = transpose, solve_baseflow = opts%solve_baseflow, recompute_dt = opts%recompute_dt, variable_dt = opts%variable_dt, endtime = opts%endtime,vtol = opts%vtol, ptol = opts%ptol, cfl_limit = opts%cfl_limit, silent = silent)
+
 			end subroutine set_nek_opts_prt
 
          subroutine nek2vec_prt(vec, vx_, vy_, vz_, pr_, t_)
