@@ -214,9 +214,9 @@
                end if
                fintim = nsteps*dt
                param(12) = -abs(param(12))
-               write (msg, '(A,E15.8)') padl('Force constant timestep: ', 30), -param(12)
+               write (msg, '(A,F15.8)') padl('Force constant timestep: ', 30), -param(12)
                if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
-               write (msg, '(A,E15.8)') padl('Set fintim: ', 30), fintim
+               write (msg, '(A,F15.6)') padl('Set fintim: ', 30), fintim
                if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
                write (msg, '(A,I15)') padl('Set nsteps: ', 30), nsteps
                if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
@@ -316,7 +316,7 @@
             if (full_summary_) then
       ! params
                call nek_log_message('PARAMETERS:', this_module, 'nek_status', nekfmt)
-               write (msg, '(A,F15.8)') padl('endtime: ', 20), param(10)
+               write (msg, '(A,F15.6)') padl('endtime: ', 20), param(10)
                call nek_log_message(msg, this_module, 'nek_status', nekfmt)
                if (param(12) >= 0.0_dp) then
                   if (ifpert) then
