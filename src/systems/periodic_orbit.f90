@@ -3,6 +3,7 @@
       contains
          module procedure nonlinear_map_UPO
       ! internal
+         real(dp) :: atol_v, atol_p
          character(len=128) :: msg
          select type (vec_in)
          type is (nek_ext_dvector)
@@ -10,17 +11,20 @@
             type is (nek_ext_dvector)
 
       ! Set appropriate tolerances and Nek status.
+               if (.not. self%nek_opts%is_initialized()) call self%nek_opts%init()
                write (msg, '(A,F9.6)') 'Current period estimate, T = ', vec_in%T
                call nek_log_message(msg, this_module, 'nonlinear_map_UPO')
-               self%nek_opts%endtime = vec_in%T
-               self%nek_opts%vtol    = atol*self%tolrv
-               self%nek_opts%ptol    = atol*self%tolrp
-               call set_nek_opts(self%nek_opts)
+               self%nek_opts%endtime = vec_in%T                ! set current period estimate
+               atol_v = self%nek_opts%vtol                     ! save current velocity tolerance
+               atol_p = self%nek_opts%ptol                     ! save current pressure tolerance
+               self%nek_opts%vtol    = atol*self%tol_ratio_vel ! set velocity tolerance based on input value
+               self%nek_opts%ptol    = atol*self%tol_ratio_pr  ! set pressure tolerance based on input value
+               call set_nek_opts(self%nek_opts, stamp_log=.true., print_summary=.true.)
 
       ! Set the initial condition for the nonlinear solver.
                call ext_vec2nek(vx, vy, vz, pr, t, vec_in)
 
-      ! Integrate the nonlinear equations forward
+      ! Integrate the nonlinear equations forward.
                time = 0.0_dp
                do istep = 1, nsteps
 
@@ -35,6 +39,11 @@
       ! Evaluate residual F(X) - X.
                call vec_out%sub(vec_in)
 
+      ! Reset tolerances.
+               self%nek_opts%vtol = atol_v
+               self%nek_opts%ptol = atol_p
+               call set_nek_opts(self%nek_opts)
+
             class default
                call type_error('vec_out','nek_ext_dvector','OUT',this_module,'nonlinear_map_UPO')
             end select
@@ -45,19 +54,16 @@
       
          module procedure jac_direct_map
       ! internal
-         real(dp) :: atol
-         type(nek_ext_dvector) :: vec
+         real(dp) :: atol_v, atol_p
+         integer :: nrst, itmp, irst
+         real(dp) :: rtmp
+         type(nek_ext_dvector) :: vec_rst, vec
+         character(len=128) :: msg
          select type (vec_in)
          type is (nek_ext_dvector)
             select type (vec_out)
             type is (nek_ext_dvector)
-
-      ! Ensure correct nek status
-               atol = param(22)                                      ! save current tolerance
-               self%nek_opts%endtime = get_period_abs(self%X)        ! set endtime
-               self%nek_opts%vtol    = atol*self%tolrv               ! set velocity tolerance
-               self%nek_opts%ptol    = atol*self%tolrp               ! set pressure tolerance
-               call set_nek_opts(self%nek_opts, transpose = .false.)
+               nrst = abs(param(27)) - 1
 
       ! Set baseflow.
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
@@ -65,13 +71,49 @@
       ! Set the initial condition for the linearized solver.
                call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
 
-      ! Intgrate the coupled equations forward
+      ! Ensure correct nek status.
+               if (.not. self%nek_opts%is_initialized()) call self%nek_opts%init()
+               atol_v = self%nek_opts%vtol                           ! save current velocity tolerance
+               atol_p = self%nek_opts%ptol                           ! save current pressure tolerance
+               self%nek_opts%vtol    = atol_v*self%tol_ratio_vel     ! set velocity tolerance based on current value
+               self%nek_opts%ptol    = atol_p*self%tol_ratio_pr      ! set pressure tolerance based on current value
+               self%nek_opts%endtime = get_period_abs(self%X)        ! set endtime
+               call set_nek_opts(self%nek_opts, stamp_log=.true.)
+
+      ! Intgrate the coupled equations forward.
                time = 0.0_dp
                do istep = 1, nsteps
 
                   call nek_advance()
 
+                  ! Set restart fields if present.
+                  if (istep <= nrst .and. vec_in%has_rst_fields()) then
+                     call vec_in%get_rst(vec_rst, istep)
+                     call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
+                  end if
+
                end do
+
+      ! Compute restart fields.
+               write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
+               call nek_log_debug(msg, this_module, 'exptA_matvec')
+               ! We don't need to reset the end time but we do it to get a clean logfile
+               itmp = nsteps
+               rtmp = time
+               self%nek_opts%endtime = time + nrst*dt
+               call set_nek_opts(self%nek_opts)
+               nsteps = itmp
+               do istep = nsteps + 1, nsteps + nrst
+                  
+                  call nek_advance()
+                  
+                  irst = istep - nsteps
+                  call nek2ext_vec(vec_rst, vxp, vyp, vzp, prp, tp)
+                  call vec_out%save_rst(vec_rst, irst)
+               end do
+               ! Reset iteration count and time.
+               istep = itmp
+               time  = rtmp
 
       ! Copy the final solution to vector.
                call nek2ext_vec(vec_out, vxp, vyp, vzp, prp, tp)
@@ -90,9 +132,11 @@
                call compute_fdot(vec)
                vec_out%T = vec_in%dot(vec)
 
-      ! Reset tolerances
-               param(22) = atol
-               param(21) = atol
+      ! Reset tolerances and endtime.
+               self%nek_opts%vtol = atol_v
+               self%nek_opts%ptol = atol_p
+               self%nek_opts%endtime = time
+               call set_nek_opts(self%nek_opts)
 
             class default
                call type_error('vec_out','nek_ext_dvector','OUT',this_module,'jac_direct_map')
@@ -104,19 +148,24 @@
       
          module procedure jac_adjoint_map
       ! internal
-         real(dp) :: atol
-         type(nek_ext_dvector) :: vec
+         real(dp) :: atol_v, atol_p
+         integer :: nrst, itmp, irst
+         real(dp) :: rtmp
+         type(nek_ext_dvector) :: vec_rst, vec
+         character(len=128) :: msg
          select type (vec_in)
          type is (nek_ext_dvector)
             select type (vec_out)
             type is (nek_ext_dvector)
 
-      ! Ensure correct nek status
-               atol = param(22)                                      ! save current tolerance
-               self%nek_opts%endtime = get_period_abs(self%X)        ! set endtime
-               self%nek_opts%vtol    = atol*self%tolrv               ! set velocity tolerance
-               self%nek_opts%ptol    = atol*self%tolrp               ! set pressure tolerance
-               call set_nek_opts(self%nek_opts, transpose = .true.)
+      ! Ensure correct nek status.
+               if (.not. self%nek_opts%is_initialized()) call self%nek_opts%init()
+               atol_v = self%nek_opts%vtol                        ! save current velocity tolerance
+               atol_p = self%nek_opts%ptol                        ! save current pressure tolerance
+               self%nek_opts%vtol    = atol_v*self%tol_ratio_vel  ! set velocity tolerance based on current value
+               self%nek_opts%ptol    = atol_p*self%tol_ratio_pr   ! set pressure tolerance based on current value
+               self%nek_opts%endtime = get_period_abs(self%X)     ! set endtime
+               call set_nek_opts(self%nek_opts, transpose = .true., stamp_log=.true.)
 
       ! Set baseflow.
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
@@ -130,7 +179,34 @@
 
                   call nek_advance()
 
+                  ! Set restart fields if present.
+                  if (istep <= nrst .and. vec_in%has_rst_fields()) then
+                     call vec_in%get_rst(vec_rst, istep)
+                     call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
+                  end if
+
                end do
+
+      ! Compute restart fields.
+               write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
+               call nek_log_debug(msg, this_module, 'exptA_matvec')
+               ! We don't need to reset the end time but we do it to get a clean logfile
+               itmp = nsteps
+               rtmp = time
+               self%nek_opts%endtime = time + nrst*dt
+               call set_nek_opts(self%nek_opts, transpose= .true.)
+               nsteps = itmp
+               do istep = nsteps + 1, nsteps + nrst
+                  
+                  call nek_advance()
+                  
+                  irst = istep - nsteps
+                  call nek2ext_vec(vec_rst, vxp, vyp, vzp, prp, tp)
+                  call vec_out%save_rst(vec_rst, irst)
+               end do
+               ! Reset iteration count and time.
+               istep = itmp
+               time  = rtmp
 
       ! Copy the final solution to vector.
                call nek2ext_vec(vec_out, vxp, vyp, vzp, prp, tp)
@@ -148,9 +224,11 @@
                call compute_fdot(vec)
                vec_out%T = vec_in%dot(vec)
 
-      ! Reset tolerances
-               param(22) = atol
-               param(21) = atol
+      ! Reset tolerances and endtime.
+               self%nek_opts%vtol = atol_v
+               self%nek_opts%ptol = atol_p
+               self%nek_opts%endtime = time
+               call set_nek_opts(self%nek_opts, transpose= .true.)
             
             class default
                call type_error('vec_out','nek_ext_dvector','OUT',this_module,'jac_adjoint_map')

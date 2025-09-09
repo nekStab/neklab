@@ -7,7 +7,7 @@
          call nek_log_message("Set self%baseflow -> vx, vy, vz, pr, t", this_module, "init_exptA_temp")
       ! Ensure correct nek status
          self%nek_opts%endtime = self%tau          ! Set endtime
-         call set_nek_opts(self%nek_opts)
+         call set_nek_opts(self%nek_opts, stamp_log=.true., print_summary=.true.)
          end procedure
 
          module procedure exptA_temp_matvec
@@ -29,7 +29,7 @@
 
       ! Ensure correct nek status
                self%nek_opts%endtime = self%tau          ! Set endtime
-               call set_nek_opts(self%nek_opts, transpose= .false., silent = .true.)
+               call set_nek_opts(self%nek_opts, stamp_log=.true.)
 
       ! Integrate the equations forward in time.
                time = 0.0_dp
@@ -52,7 +52,7 @@
                itmp = nsteps
                rtmp = time
                self%nek_opts%endtime = time + nrst*dt
-               call set_nek_opts(self%nek_opts, transpose= .false., silent = .true.)
+               call set_nek_opts(self%nek_opts)
                nsteps = itmp
                do istep = nsteps + 1, nsteps + nrst
 
@@ -67,6 +67,10 @@
 
       ! Copy the final solution to vector.
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
+
+      ! Reset endtime.
+               self%nek_opts%endtime = self%tau          ! Set endtime
+               call set_nek_opts(self%nek_opts)
 
                class default
                call type_error('vec_out','nek_dvector','OUT',this_module,'exptA_temp_matvec')
@@ -95,7 +99,7 @@
                
       ! Ensure correct nek status
                self%nek_opts%endtime = self%tau          ! Set endtime
-               call set_nek_opts(self%nek_opts, transpose= .true., silent = .true.)
+               call set_nek_opts(self%nek_opts, transpose= .true., stamp_log=.true.)
 
       ! Integrate the equations forward in time.
                time = 0.0_dp
@@ -118,7 +122,7 @@
                itmp = nsteps
                rtmp = time
                self%nek_opts%endtime = time + nrst*dt
-               call set_nek_opts(self%nek_opts, transpose= .true., silent = .true.)
+               call set_nek_opts(self%nek_opts, transpose= .true.)
                nsteps = itmp
                do istep = nsteps + 1, nsteps + nrst
 
@@ -133,6 +137,10 @@
 
       ! Copy the final solution to vector.
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
+
+      ! Reset endtime.
+               self%nek_opts%endtime = self%tau          ! Set endtime
+               call set_nek_opts(self%nek_opts, transpose= .true.)
 
             class default
                call type_error('vec_out','nek_dvector','OUT',this_module,'exptA_proj_rmatvec')

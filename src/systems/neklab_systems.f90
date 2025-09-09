@@ -41,8 +41,8 @@
       ! --> Type: nek_system
          type, extends(abstract_system_rdp), public :: nek_system
             type(nek_opts_std) :: nek_opts
-            real(dp) :: tolrv = 0.1_dp
-            real(dp) :: tolrp = 0.1_dp
+            real(dp) :: tol_ratio_vel = 0.1_dp
+            real(dp) :: tol_ratio_pr  = 0.1_dp
          contains
             private
             procedure, pass(self), public :: response => nonlinear_map
@@ -51,8 +51,8 @@
       ! --> Type: nek_jacobian
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian
             type(nek_opts_prt) :: nek_opts
-            real(dp) :: tolrv = 0.5_dp
-            real(dp) :: tolrp = 0.5_dp
+            real(dp) :: tol_ratio_vel = 0.1_dp
+            real(dp) :: tol_ratio_pr  = 0.1_dp
          contains
             private
             procedure, pass(self), public :: matvec => jac_exptA_matvec
@@ -88,8 +88,8 @@
       ! --> Type: nek_system
          type, extends(abstract_system_rdp), public :: nek_system_temp
             type(nek_opts_std) :: nek_opts
-            real(dp) :: tolrv = 0.1_dp
-            real(dp) :: tolrp = 0.1_dp
+            real(dp) :: tol_ratio_vel = 0.1_dp
+            real(dp) :: tol_ratio_pr  = 0.1_dp
          contains
             private
             procedure, pass(self), public :: response => nonlinear_map_temp
@@ -98,8 +98,8 @@
       ! --> Type: nek_jacobian
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian_temp
             type(nek_opts_prt) :: nek_opts
-            real(dp) :: tolrv = 0.5_dp
-            real(dp) :: tolrp = 0.5_dp
+            real(dp) :: tol_ratio_vel = 0.1_dp
+            real(dp) :: tol_ratio_pr  = 0.1_dp
          contains
             private
             procedure, pass(self), public :: matvec => jac_exptA_temp_matvec
@@ -134,8 +134,8 @@
       
          type, extends(abstract_system_rdp), public :: nek_system_upo
             type(nek_opts_std) :: nek_opts
-            real(dp) :: tolrv = 0.1_dp
-            real(dp) :: tolrp = 0.1_dp
+            real(dp) :: tol_ratio_vel = 0.1_dp
+            real(dp) :: tol_ratio_pr  = 0.1_dp
          contains
             private
             procedure, pass(self), public :: response => nonlinear_map_upo
@@ -143,8 +143,8 @@
       
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian_upo
             type(nek_opts_prt) :: nek_opts
-            real(dp) :: tolrv = 0.5_dp
-            real(dp) :: tolrp = 0.5_dp
+            real(dp) :: tol_ratio_vel = 0.1_dp
+            real(dp) :: tol_ratio_pr  = 0.1_dp
          contains
             private
             procedure, pass(self), public :: matvec => jac_direct_map
