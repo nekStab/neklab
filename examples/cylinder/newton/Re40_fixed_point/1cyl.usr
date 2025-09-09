@@ -11,9 +11,6 @@ c-----------------------------------------------------------------------
       type(nek_system), allocatable :: sys
       ! State vectors
       type(nek_dvector) :: bf
-      ! Nek options
-      type(nek_opts_std) :: std_opts
-      type(nek_opts_prt) :: prt_opts
       ! Tolerance for the Newton solver
       real(dp) :: tol
       
@@ -26,10 +23,8 @@ c-----------------------------------------------------------------------
          call nek2vec(bf, vx, vy, vz, pr, t)
          
          ! Define system
-         call std_opts%init() ! initialize options with baseline data from param and optionally overwrite
-         sys = nek_system(nek_opts = std_opts)
-         call prt_opts%init() ! initialize options with baseline data from param and optionally overwrite
-         sys%jacobian = nek_jacobian(nek_opts = prt_opts)
+         sys = nek_system()
+         sys%jacobian = nek_jacobian()
          sys%jacobian%X = bf
 			
          ! Set Newton tolerance
