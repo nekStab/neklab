@@ -45,12 +45,14 @@
 				! Allow for variable timestep during integration (default: .false.).
 				real(dp) :: endtime = 0.0
 				! Integration time (default: taken from .par file)
+				real(dp) :: cfl_limit = 0.5_dp	
+				! CFL limit used to determine maximum dt (default: taken from .par file)
 				real(dp) :: ptol = 0.0_dp
 				! tolerance setting for the pressure solves (default: taken from .par file)
 				real(dp) :: vtol = 0.0_dp
 				! tolerance setting for the velocity solves (default: taken from .par file)
-				real(dp) :: cfl_limit = 0.5_dp	
-				! CFL limit used to determine maximum dt (default: taken from .par file)
+            real(dp) :: tol_ratio_pv = 0.0_dp
+            ! ratio between pressure and velocity tolerances (default: taken from .par file)
 				logical, private :: initialized = .false.
          end type
 
@@ -125,14 +127,15 @@
       ! Type bound procedures for opts
       !---------------------------------------------------------------------
 
-			subroutine init_nek_opts_std(self, recompute_dt, variable_dt, endtime, ptol, vtol, cfl_limit)
+			subroutine init_nek_opts_std(self, recompute_dt, variable_dt, endtime, cfl_limit, ptol, vtol, tol_ratio_pv)
 				class(nek_opts_std), intent(inout) :: self
             logical, optional, intent(in) :: recompute_dt
 				logical, optional, intent(in) :: variable_dt
 				real(dp), optional, intent(in) :: endtime
+				real(dp), optional, intent(in) :: cfl_limit
 				real(dp), optional, intent(in) :: ptol
 				real(dp), optional, intent(in) :: vtol
-				real(dp), optional, intent(in) :: cfl_limit
+				real(dp), optional, intent(in) :: tol_ratio_pv
             ! internal
             character(len=*), parameter :: this_procedure = 'init_nek_opts_std'
 
@@ -141,9 +144,10 @@
             self%variable_dt  = optval(variable_dt,  .false.)
             ! involving param
 				self%endtime      = optval(endtime,      param(10))
+				self%cfl_limit    = optval(cfl_limit,    param(26))
 				self%ptol         = optval(ptol,         param(21))
 				self%vtol         = optval(vtol,         param(22))
-				self%cfl_limit    = optval(cfl_limit,    param(26))
+            self%tol_ratio_pv = optval(tol_ratio_pv, self%ptol/self%vtol)
             
             if (.not. self%initialized) then
                call nek_log_message('options structure initialized.', this_module, this_procedure)
@@ -175,18 +179,21 @@
             call nek_log_message(msg, module=this_module, fmt='(5X,A)')
             write (msg, '(A,E15.8)') padl('ptol:', 20), self%ptol
             call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            write (msg, '(A,E15.8)') padl('tol_ratio:', 20), self%tol_ratio_pv
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
             call nek_log_message('##  NEK OPTS NONLINEAR ##', module=this_module)
          end subroutine print_nek_opts_std
 
-         subroutine init_nek_opts_prt(self, solve_baseflow, recompute_dt, variable_dt, endtime, ptol, vtol, cfl_limit)
+         subroutine init_nek_opts_prt(self, solve_baseflow, recompute_dt, variable_dt, endtime, cfl_limit, ptol, vtol, tol_ratio_pv)
 				class(nek_opts_prt), intent(inout) :: self
             logical, optional, intent(in) :: solve_baseflow
             logical, optional, intent(in) :: recompute_dt
 				logical, optional, intent(in) :: variable_dt
 				real(dp), optional, intent(in) :: endtime
+				real(dp), optional, intent(in) :: cfl_limit
 				real(dp), optional, intent(in) :: ptol
 				real(dp), optional, intent(in) :: vtol
-				real(dp), optional, intent(in) :: cfl_limit
+				real(dp), optional, intent(in) :: tol_ratio_pv
             ! internal
             character(len=*), parameter :: this_procedure = 'init_nek_opts_prt'
             character(len=128) :: msg
@@ -196,9 +203,10 @@
             self%variable_dt    = optval(variable_dt, .false.)
             ! involving param
 				self%endtime        = optval(endtime,      param(10))
-				self%ptol           = optval(ptol,         param(21))
-				self%vtol           = optval(vtol,         param(22))
 				self%cfl_limit      = optval(cfl_limit,    param(26))
+				self%ptol           = optval(ptol,         param(21))
+				self%vtol           = optval(vtol,         param(22)) 
+            self%tol_ratio_pv   = optval(tol_ratio_pv, self%ptol/self%vtol)
 
             if (.not. self%initialized) then
                call nek_log_message('options structure initialized.', this_module, this_procedure)
@@ -231,6 +239,8 @@
             write (msg, '(A,E15.8)') padl('vtol:', 20), self%vtol
             call nek_log_message(msg, module=this_module, fmt='(5X,A)')
             write (msg, '(A,E15.8)') padl('ptol:', 20), self%ptol
+            call nek_log_message(msg, module=this_module, fmt='(5X,A)')
+            write (msg, '(A,E15.8)') padl('tol_ratio:', 20), self%tol_ratio_pv
             call nek_log_message(msg, module=this_module, fmt='(5X,A)')
             call nek_log_message('##  NEK OPTS LINEAR ##', module=this_module)
          end subroutine print_nek_opts_prt
