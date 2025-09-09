@@ -6,6 +6,7 @@
          call vec2nek(vx, vy, vz, pr, t, self%baseflow)
          call nek_log_information("Set self%baseflow -> vx, vy, vz, pr, t", this_module, "init_exptA")
       ! Ensure correct nek status
+         call self%nek_opts%init()
          self%nek_opts%endtime = self%tau          ! Set endtime
          call set_nek_opts(self%nek_opts, stamp_log=.true., print_summary=.true.)
          end procedure
