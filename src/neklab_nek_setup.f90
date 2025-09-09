@@ -36,7 +36,7 @@
       
       contains
       
-         subroutine setup_nek(LNS, transpose, solve_baseflow, recompute_dt, variable_dt, endtime, vtol, ptol, cfl_limit, silent)
+         subroutine setup_nek(LNS, transpose, solve_baseflow, recompute_dt, variable_dt, endtime, vtol, ptol, cfl_limit, stamp_log, verbose)
             logical, intent(in) :: LNS
             logical, optional, intent(in) :: transpose
             logical :: transpose_
@@ -54,18 +54,20 @@
             real(dp) :: ptol_
             real(dp), optional, intent(in) :: cfl_limit
             real(dp) :: cfl_limit_
-            logical, optional, intent(in) :: silent
-            logical :: silent_
+            logical, optional, intent(in) :: stamp_log
+            logical :: stamp_log_
+            logical, optional, intent(in) :: verbose
+            logical :: verbose_
       ! internal
             character(len=*), parameter :: nekfmt = '(5X,A)'
             real(dp) :: dt_old
             character(len=128) :: msg
-            logical :: full_summary
             logical :: iffxdt
+            logical :: force_summary
             common /FIXDT/ iffxdt
       
-      ! Only print summary if we switch from linear to nonlinear solvers or vice versa
-            full_summary = .false.
+      ! Force summary if we switch from linear to nonlinear solvers or vice versa
+            force_summary = .false.
       
             transpose_ = optval(transpose, .false.)
             solve_baseflow_ = optval(solve_baseflow, .false.)
@@ -73,7 +75,8 @@
             ptol_ = optval(ptol, param(21))
             vtol_ = optval(vtol, param(22))
             cfl_limit_ = optval(cfl_limit, param(26))
-            silent_ = optval(silent, .false.)
+            stamp_log_ = optval(stamp_log, .true.)
+            verbose_ = optval(verbose, .false.)
       
             if (maxval(abs(vx)) == 0.0_dp .and. maxval(abs(vy)) == 0.0_dp .and. maxval(abs(vz)) == 0.0_dp) then
                recompute_dt_ = .false.
@@ -85,7 +88,7 @@
       
             call nekgsync()
       
-            if (nid == 0 .and. .not. silent_) then
+            if (nid == 0 .and. stamp_log_) then
                print *, ''
                print '("neklab ",A)', '################## SETUP NEK ###################'
                print *, ''
@@ -94,7 +97,7 @@
       ! general settings
             lastep = 0; 
             if (LNS) then
-               if (.not. ifpert) full_summary = .true.
+               if (.not. ifpert) force_summary = .true.
                ifpert = .true.; call bcast(ifpert, lsize)
                if (transpose_) then
                   ifadj = .true.; call bcast(ifadj, lsize)
@@ -127,7 +130,7 @@
                   ifchar = .false.
                end if
             else
-               if (ifpert) full_summary = .true.
+               if (ifpert) force_summary = .true.
                ifpert = .false.; call bcast(ifpert, lsize)
                param(31) = 0; npert = 0
             end if
@@ -140,7 +143,7 @@
             end if
             param(10) = endtime_
             write (msg, '(A,F15.8)') padl('Set integration time: ', 30), param(10)
-            if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
+            if (nid == 0 .and. stamp_log_) print nekfmt, trim(msg)
       
       ! Force CFL to chosen limit
             if (cfl_limit_ < 0.0_dp .or. cfl_limit_ > 0.5_dp) then
@@ -152,7 +155,7 @@
             end if
             param(26) = cfl_limit_
             write (msg, '(A,F15.8)') padl('Set CFL limit: ', 30), param(26)
-            if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
+            if (nid == 0 .and. stamp_log_) print nekfmt, trim(msg)
               
       ! Force constant timestep if requested
             if (variable_dt_) then
@@ -181,12 +184,12 @@
                nsteps = 0
                if (LNS) then
                   write (msg, '(A,A)') padl('Set timestep: ', 30), 'read from baseflow'
-                  if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
+                  if (nid == 0 .and. stamp_log_) print nekfmt, trim(msg)
                else
                   write (msg, '(A,A)') padl('Set timestep: ', 30), 'variable dt' 
-                  if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
+                  if (nid == 0 .and. stamp_log_) print nekfmt, trim(msg)
                   write (msg, '(A,E15.8)') padl('Set fintim: ', 30), fintim
-                  if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
+                  if (nid == 0 .and. stamp_log_) print nekfmt, trim(msg)
                end if
             else
                iffxdt = .true.
@@ -215,11 +218,11 @@
                fintim = nsteps*dt
                param(12) = -abs(param(12))
                write (msg, '(A,F15.8)') padl('Force constant timestep: ', 30), -param(12)
-               if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
+               if (nid == 0 .and. stamp_log_) print nekfmt, trim(msg)
                write (msg, '(A,F15.6)') padl('Set fintim: ', 30), fintim
-               if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
+               if (nid == 0 .and. stamp_log_) print nekfmt, trim(msg)
                write (msg, '(A,I15)') padl('Set nsteps: ', 30), nsteps
-               if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
+               if (nid == 0 .and. stamp_log_) print nekfmt, trim(msg)
             end if
       
       ! Set tolerances if requested
@@ -228,36 +231,43 @@
             restol(:) = param(22); call bcast(restol, (ldimt1+1)*wdsize)
             atol(:) = param(22); call bcast(atol, (ldimt1+1)*wdsize)
             write (msg, '(A,E15.8)') padl('Set pressure tol: ', 30), param(21)
-            if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
+            if (nid == 0 .and. stamp_log_) print nekfmt, trim(msg)
             write (msg, '(A,E15.8)') padl('Set velocity tol: ', 30), param(22)
-            if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
+            if (nid == 0 .and. stamp_log_) print nekfmt, trim(msg)
       
       ! Broadcast parameters
             call bcast(param, 200*wdsize)
       
-            if (nid == 0 .and. .not. silent_) then
+            if (nid == 0 .and. stamp_log_) then
                print *, ''
                print '("neklab ",A)', '############### SETUP COMPLETED ################'
                print *, ''
             end if
       
       ! Print status
-            if (.not. silent_) call nek_status(full_summary)
+            if (stamp_log_ .or. force_summary) then
+               if (force_summary) then
+                  call nek_status(.true.)
+               else
+                  call nek_status(verbose)
+               end if
+            end if
          end subroutine setup_nek
       
-         subroutine setup_nonlinear_solver(recompute_dt, variable_dt, endtime, vtol, ptol, cfl_limit, silent)
+         subroutine setup_nonlinear_solver(recompute_dt, variable_dt, endtime, vtol, ptol, cfl_limit, stamp_log, verbose)
             logical, optional, intent(in) :: recompute_dt
             logical, optional, intent(in) :: variable_dt
             real(dp), optional, intent(in) :: endtime
             real(dp), optional, intent(in) :: vtol
             real(dp), optional, intent(in) :: ptol
             real(dp), optional, intent(in) :: cfl_limit
-            logical, optional, intent(in) :: silent
+            logical, optional, intent(in) :: stamp_log
+            logical, optional, intent(in) :: verbose
             call setup_nek(LNS=.false., recompute_dt=recompute_dt, variable_dt=variable_dt,
-     & endtime = endtime, vtol = vtol, ptol = ptol, cfl_limit = cfl_limit, silent = silent)
+     & endtime = endtime, vtol = vtol, ptol = ptol, cfl_limit = cfl_limit, stamp_log = stamp_log, verbose = verbose)
          end subroutine setup_nonlinear_solver
       
-         subroutine setup_linear_solver(transpose, solve_baseflow, recompute_dt, variable_dt, endtime, vtol, ptol, cfl_limit, silent)
+         subroutine setup_linear_solver(transpose, solve_baseflow, recompute_dt, variable_dt, endtime, vtol, ptol, cfl_limit, stamp_log, verbose)
             logical, optional, intent(in) :: transpose
             logical, optional, intent(in) :: solve_baseflow
             logical, optional, intent(in) :: recompute_dt
@@ -266,17 +276,19 @@
             real(dp), optional, intent(in) :: vtol
             real(dp), optional, intent(in) :: ptol
             real(dp), optional, intent(in) :: cfl_limit
-            logical, optional, intent(in) :: silent
+            logical, optional, intent(in) :: stamp_log
+            logical, optional, intent(in) :: verbose
             call setup_nek(LNS=.true., transpose=transpose, solve_baseflow=solve_baseflow, recompute_dt=recompute_dt,
-     & variable_dt=variable_dt, endtime = endtime, vtol = vtol, ptol = ptol, cfl_limit = cfl_limit, silent = silent)
+     & variable_dt=variable_dt, endtime = endtime, vtol = vtol, ptol = ptol, stamp_log = stamp_log, verbose = verbose)
          end subroutine setup_linear_solver
       
-         subroutine nek_status(full_summary)
+         subroutine nek_status(verbose)
             character(len=128) :: msg
-            logical, optional, intent(in) :: full_summary
-            logical :: full_summary_
+            logical, optional, intent(in) :: verbose
+            logical :: verbose_
             character(len=*), parameter :: nekfmt = '(5X,A)'
-            full_summary_ = optval(full_summary, .false.)
+            verbose_ = optval(verbose, .false.)
+
       ! overview
             if (nid == 0) then
                print *, ''
@@ -285,7 +297,7 @@
             end if
       
             if (ifpert) then
-               if (full_summary_) then
+               if (verbose_) then
                   call nek_log_message('LINEAR MODE:', this_module, 'nek_status', nekfmt)
                   write (msg, '(A,L15)') padl('ifpert: ', 20), ifpert
                   call nek_log_message(msg, this_module, 'nek_status', nekfmt)
@@ -305,7 +317,7 @@
                   call nek_log_message('LINEAR MODE', this_module, 'nek_status', nekfmt)
                end if
             else
-               if (full_summary_) then
+               if (verbose_) then
                   call nek_log_message('NONLINEAR MODE:', this_module, 'nek_status', nekfmt)
                   write (msg, '(A,L15)') padl('OIFS: ', 20), ifchar
                   call nek_log_message(msg, this_module, 'nek_status', nekfmt)
@@ -313,7 +325,7 @@
                   call nek_log_message('NONLINEAR MODE', this_module, 'nek_status', nekfmt)
                end if
             end if
-            if (full_summary_) then
+            if (verbose_) then
       ! params
                call nek_log_message('PARAMETERS:', this_module, 'nek_status', nekfmt)
                write (msg, '(A,F15.6)') padl('endtime: ', 20), param(10)
