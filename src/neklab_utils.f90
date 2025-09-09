@@ -135,7 +135,7 @@
 				real(dp), optional, intent(in) :: cfl_limit
             ! internal
             character(len=*), parameter :: this_procedure = 'init_nek_opts_std'
-            
+
             ! Defaults
             self%recompute_dt = optval(recompute_dt, .true.)
             self%variable_dt  = optval(variable_dt,  .false.)
@@ -162,7 +162,7 @@
             ! internal
             character(len=128) :: msg
             ! print info
-            call nek_log_message('##  NEK OPTS STD ##', module=this_module)
+            call nek_log_message('##  NEK OPTS NONLINEAR ##', module=this_module)
             write (msg, '(A,L15)') padl('recompute_dt:', 20), self%recompute_dt
             call nek_log_message(msg, module=this_module, fmt='(5X,A)')
             write (msg, '(A,L15)') padl('variable_dt:', 20), self%variable_dt
@@ -175,7 +175,7 @@
             call nek_log_message(msg, module=this_module, fmt='(5X,A)')
             write (msg, '(A,E15.8)') padl('ptol:', 20), self%ptol
             call nek_log_message(msg, module=this_module, fmt='(5X,A)')
-            call nek_log_message('##  NEK OPTS STD ##', module=this_module)
+            call nek_log_message('##  NEK OPTS NONLINEAR ##', module=this_module)
          end subroutine print_nek_opts_std
 
          subroutine init_nek_opts_prt(self, solve_baseflow, recompute_dt, variable_dt, endtime, ptol, vtol, cfl_limit)
@@ -217,7 +217,7 @@
             ! internal
             character(len=128) :: msg
             ! print info
-            call nek_log_message('##  NEK OPTS PRT ##', module=this_module)
+            call nek_log_message('##  NEK OPTS LINEAR ##', module=this_module)
             write (msg, '(A,L15)') padl('solve_baseflow:', 20), self%solve_baseflow
             call nek_log_message(msg, module=this_module, fmt='(5X,A)')
             write (msg, '(A,L15)') padl('recompute_dt:', 20), self%recompute_dt
@@ -232,43 +232,47 @@
             call nek_log_message(msg, module=this_module, fmt='(5X,A)')
             write (msg, '(A,E15.8)') padl('ptol:', 20), self%ptol
             call nek_log_message(msg, module=this_module, fmt='(5X,A)')
-            call nek_log_message('##  NEK OPTS PRT ##', module=this_module)
+            call nek_log_message('##  NEK OPTS LINEAR ##', module=this_module)
          end subroutine print_nek_opts_prt
 
-         subroutine set_nek_opts_std(opts, silent)
+         subroutine set_nek_opts_std(opts, stamp_log, print_summary)
 				type(nek_opts_std), intent(inout) :: opts
-				logical, optional, intent(in) :: silent
+				logical, optional, intent(in) :: stamp_log
+				logical, optional, intent(in) :: print_summary
             ! internal
-            logical :: silent_
+            logical :: stamp_log_, print_summary_
             
             ! optional arguments
-            silent_ = optval(silent, .false.)
+            stamp_log_ = optval(stamp_log, .false.)
+            print_summary_ = optval(print_summary, .false.)
 
             ! safety check
             if (.not. opts%is_initialized()) call opts%init()
-            if (.not. silent_) call opts%print()
+            if (print_summary_) call opts%print()
             
             ! set opts
-				call setup_nek(LNS = .false., recompute_dt = opts%recompute_dt, variable_dt = opts%variable_dt, endtime = opts%endtime, vtol = opts%vtol, ptol = opts%ptol, cfl_limit = opts%cfl_limit, silent = silent)
+				call setup_nek(LNS = .false., recompute_dt = opts%recompute_dt, variable_dt = opts%variable_dt, endtime = opts%endtime, vtol = opts%vtol, ptol = opts%ptol, cfl_limit = opts%cfl_limit, stamp_log=stamp_log_, verbose=print_summary_)
 
 			end subroutine set_nek_opts_std
 
-			subroutine set_nek_opts_prt(opts, transpose, silent)
+			subroutine set_nek_opts_prt(opts, transpose, stamp_log, print_summary)
 				type(nek_opts_prt), intent(inout) :: opts
 				logical, optional, intent(in) :: transpose
-				logical, optional, intent(in) :: silent
+				logical, optional, intent(in) :: stamp_log
+				logical, optional, intent(in) :: print_summary
             ! internal
-            logical :: silent_
+            logical :: stamp_log_, print_summary_
             
             ! optional arguments
-            silent_ = optval(silent, .false.)
+            stamp_log_ = optval(stamp_log, .false.)
+            print_summary_ = optval(print_summary, .false.)
 
             ! safety check
             if (.not. opts%is_initialized()) call opts%init()
-            if (.not. silent_) call opts%print()
+            if (print_summary_) call opts%print()
 
             ! set opts
-				call setup_nek(LNS = .true., transpose = transpose, solve_baseflow = opts%solve_baseflow, recompute_dt = opts%recompute_dt, variable_dt = opts%variable_dt, endtime = opts%endtime,vtol = opts%vtol, ptol = opts%ptol, cfl_limit = opts%cfl_limit, silent = silent)
+				call setup_nek(LNS = .true., transpose = transpose, solve_baseflow = opts%solve_baseflow, recompute_dt = opts%recompute_dt, variable_dt = opts%variable_dt, endtime = opts%endtime,vtol = opts%vtol, ptol = opts%ptol, cfl_limit = opts%cfl_limit, stamp_log=stamp_log_, verbose=print_summary_)
 
 			end subroutine set_nek_opts_prt
 
