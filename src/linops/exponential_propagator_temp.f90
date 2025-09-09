@@ -19,17 +19,17 @@
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
-
                nrst = abs(param(27)) - 1
-      ! Ensure correct nek status
-               self%nek_opts%endtime = self%tau          ! Set endtime
-               call set_nek_opts(self%nek_opts, transpose= .false., silent = .true.)
 
       ! Set baseflow.
                call vec2nek(vx, vy, vz, pr, t, self%baseflow)
 
       ! Set initial condition for the linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
+
+      ! Ensure correct nek status
+               self%nek_opts%endtime = self%tau          ! Set endtime
+               call set_nek_opts(self%nek_opts, transpose= .false., silent = .true.)
 
       ! Integrate the equations forward in time.
                time = 0.0_dp
@@ -85,17 +85,17 @@
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
-
                nrst = abs(param(27)) - 1
-      ! Ensure correct nek status
-               self%nek_opts%endtime = self%tau          ! Set endtime
-               call set_nek_opts(self%nek_opts, transpose= .true., silent = .true.)
 
       ! Set baseflow.
                call vec2nek(vx, vy, vz, pr, t, self%baseflow)
 
       ! Set initial condition for the linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
+               
+      ! Ensure correct nek status
+               self%nek_opts%endtime = self%tau          ! Set endtime
+               call set_nek_opts(self%nek_opts, transpose= .true., silent = .true.)
 
       ! Integrate the equations forward in time.
                time = 0.0_dp
