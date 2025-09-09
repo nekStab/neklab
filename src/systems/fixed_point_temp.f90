@@ -13,10 +13,8 @@
 
       ! Set appropriate tolerances and Nek status.
                if (.not. self%nek_opts%is_initialized()) call self%nek_opts%init()
-               atol_v = self%nek_opts%vtol                     ! save current velocity tolerance
-               atol_p = self%nek_opts%ptol                     ! save current pressure tolerance
-               self%nek_opts%vtol = atol*self%tol_ratio_vel    ! set velocity tolerance
-               self%nek_opts%ptol = atol*self%tol_ratio_pr     ! set pressure tolerance
+               self%nek_opts%vtol = atol*self%tol_ratio_vel                            ! set velocity tolerance
+               self%nek_opts%ptol = atol*self%tol_ratio_pr*self%nek_opts%tol_ratio_pv  ! set pressure tolerance
                call set_nek_opts(self%nek_opts, stamp_log=.true.)
 
       ! Integrate the nonlinear equations forward.
@@ -33,9 +31,9 @@
       ! Evaluate residual F(X) - X.
                call vec_out%sub(vec_in)
 
-      ! Reset tolerances.
-               self%nek_opts%vtol = atol_v
-               self%nek_opts%ptol = atol_p
+      ! Revert to input atol.
+               self%nek_opts%vtol = atol
+               self%nek_opts%ptol = atol*self%nek_opts%tol_ratio_pv
                call set_nek_opts(self%nek_opts)
 
             class default
@@ -66,9 +64,8 @@
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
             
       ! Ensure correct nek status
-               if (.not. self%nek_opts%is_initialized()) call self%nek_opts%init()
-               atol_v = self%nek_opts%vtol                     ! save current velocity tolerance
-               atol_p = self%nek_opts%ptol                     ! save current pressure tolerance
+               atol_v = param(22)                              ! save current velocity tolerance (set during nonlinear run)
+               atol_p = param(21)                              ! save current pressure tolerance (set during nonlinear run)
                self%nek_opts%vtol = atol_v*self%tol_ratio_vel  ! set velocity tolerance based on current value
                self%nek_opts%ptol = atol_p*self%tol_ratio_pr   ! set pressure tolerance based on current value
                call set_nek_opts(self%nek_opts, stamp_log=.true., print_summary=.true.) 
@@ -148,9 +145,8 @@
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       
       ! Ensure correct nek status.
-               if (.not. self%nek_opts%is_initialized()) call self%nek_opts%init()
-               atol_v = self%nek_opts%vtol                     ! save current velocity tolerance
-               atol_p = self%nek_opts%ptol                     ! save current pressure tolerance
+               atol_v = param(22)                              ! save current velocity tolerance (set during nonlinear run)
+               atol_p = param(21)                              ! save current pressure tolerance (set during nonlinear run)
                self%nek_opts%vtol = atol_v*self%tol_ratio_vel  ! set velocity tolerance based on current value
                self%nek_opts%ptol = atol_p*self%tol_ratio_pr   ! set pressure tolerance based on current value
                call set_nek_opts(self%nek_opts, transpose = .true., stamp_log=.true.)
