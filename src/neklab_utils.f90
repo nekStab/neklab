@@ -139,17 +139,17 @@
             ! internal
             character(len=*), parameter :: this_procedure = 'init_nek_opts_std'
 
-            ! Defaults
-            self%recompute_dt = optval(recompute_dt, .true.)
-            self%variable_dt  = optval(variable_dt,  .false.)
-            ! involving param
-				self%endtime      = optval(endtime,      param(10))
-				self%cfl_limit    = optval(cfl_limit,    param(26))
-				self%ptol         = optval(ptol,         param(21))
-				self%vtol         = optval(vtol,         param(22))
-            self%tol_ratio_pv = optval(tol_ratio_pv, self%ptol/self%vtol)
-            
             if (.not. self%initialized) then
+               ! Defaults
+               self%recompute_dt = optval(recompute_dt, .true.)
+               self%variable_dt  = optval(variable_dt,  .false.)
+               ! involving param
+				   self%endtime      = optval(endtime,      param(10))
+				   self%cfl_limit    = optval(cfl_limit,    param(26))
+				   self%ptol         = optval(ptol,         param(21))
+				   self%vtol         = optval(vtol,         param(22))
+               self%tol_ratio_pv = optval(tol_ratio_pv, self%ptol/self%vtol)
+            
                call nek_log_message('options structure initialized.', this_module, this_procedure)
             end if
 
@@ -196,19 +196,19 @@
 				real(dp), optional, intent(in) :: tol_ratio_pv
             ! internal
             character(len=*), parameter :: this_procedure = 'init_nek_opts_prt'
-            character(len=128) :: msg
-            ! Defaults
-            self%solve_baseflow = optval(solve_baseflow, .false.)
-            self%recompute_dt   = optval(recompute_dt, .true.)
-            self%variable_dt    = optval(variable_dt, .false.)
-            ! involving param
-				self%endtime        = optval(endtime,      param(10))
-				self%cfl_limit      = optval(cfl_limit,    param(26))
-				self%ptol           = optval(ptol,         param(21))
-				self%vtol           = optval(vtol,         param(22)) 
-            self%tol_ratio_pv   = optval(tol_ratio_pv, self%ptol/self%vtol)
-
+            
             if (.not. self%initialized) then
+               ! Defaults
+               self%solve_baseflow = optval(solve_baseflow, .false.)
+               self%recompute_dt   = optval(recompute_dt, .true.)
+               self%variable_dt    = optval(variable_dt, .false.)
+               ! involving param
+				   self%endtime        = optval(endtime,      param(10))
+				   self%cfl_limit      = optval(cfl_limit,    param(26))
+				   self%ptol           = optval(ptol,         param(21))
+				   self%vtol           = optval(vtol,         param(22)) 
+               self%tol_ratio_pv   = optval(tol_ratio_pv, self%ptol/self%vtol)
+
                call nek_log_message('options structure initialized.', this_module, this_procedure)
             end if
 
