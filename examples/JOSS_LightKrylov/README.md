@@ -19,7 +19,7 @@ To compile the code:
 To run the case:
 * navigate to the folder of the case of interest.
 * copy or link the mesh file `1cyl.re2` from the example root directory.
-* generate the processor map file `1cyl.map` using the tool `genmap` distributed together with `Nek5000`.
+* generate the processor map file `1cyl.ma2` using the tool `genmap` distributed together with `Nek5000`.
 * run the code using the parallel executable provided in `Nek5000/bin/`.
 
 # Example list
