@@ -1,0 +1,286 @@
+c-----------------------------------------------------------------------
+      subroutine userchk
+      use LightKrylov_Timing, only: timer => global_lightkrylov_timer
+      use neklab
+      include "SIZE"
+      include "TOTAL"
+      
+      ! State vectors
+      type(nek_dvector) :: bf
+      ! Linear operator we wish to analyse
+      type(exptA_linop) :: exptA
+      real(dp) :: tau
+      ! Sponge parameters
+      real(dp) :: wl, wr, dl, dr, strength
+      ! eigs parameters
+      integer, parameter :: kdim = 128, nev = 2
+
+      if (istep.eq.0) then
+         ! Load baseflow.
+         call load_fld("BF_1cyl_Re_100.fld")
+         call nek2vec(bf, vx, vy, vz, pr, t)
+
+         ! Define sponge parameters.
+         wl = 10.0; wr = 12.0
+         dl =  8.0; dr =  8.0
+         strength = 1.0
+         call make_sponge(vx, vy, vz, wl, wr, dl, dr, strength)
+
+         ! Exponential propagator.
+         tau = 1.0_dp
+         exptA = exptA_linop(tau, bf) ; call exptA%init()
+
+         ! Stability analysis.
+         call linear_stability_analysis_fixed_point(exptA, kdim, nev)
+ 
+         call nek_end()
+      endif
+
+      return
+      end
+c----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      call sponge_forcing(ffx, ffy, ffz, ix, iy, iz, ieg)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+      integer iel,ifc
+      
+      !this mesh was generatd with genbox
+      !with only BCs for velicity
+      !here we chenge outflow to dirichlet if adjoint
+      !and initilize BCs for scalar field
+
+      if(uparam(1)==3.2)then !if adjoint, change BCs
+      do iel=1,nelt
+      do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
+      enddo
+      enddo
+      endif
+
+      if(ifheat)then
+      cbc(:,:,2)=cbc(:,:,1)
+      do iel=1,nelt
+       do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+      enddo
+      enddo
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine make_sponge(lvx, lvy, lvz, width_left, width_right, dl, dr, strength)
+         implicit none
+         include 'SIZE'            !
+         include 'GEOM'
+         include 'INPUT'           ! IF3D
+         include 'PARALLEL'        ! GLLEL
+         include 'SOLN'            ! JP
+
+         ! argument list
+         real lvx(lx1*ly1*lz1*lelv), lvy(lx1*ly1*lz1*lelv), lvz(lx1*ly1*lz1*lelv)
+         real width_left, width_right, dl, dr, strength
+
+         real spnb_fun(lx1*ly1*lz1*lelv), spnb_vr(lx1*ly1*lz1*lelv,ldim)
+         real arg, xtmp, xmax, xmin, xxmax, xxmin, xxmax_c, xxmin_c
+         integer, parameter :: ntot = lx1*ly1*lz1*lelv
+
+         integer :: il, jl
+
+         real math_stepf
+         real glmax, glmin
+
+         common /SPONGE/ spnb_fun, spnb_vr
+
+         xmin = glmin(XM1,ntot)
+         xmax = glmax(XM1,ntot)
+         
+         ! zero spnb_fun
+         call rzero(spnb_fun,ntot)
+
+         if(strength.gt.0.0) then
+            
+            ! save reference field
+            call copy(spnb_vr(1,1), lvx, ntot)
+            call copy(spnb_vr(1,2), lvy, ntot)
+            if (IF3D) call copy(spnb_vr(1,NDIM),lvz, ntot)
+   
+            if (width_left.gt.0.0.or.width_right.gt.0.0) then
+               ! sponge beginning (rise at xmax; right)
+               xxmax = xmax - width_right
+               ! end (drop at xmin; left)
+               xxmin = xmin + width_left
+               ! beginning of constant part (right)
+               xxmax_c = xxmax + dr
+               ! beginning of constant part (left)
+               xxmin_c = xxmin - dl
+               do jl = 1,ntot
+                  xtmp = xm1(jl, 1, 1, 1)
+                  if(xtmp.lt.xxmin_c) then ! constant; xmin
+                     xtmp = strength
+                  elseif(xtmp.lt.xxmin) then ! fall; xmin
+                     arg = (xxmin-xtmp)/dl
+                     xtmp = strength*math_stepf(arg)
+                  elseif (xtmp.le.xxmax) then ! zero
+                     xtmp = 0.0
+                  elseif (xtmp.lt.xxmax_c) then ! rise
+                     arg = (xtmp-xxmax)/dr
+                     xtmp = strength*math_stepf(arg)
+                  else    ! constant
+                     xtmp = strength
+                  endif
+                  ! set sponge
+                  spnb_fun(jl) = max(spnb_fun(jl),xtmp)
+               enddo
+            endif
+   
+         endif
+
+         call outpost(spnb_fun, vy, vz, pr, t, 'spg')
+   
+         return
+      end
+
+c-----------------------------------------------------------------------    
+      real function math_stepf(x)
+      implicit none
+
+      ! argument list
+      real x
+
+      ! local variables
+      real xdmin, xdmax
+      parameter (xdmin = 0.0001, xdmax = 0.9999)
+!-----------------------------------------------------------------------
+      ! get function value
+      if (x.le.xdmin) then
+         math_stepf = 0.0
+      else if (x.le.xdmax) then
+         math_stepf = 1./( 1. + exp(1./(x - 1.) + 1./x) )
+      else
+         math_stepf = 1.
+      end if
+
+      return
+      end function math_stepf
+c-----------------------------------------------------------------------
+      subroutine sponge_forcing(ffx,ffy,ffz,ix,iy,iz,ieg)
+         implicit none
+         include 'SIZE'            !
+         include 'INPUT'           ! IF3D
+         include 'PARALLEL'        ! GLLEL
+         include 'SOLN'            ! JP
+
+         ! argument list
+         real ffx, ffy, ffz
+         real spnb_fun(lx1*ly1*lz1*lelv), spnb_vr(lx1*ly1*lz1*lelv,ldim)
+         integer ix,iy,iz,ieg
+
+         ! local variables
+         integer iel, ip
+
+         common /SPONGE/ spnb_fun, spnb_vr
+         
+         iel=gllel(ieg)
+         
+         ip=ix+nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+         if (jp.eq.0) then
+            ! dns
+            ffx = ffx + spnb_fun(ip)*(spnb_vr(ip,1) - vx(ix,iy,iz,iel))
+            ffy = ffy + spnb_fun(ip)*(spnb_vr(ip,2) - vy(ix,iy,iz,iel))
+            if (if3d) ffz = ffz + spnb_fun(ip)*
+     $           (spnb_vr(ip,ndim) - vz(ix,iy,iz,iel))
+         else
+            ! perturbation
+            ffx = ffx - spnb_fun(ip)*vxp(ip,jp)
+            ffy = ffy - spnb_fun(ip)*vyp(ip,jp)
+            if(if3d) ffz = ffz - spnb_fun(ip)*vzp(ip,jp)
+         endif
+
+         return
+      end

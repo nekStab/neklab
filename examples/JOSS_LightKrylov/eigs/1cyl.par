@@ -1,0 +1,28 @@
+[GENERAL]
+stopAt = endTime
+numSteps = 1.0
+
+dt = 0.01
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+dealiasing = yes
+
+[PROBLEMTYPE]
+equation = incompLinNS
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-9
+residualProj = no
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-9
+residualProj = yes
+density = 1.0
+viscosity = -100.0
