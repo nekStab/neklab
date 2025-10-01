@@ -1,0 +1,43 @@
+[GENERAL]
+startfrom = BF_rayBen0.f00001
+stopAt = endTime
+endTime = 10.0
+
+userParam05 = 1.0 # Pr
+userParam06 = 1900.0 # > 1707.762
+
+# Ra_c=1707.762 for the \lambda=3.117 # (Chandrasekhar 1961 Table III p. 43)
+
+dt = 0.010
+variabledt = no
+timestepper = bdf3
+targetcfl = 0.30
+
+writecontrol = runTime #timestep
+writeinterval = 1.
+writedoubleprecision = no
+
+dealiasing = yes
+filtering = explicit
+filterWeight = 0.01
+filterCutoffRatio = 0.84
+
+[VELOCITY]
+viscosity = 1.0
+residualtol = 1.0E-10
+residualproj = yes
+density = 1.0
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualtol = 1.0E-10
+residualproj = yes
+writetofieldfile = yes
+
+[TEMPERATURE]
+solver = helm
+residualtol = 1.0E-10
+residualproj = yes
+writetofieldfile = yes
+conductivity = 1.0
+rhocp = 1.0
