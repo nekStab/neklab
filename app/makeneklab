@@ -158,18 +158,18 @@ if [[ $1 != "clean" ]]; then
  
   # First try with 4 procs (default for nek5000)
  set +e  # Don't exit on error (otherwise we can't retry)
- make -j4 2>&1 | tee -a build.log
- BUILD_RESULT=$?
+ make -j1 2>&1 | tee -a build.log
+ #BUILD_RESULT=$?
  
  # Retry up to 5 times if needed (race condition in parallel build)
- ATTEMPT=1 # we try then up to 8 passes (1st try + 7 retries)
+ #ATTEMPT=1 # we try then up to 8 passes (1st try + 7 retries)
  # TODO: improve order of files in makefile_neklab to minimize this
- while [ $BUILD_RESULT -ne 0 ] && [ $ATTEMPT -lt 8 ]; do
-   ATTEMPT=$((ATTEMPT + 1))
-   echo "Retry $ATTEMPT/8..."
-   make -j4 2>&1 | tee -a build.log
-   BUILD_RESULT=$?
- done
+ #while [ $BUILD_RESULT -ne 0 ] && [ $ATTEMPT -lt 8 ]; do
+ #  ATTEMPT=$((ATTEMPT + 1))
+ #  echo "Retry $ATTEMPT/8..."
+ #  make -j4 2>&1 | tee -a build.log
+ #  BUILD_RESULT=$?
+ #done
  
  set +o pipefail
  if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
