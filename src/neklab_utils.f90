@@ -32,6 +32,8 @@
       ! utilities for extended nek vectors
          public :: nek2ext_vec, ext_vec2nek, abs_ext_vec2nek, outpost_ext_dnek
          public :: get_period, get_period_abs
+      ! combined utility for outposting nek vectors
+         public :: outpost_nek
       ! miscellaneous
          public :: nopcopy
       
@@ -297,6 +299,8 @@
             end do
             end if
          end subroutine nopcopy
+
+      ! OUTPOSTING
       
          subroutine outpost_dnek_vector(vec, prefix)
             type(nek_dvector), intent(in) :: vec
@@ -342,5 +346,18 @@
                call outpost_ext_dnek_vector(vec(i), prefix)
             end do
          end subroutine outpost_ext_dnek_basis
+
+         subroutine outpost_nek(vec, prefix)
+            class(abstract_vector_rdp), intent(in) :: vec
+            character(len=3), intent(in) :: prefix
+            select type (vec)
+            type is (nek_dvector)
+               call outpost_dnek    (vec, prefix)
+            type is (nek_ext_dvector)
+               call outpost_ext_dnek(vec, prefix)
+            class default
+               call type_error('vec','nek_dvector/nek_ext_dvector','IN',this_module,'outpost_nek')
+            end select
+         end subroutine outpost_nek
 
       end module neklab_utils

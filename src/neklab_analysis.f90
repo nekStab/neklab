@@ -6,7 +6,7 @@
          use LightKrylov, only: gmres_rdp
          use LightKrylov, only: initialize_krylov_subspace, orthonormalize_basis, zero_basis, rand_basis
          use LightKrylov, only: linear_combination, innerprod
-         use LightKrylov, only: newton, newton_dp_opts
+         use LightKrylov, only: newton, newton_dp_opts, GMRES_dp_opts
          use LightKrylov_Logger
          use LightKrylov_Timing, only: timer => global_lightkrylov_timer
          use LightKrylov_AbstractVectors, only: abstract_vector_rdp
@@ -163,38 +163,33 @@
       !! optional flag to return whether the intial condition is a fixed point (and no new solution is computed)
       
       ! Misc
+            character(len=*), parameter :: this_procedure = 'newton_main'
             integer :: info, tol_mode_
-            type(newton_dp_opts) :: opts
+            type(newton_dp_opts) :: newton_opts
+            type(gmres_dp_opts) :: GMRES_opts
             character(len=3) :: file_prefix
             type(newton_dp_metadata) :: meta
-            character(len=*), parameter :: this_procedure = 'newton_main'
       
 		tol_mode_ = optval(tol_mode, 1)
 
       	call nek_log_message('Starting newton iteration.', this_module, this_procedure)
       
       ! Define options for the Newton solver
-            opts = newton_dp_opts(maxiter=40, ifbisect=.false.)
+         newton_opts = newton_dp_opts(maxiter=40, ifbisect=.false.)
+      ! Define options for the GMRES solver
+         GMRES_opts = GMRES_dp_opts(kdim = 30, maxiter = 10)
       
       ! Call to LightKrylov.
             if (tol_mode_ == 1) then
-               call newton(sys, bf, gmres_rdp, info, atol=tol, options=opts, scheduler=nek_constant_tol, meta=meta)
+               call newton(sys, bf, GMRES_rdp, info, atol=tol, options=newton_opts, linear_solver_options=GMRES_opts, scheduler=nek_constant_tol, meta=meta)
             else
-		   call newton(sys, bf, gmres_rdp, info, atol=tol, options=opts, scheduler=nek_dynamic_tol, meta=meta)
+		   call newton(sys, bf, GMRES_rdp, info, atol=tol, options=newton_opts, linear_solver_options=GMRES_opts, scheduler=nek_dynamic_tol, meta=meta)
 		end if
       
       ! Outpost initial condition.
             file_prefix = 'nwt'
             call set_fldindex(file_prefix, 1)
-            select type (bf)
-            type is (nek_dvector)
-               call outpost_dnek(bf, file_prefix)
-            type is (nek_ext_dvector)
-               call outpost_ext_dnek(bf, file_prefix)
-            class default
-               call nek_stop_error('bf is of unrecognized type!', this_module, this_procedure)
-            end select
-
+            call outpost_nek(bf, file_prefix)
             if (present(input_is_fixed_point)) then
                input_is_fixed_point = meta%input_is_fixed_point
             end if
