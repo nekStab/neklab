@@ -36,9 +36,17 @@ A collection of classical examples are present in the [`examples`](https://githu
 
 - [`transient_growth`](https://github.com/nekStab/neklab/tree/main/examples/back_fstep/transient_growth): Computation of the four leading singular triplets of the exponential propagator $\mathrm{exp}(\tau A)$, where $A$ is the linearized Navier-Stokes operator and $\tau$ the desired time horizon.
 
-- [`gramian`](https://github.com/nekStab/neklab/tree/main/examples/back_fstep/gramian): Computation of the leading eigenpairs of the observability gramian. It uses [`LightROM`](https://github.com/nekStab/LightROM) to time-march the corresponding differential Lyapunov equation until a steady state is reached using dynamical low-rank approximation.
+- [`gramian`](https://github.com/nekStab/neklab/tree/main/examples/back_fstep/gramian) (experimental): Computation of the leading eigenpairs of the observability gramian. It uses [`LightROM`](https://github.com/nekStab/LightROM) to time-march the corresponding differential Lyapunov equation until a steady state is reached using dynamical low-rank approximation.
 
 #### [Cylinder flow](https://github.com/nekStab/neklab/tree/main/examples/cylinder)
+
+- [`dns`](https://github.com/nekStab/neklab/tree/README/examples/cylinder/dns): Runs a standard direct numerical simulation of the two-dimensional past a circular cylinder at Reynolds 40 and 180 using vanilla `Nek5000`.
+
+- [`newton`](https://github.com/nekStab/neklab/tree/README/examples/cylinder/newton): Illustrate how a stationary solution ($Re = 40$) and a periodic orbit ($Re = 180$) of the incompressible Navier-Stokes equations can be computed using a *time-stepper* based Newton-Krylov solver.
+
+- [`stability`](https://github.com/nekStab/neklab/tree/main/examples/cylinder/stability): Computation of the leading left (direct) and right (adjoint) eigenvectors of the linearized Navier-Stokes operator at $Re = 50$ using `LightKrylov`'s Krylov-Schur eigenvalue algorithm.
+
+- [`resolvent`](https://github.com/nekStab/neklab/tree/README/examples/cylinder/resolvent) (experimental): Computation of the leading singular triplets of the resolvent operator at $Re = 50$ using a *time-stepper* formulation of the problem.
 
 #### [Poiseuille flow](https://github.com/nekStab/neklab/tree/main/examples/poiseuille)
 
