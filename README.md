@@ -1,3 +1,5 @@
+<img src="imgs/logo-neklab.png" style="align:center; width:512px" />
+
 ### Status
 
 [![Language](https://img.shields.io/badge/-Fortran-734f96?logo=fortran&logoColor=white)](https://github.com/topics/fortran)
