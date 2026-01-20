@@ -70,7 +70,6 @@ A collection of classical examples are present in the [`examples`](https://githu
 `neklab` is currently developped and maintained by a team of two:
 
 - [Jean-Christophe Loiseau](https://loiseaujc.github.io/): Assistant Professor of Applied maths and Fluid dynamics at DynFluid, Arts et Métiers Institute of Technology, Paris, France.
-
 - [Simon Kern](https://github.com/Simkern/): PhD in Fluid dynamics (KTH, Sweden, 2023) and currently postdoctoral researcher at DynFluid.
 
 [Ricardo Frantz](https://github.com/ricardofrantz), PhD in Fluid Dynamics (Arts et Métiers, France, 2022) and now working in Switzerland, has also immensely contributed to the initial development of `neklab`.
@@ -90,3 +89,6 @@ The development of `neklab` is part of an on-going research project funded by [A
 We are also very grateful to the [fortran-lang](https://fortran-lang.org/) community and the maintainers of [`stdlib`](https://github.com/fortran-lang/stdlib), in particular to @perazz, @jalvesz and @jvdp1 for their awesome work on the `stdlib_linalg` module which greatly simplified the developlement of `LightKrylov`, our linear algebra backend.
 
 ### Related projects
+
+- [`KTH Framework`](https://github.com/KTH-Nek5000/KTH_Framework): Another toolbox for `Nek5000` developed at KTH (Sweden) with a scope similar to `neklab`.
+- [`NekLab Docker`](https://github.com/eduardomartini/neklab_docker): A docker container for `neklab` by @eduardomartini.
