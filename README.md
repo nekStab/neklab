@@ -56,6 +56,8 @@ A collection of classical examples are present in the [`examples`](https://githu
 
 #### Rayleigh-Bénard convection
 
+- [`baseflow`](https://github.com/nekStab/neklab/tree/README/examples/rayBen/baseflow): Computation of the unstable steady solution for the Rayleigh-Bénard convection, including coupling between the momentum and temprature equations.
+
 #### Annular thermosyphon
 
 ## Installation
