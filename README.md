@@ -36,7 +36,7 @@ A collection of classical examples are present in the [`examples`](https://githu
 
 - [`transient_growth`](https://github.com/nekStab/neklab/tree/main/examples/back_fstep/transient_growth): Computation of the four leading singular triplets of the exponential propagator $\mathrm{exp}(\tau A)$, where $A$ is the linearized Navier-Stokes operator and $\tau$ the desired time horizon.
 
-- [`gramian`](https://github.com/nekStab/neklab/tree/main/examples/back_fstep/gramian) (experimental): Computation of the leading eigenpairs of the observability gramian. It uses [`LightROM`](https://github.com/nekStab/LightROM) to time-march the corresponding differential Lyapunov equation until a steady state is reached using dynamical low-rank approximation.
+- [`gramian`](https://github.com/nekStab/neklab/tree/main/examples/back_fstep/gramian) (experimental): Computation of the leading eigenpairs of the observability/controlability gramian. It computes a low-rank approximation in the frequency domain using a *time-stepper* formulation of the resolvent problem.
 
 #### Cylinder flow
 
