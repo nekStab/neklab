@@ -65,10 +65,28 @@ A collection of classical examples are present in the [`examples`](https://githu
 
 ## Installation
 
-### Dependencies
-
 ## Contributing
 
+`neklab` is currently developped and maintained by a team of two:
+
+- [Jean-Christophe Loiseau](https://loiseaujc.github.io/): Assistant Professor of Applied maths and Fluid dynamics at DynFluid, Arts et Métiers Institute of Technology, Paris, France.
+
+- [Simon Kern](https://github.com/Simkern/): PhD in Fluid dynamics (KTH, Sweden, 2023) and currently postdoctoral researcher at DynFluid.
+
+[Ricardo Frantz](https://github.com/ricardofrantz), PhD in Fluid Dynamics (Arts et Métiers, France, 2022) and now working in Switzerland, has also immensely contributed to the initial development of `neklab`.
+
+Contributions are more than welcomed! More information can be found in the following pages:
+
+- [Guidelines](https://github.com/nekStab/neklab/blob/main/CONTRIBUTING.md)
+- [Issues](https://github.com/nekStab/neklab/issues)
+- [Workflow](https://github.com/nekStab/neklab/blob/main/WORKFLOW.md)
+- [Style guide](https://github.com/nekStab/neklab/blob/main/STYLE_GUIDE.md)
+- [Code of conduct](https://github.com/nekStab/neklab/blob/main/CODE_OF_CONDUCT.md)
+- [Licence](https://github.com/nekStab/neklab/blob/main/LICENSE)
+
 ## Acknowledgment
+
+The development of `neklab` is part of an on-going research project funded by [Agence Nationale pour la Recherche](https://anr.fr/en/) (ANR) under the grant agreement ANR-22-CE46-0008. The project started in January 2023 and will run until December 2026.
+We are also very grateful to the [fortran-lang](https://fortran-lang.org/) community and the maintainers of [`stdlib`](https://github.com/fortran-lang/stdlib), in particular to @perazz, @jalvesz and @jvdp1 for their awesome work on the `stdlib_linalg` module which greatly simplified the developlement of `LightKrylov`, our linear algebra backend.
 
 ### Related projects
