@@ -1,4 +1,4 @@
-<img src="imgs/logo-neklab.png" style="align:center; width:512px" />
+<img src="imgs/logo_neklab.png" style="align:center; width:512px" />
 
 ### Status
 
