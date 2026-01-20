@@ -13,7 +13,7 @@
 
 
 **Scope :** `neklab` is a toolbox for the massively spectral element solver `Nek5000` intended to extend its capabilities for performing large-scale linear stability and bifurcation analysis.
-It makes use of [`LightKrylov`](https://github.com/nekStab/LightKrylov), our abstract linear algebra package.
+It makes use of [`LightKrylov`](https://github.com/nekStab/LightKrylov), our abstract linear algebra package as backend.
 `neklab` can be used to perform the following analyses:
 
 - **Fixed points and periodic orbits computations -** Uses a *time-stepper* based Newton-Krylov solver to compute particular solutions of the incompressible Navier-Stokes equations.
@@ -29,6 +29,18 @@ It makes use of [`LightKrylov`](https://github.com/nekStab/LightKrylov), our abs
 ## Capabilities
 
 ### Examples
+
+A collection of classical examples are present in the [`examples`](https://github.com/nekStab/neklab/tree/main/examples) folder.
+
+#### [Backward facing step](https://github.com/nekStab/neklab/tree/main/examples/back_fstep)
+
+#### [Cylinder flow](https://github.com/nekStab/neklab/tree/main/examples/cylinder)
+
+#### [Poiseuille flow](https://github.com/nekStab/neklab/tree/main/examples/poiseuille)
+
+#### [Rayleigh-Bénard convection](https://github.com/nekStab/neklab/tree/main/examples/rayBen/)
+
+#### [Annular thermosyphon](https://github.com/nekStab/neklab/tree/main/examples/thermosyphon/)
 
 ## Installation
 
