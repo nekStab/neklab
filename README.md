@@ -12,7 +12,17 @@
 | **Contact**   | [jean-christophe.loiseau@ensam.eu](mailto:jean-christophe.loiseau@ensam.eu)    |
 
 
-**Scope :**
+**Scope :** `neklab` is a toolbox for the massively spectral element solver `Nek5000` intended to extend its capabilities for performing large-scale linear stability and bifurcation analysis.
+It makes use of [`LightKrylov`](https://github.com/nekStab/LightKrylov), our abstract linear algebra package.
+`neklab` can be used to perform the following analyses:
+
+- **Fixed points and periodic orbits computations -** Uses a *time-stepper* based Newton-Krylov solver to compute particular solutions of the incompressible Navier-Stokes equations.
+
+- **Modal stability analysis and Floquet multipliers computation -** Uses a *time-stepper* approach and a Krylov-Schur algorithm to compute the leading eigenpairs of the linearized Navier-Stokes operator (for fixed points) and of the monodromy matrix (for periodic orbits).
+
+- **Non-modal stability analysis -** Uses an iterative Golub-Kahan factorization to compute the leading singular triplets of the exponential propagator $\mathrm{exp}(\tau A)$.
+
+- **Optimal Time Dependent modes -** Computes the OTD modes for an arbitrary time-evolution using the algorithm from **ADD REFERENCE**.
 
 ## Description
 
