@@ -3,6 +3,7 @@
       contains
          module procedure nonlinear_map_UPO
       ! internal
+         character(len=*), parameter :: this_procedure = 'nonlinear_map_UPO'
          character(len=128) :: msg
          select type (vec_in)
          type is (nek_ext_dvector)
@@ -16,7 +17,7 @@
      &                                     vtol         = atol*0.1,
      &                                     ptol         = atol*0.1)
                write (msg, '(A,F9.6)') 'Current period estimate, T = ', vec_in%T
-               call nek_log_message(msg, this_module, 'nonlinear_map_UPO')
+               call nek_log_message(msg, this_module, this_procedure)
 
       ! Set the initial condition for the nonlinear solver.
                call ext_vec2nek(vx, vy, vz, pr, t, vec_in)
@@ -37,15 +38,16 @@
                call vec_out%sub(vec_in)
 
             class default
-               call type_error('vec_out','nek_ext_dvector','OUT',this_module,'nonlinear_map_UPO')
+               call type_error('vec_out','nek_ext_dvector','OUT',this_module,this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_ext_dvector','IN',this_module,'nonlinear_map_UPO')
+            call type_error('vec_in','nek_ext_dvector','IN',this_module,this_procedure)
          end select
          end procedure nonlinear_map_UPO
       
          module procedure jac_direct_map
       ! internal
+         character(len=*), parameter :: this_procedure = 'jac_direct_map'
          real(dp) :: atol
          type(nek_ext_dvector) :: vec
          select type (vec_in)
@@ -99,15 +101,16 @@
                param(21) = atol
 
             class default
-               call type_error('vec_out','nek_ext_dvector','OUT',this_module,'jac_direct_map')
+               call type_error('vec_out','nek_ext_dvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_ext_dvector','IN',this_module,'jac_direct_map')
+            call type_error('vec_in','nek_ext_dvector','IN',this_module, this_procedure)
          end select
          end procedure jac_direct_map
       
          module procedure jac_adjoint_map
       ! internal
+         character(len=*), parameter :: this_procedure = 'jac_adjoint_map'
          real(dp) :: atol
          type(nek_ext_dvector) :: vec
          select type (vec_in)
@@ -160,10 +163,10 @@
                param(21) = atol
             
             class default
-               call type_error('vec_out','nek_ext_dvector','OUT',this_module,'jac_adjoint_map')
+               call type_error('vec_out','nek_ext_dvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_ext_dvector','IN',this_module,'jac_adjoint_map')
+            call type_error('vec_in','nek_ext_dvector','IN',this_module, this_procedure)
          end select
          end procedure jac_adjoint_map
       end submodule

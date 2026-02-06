@@ -18,6 +18,7 @@
          type(exptA_linop) :: exptA
          type(nek_dvector) :: b
          real(kind=dp) :: tau
+         character(len=*), parameter :: this_procedure = 'resolvent_matvec'
       ! Integration time.
          tau = merge(1.0_dp, 2*pi_dp/abs(self%omega), self%omega == 0.0_dp)
       ! Initialize exponential propagator.
@@ -35,10 +36,10 @@
                exptA%tau = tau/4.0_dp; call exptA%init()
                vec_out%im = evaluate_imaginary_part(vec_in, self%omega, vec_out%re, ifadj)
             class default
-               call type_error('vec_out','nek_zvector','OUT',this_module,'resolvent_matvec')
+               call type_error('vec_out','nek_zvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_zvector','IN',this_module,'resolvent_matvec')
+            call type_error('vec_in','nek_zvector','IN',this_module, this_procedure)
          end select
          end procedure
       
@@ -46,6 +47,7 @@
          type(exptA_linop) :: exptA
          type(nek_dvector) :: b
          real(kind=dp) :: tau
+         character(len=*), parameter :: this_procedure = 'resolvent_rmatvec'
       ! Force adjoint mode.
       ! Integration time.
          tau = merge(1.0_dp, 2*pi_dp/abs(self%omega), self%omega == 0.0_dp)
@@ -64,10 +66,10 @@
                exptA%tau = tau/4.0_dp; call exptA%init()
                vec_out%im = evaluate_imaginary_part(vec_in, self%omega, vec_out%re, .true.)
             class default
-               call type_error('vec_out','nek_zvector','OUT',this_module,'resolvent_rmatvec')
+               call type_error('vec_out','nek_zvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_zvector','IN',this_module,'resolvent_rmatvec')
+            call type_error('vec_in','nek_zvector','IN',this_module, this_procedure)
          end select
          end procedure
       

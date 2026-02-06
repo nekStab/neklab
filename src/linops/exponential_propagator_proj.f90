@@ -3,7 +3,7 @@
       contains
          module procedure init_exptA_proj
       ! internal
-         integer :: idir, nelx, nely, nelz, i
+         integer :: i
       ! For the baseflow field for dt/nsteps/cfl computation.
          call vec2nek(vx, vy, vz, pr, t, self%baseflow)
          call nek_log_information("Set self%baseflow -> vx, vy, vz, pr, t", this_module, "init_exptA_proj")
@@ -13,11 +13,11 @@
      &                            recompute_dt   = .true.,
      &                            cfl_limit      = 0.5_dp)
          
-      ! Define and initialize planar average
-         idir = 1
-         nelx = 10
-         nely = 12
-         nelz = 1
+      ! Setup projection (via planar average in the streamwise direction)
+         self%idir = idir
+         self%nelx = nelx
+         self%nely = nely
+         self%nelz = nelz
          call gtpp_gs_setup(self%hndl, nelx, nely, nelz, idir)
       ! Define projection basis
          do i = 1, lv
@@ -30,6 +30,7 @@
          integer :: nrst, itmp, irst
          real(dp) :: rtmp
          type(nek_dvector) :: vec_rst
+         character(len=*), parameter :: this_procedure = 'exptA_proj_matvec'
          character(len=128) :: msg
          select type (vec_in)
          type is (nek_dvector)
@@ -75,7 +76,7 @@
       
       ! Compute restart fields.
                write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
-               call nek_log_debug(msg, this_module, 'exptA_proj_matvec')
+               call nek_log_debug(msg, this_module, this_procedure)
                ! We don't need to reset the end time but we do it to get a clean logfile
                itmp = nsteps
                rtmp = time
@@ -96,10 +97,10 @@
                time  = rtmp
 
             class default
-               call type_error('vec_out','nek_dvector','OUT',this_module,'exptA_proj_matvec')
+               call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_dvector','IN',this_module,'exptA_proj_matvec')
+            call type_error('vec_in','nek_dvector','IN',this_module, this_procedure)
          end select
          end procedure
       
@@ -107,6 +108,7 @@
          integer :: nrst, itmp, irst
          real(dp) :: rtmp
          type(nek_dvector) :: vec_rst
+         character(len=*), parameter :: this_procedure = 'exptA_proj_rmatvec'
          character(len=128) :: msg
          select type (vec_in)
          type is (nek_dvector)
@@ -152,7 +154,7 @@
       
       ! Compute restart fields.
                write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
-               call nek_log_debug(msg, this_module, 'exptA_rmatvec_proj')
+               call nek_log_debug(msg, this_module, this_procedure)
                ! We don't need to reset the end time but we do it to get a clean logfile
                itmp = nsteps
                rtmp = time
@@ -173,10 +175,10 @@
                time  = rtmp
 
             class default
-               call type_error('vec_out','nek_dvector','OUT',this_module,'exptA_proj_rmatvec')
+               call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_dvector','IN',this_module,'exptA_proj_rmatvec')
+            call type_error('vec_in','nek_dvector','IN',this_module, this_procedure)
          end select
          end procedure
 

@@ -79,7 +79,6 @@
                call nek_daxpby(1.0_dp, wrk%re, 1.0_dp, self%re_rst(i))
                call nek_daxpby(1.0_dp, wrk%im, 1.0_dp, self%im_rst(i))
             end do
-
          class default
             call type_error('vec','nek_zvector','IN',this_module,'nek_zaxpby')
          end select
@@ -112,6 +111,7 @@
 
          module procedure zsave_rst
          integer :: m, lv, lp, torder
+         character(len=*), parameter :: this_procedure = 'zsave_rst'
          character(len=128) :: msg
 
          lv = nx1*ny1*nz1*nelv
@@ -121,10 +121,10 @@
          ! sanity checks
          if (irst == torder) then
             write(msg,'(2(A,I0),A)') 'Cannot save rst fields ', torder, ' for a simulation of temporal order ', torder, '.'
-            call log_error(msg, this_module, 'zsave_rst')
+            call log_error(msg, this_module, this_procedure)
          else
             write(msg,'(A,I0)') 'Saving rst fields: ', irst
-            call log_debug(msg, this_module, 'zsave_rst')
+            call log_debug(msg, this_module, this_procedure)
          end if
 
          select type (vec_rst)
@@ -155,12 +155,13 @@
             end if
 
          class default
-            call type_error('vec_rst','nek_zvector','IN',this_module,'zsave_rst')
+            call type_error('vec_rst','nek_zvector','IN', this_module, this_procedure)
          end select
          end procedure
    
          module procedure zget_rst
          integer :: m, lv, lp
+         character(len=*), parameter :: this_procedure = 'zget_rst'
          character(len=128) :: msg
 
          lv = nx1*ny1*nz1*nelv
@@ -169,13 +170,13 @@
          ! sanity checks
          if (irst < 1) then
             write(msg,'(A,I0)') 'Invalid input for irst: ', irst
-            call log_error(msg, this_module, 'zget_rst')
+            call log_error(msg, this_module, this_procedure)
          else if (irst > self%nrst) then
             write(msg,'(A,I0)') 'No rst field to retrieve: ', irst
-            call log_warning(msg, this_module, 'zget_rst')
+            call log_warning(msg, this_module, this_procedure)
          else
             write(msg,'(A,I0)') 'Retrieving rst fields: ', irst
-            call log_information(msg, this_module, 'zget_rst')
+            call log_information(msg, this_module, this_procedure)
          end if
 
          select type (vec_rst)
@@ -205,7 +206,7 @@
             end if
 
          class default
-            call type_error('vec_rst','nek_zvector','OUT',this_module,'zget_rst')
+            call type_error('vec_rst','nek_zvector','OUT',this_module, this_procedure)
          end select
          end procedure
 

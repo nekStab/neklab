@@ -2,6 +2,7 @@
          implicit none
       contains
          module procedure nonlinear_map_temp
+         character(len=*), parameter :: this_procedure = 'nonlinear_map_temp'
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
@@ -31,15 +32,16 @@
                call vec_out%sub(vec_in)
 
             class default
-               call type_error('vec_out','nek_dvector','OUT',this_module,'nonlinear_map_temp')
+               call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_dvector','IN',this_module,'nonlinear_map_temp')
+            call type_error('vec_in','nek_dvector','IN',this_module, this_procedure)
          end select
          end procedure nonlinear_map_temp
       
          module procedure jac_exptA_temp_matvec
       ! internal
+         character(len=*), parameter :: this_procedure = 'jac_exptA_temp_matvec'
          real(dp) :: atol
          select type (vec_in)
          type is (nek_dvector)
@@ -78,15 +80,16 @@
                param(22) = atol
             
             class default
-               call type_error('vec_out','nek_dvector','OUT',this_module,'jac_exptA_temp_matvec')
+               call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_dvector','IN',this_module,'jac_exptA_temp_matvec')
+            call type_error('vec_in','nek_dvector','IN',this_module, this_procedure)
          end select
          end procedure jac_exptA_temp_matvec
       
          module procedure jac_exptA_temp_rmatvec
       ! internal
+         character(len=*), parameter :: this_procedure = 'jac_exptA_temp_rmatvec'
          real(dp) :: atol
          select type (vec_in)
          type is (nek_dvector)
@@ -126,10 +129,10 @@
                param(22) = atol
                
             class default
-               call type_error('vec_out','nek_dvector','OUT',this_module,'jac_exptA_temp_rmatvec')
+               call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_dvector','IN',this_module,'jac_exptA_temp_rmatvec')
+            call type_error('vec_in','nek_dvector','IN',this_module, this_procedure)
          end select
          end procedure jac_exptA_temp_rmatvec
       end submodule

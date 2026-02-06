@@ -198,6 +198,7 @@
             !! Information flag
 
             ! internals
+            character(len=*), parameter :: this_procedure = 'nek_constant_tol'
             character(len=256) :: msg
             real(dp), parameter :: mintol = 10.0*atol_dp! minimum acceptable solver tolerance
 
@@ -206,12 +207,12 @@
                ! Ensure target is above mintol
                tol = mintol
                write(msg,'(A,E11.4)') 'Input tolerance below minimum tolerance! Resetting solver tolerance to mintol= ', tol
-               call nek_log_warning(msg, this_module, 'nek_constant_tol')
+               call nek_log_warning(msg, this_module, this_procedure)
             else
                ! Ensure target is below maxtol
                tol = target_tol
                write(msg,'(A,E11.4)') 'Nek velocity and pressure tolerances set to tol= ', tol
-               call nek_log_information(msg, this_module, 'nek_constant_tol')
+               call nek_log_information(msg, this_module, this_procedure)
             end if
 
             ! Update nek status (in case they have changed in between calls)
@@ -235,6 +236,7 @@
             !! Information flag
 
             ! internals
+            character(len=*), parameter :: this_procedure = 'nek_dynamic_tol'
             real(dp), parameter :: maxtol = 1.0e-04_dp   ! maximum acceptable solver tolerance
             real(dp), parameter :: mintol = 10.0*atol_dp ! minimum acceptable solver tolerance
             real(dp) :: tol_old, target_tol_
@@ -244,13 +246,13 @@
             if (target_tol < mintol) then
                ! Ensure target is above mintol
                write(msg,'(A,E11.4)') 'Input target tolerance below minimum tolerance! Resetting target to mintol= ', mintol
-               call nek_log_warning(msg, this_module, 'nek_dynamic_tol')
+               call nek_log_warning(msg, this_module, this_procedure)
             end if
             target_tol_ = max(target_tol, mintol)
             if (target_tol > maxtol) then
                ! Ensure target is below maxtol
                write(msg,'(A,E11.4)') 'Input target tolerance above maximum tolerance! Resetting target to maxtol= ', maxtol
-               call nek_log_warning(msg, this_module, 'nek_dynamic_tol')
+               call nek_log_warning(msg, this_module, this_procedure)
             end if
             target_tol_ = min(target_tol_, maxtol)
 
@@ -261,13 +263,13 @@
             if (tol < 10*target_tol_) then
                ! If tolerance is close to target, make a single larger reduction step
                write(msg,'(A,E11.4)') 'Residual is close to target. Setting tolerance to input target= ', target_tol_
-               call nek_log_information(msg, this_module, 'nek_dynamic_tol')
+               call nek_log_information(msg, this_module, this_procedure)
                tol = target_tol_
             end if
             if (tol > maxtol) then
                ! If tolerance is too large, cap it at maxtol
                write(msg,'(A,E11.4)') 'Residual is large. Setting tolerance to tol= ', maxtol
-               call nek_log_information(msg, this_module, 'nek_dynamic_tol')
+               call nek_log_information(msg, this_module, this_procedure)
             end if
             tol = min(tol, maxtol)
       
@@ -278,7 +280,7 @@
                else
                   write(msg,'(A,E11.4)') 'Nek solver tolerance set to tol= ', tol
                end if
-               call nek_log_information(msg, this_module, 'nek_dynamic_tol')
+               call nek_log_information(msg, this_module, this_procedure)
                param(21) = tol; TOLPDF = param(21); call bcast(TOLPDF,wdsize)
                param(22) = tol; TOLHDF = param(22); call bcast(TOLHDF,wdsize)
                restol(:) = param(22); call bcast(restol, (ldimt1+1)*wdsize)
@@ -286,7 +288,7 @@
             else
                ! Do nothing
                write(msg,'(A,E11.4)') 'Nek solver tolerances unchanged at tol= ', tol_old
-               call nek_log_information(msg, this_module, 'nek_dynamic_tol')
+               call nek_log_information(msg, this_module, this_procedure)
             end if
          end subroutine nek_dynamic_tol
                   

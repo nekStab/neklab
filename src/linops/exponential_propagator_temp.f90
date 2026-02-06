@@ -16,6 +16,7 @@
          integer :: nrst, itmp, irst
          real(dp) :: rtmp
          type(nek_dvector) :: vec_rst
+         character(len=*), parameter :: this_procedure = 'exptA_temp_matvec'
          character(len=128) :: msg
          select type (vec_in)
          type is (nek_dvector)
@@ -25,7 +26,7 @@
                nrst = abs(param(27)) - 1
       ! Set baseflow.
                call vec2nek(vx, vy, vz, pr, t, self%baseflow)
-      
+
       ! Set initial condition for the linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
       
@@ -52,7 +53,7 @@
 
       ! Compute restart fields.
                write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
-               call nek_log_debug(msg, this_module, 'exptA_temp_matvec')
+               call nek_log_debug(msg, this_module, this_procedure)
                ! We don't need to reset the end time but we do it to get a clean logfile
                itmp = nsteps
                rtmp = time
@@ -74,10 +75,10 @@
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
 
                class default
-               call type_error('vec_out','nek_dvector','OUT',this_module,'exptA_temp_matvec')
+               call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_dvector','IN',this_module,'exptA_temp_matvec')
+            call type_error('vec_in','nek_dvector','IN',this_module, this_procedure)
          end select
          end procedure
 
@@ -85,6 +86,7 @@
          integer :: nrst, itmp, irst
          real(dp) :: rtmp
          type(nek_dvector) :: vec_rst
+         character(len=*), parameter :: this_procedure = 'exptA_temp_rmatvec'
          character(len=128) :: msg
          select type (vec_in)
          type is (nek_dvector)
@@ -105,7 +107,7 @@
      &                                  recompute_dt  = .true.,
      &                                  cfl_limit     = 0.5_dp)
 
-      ! Integrate the equations forward in time.
+         ! Integrate the equations forward in time.
                time = 0.0_dp
                do istep = 1, nsteps
 
@@ -119,12 +121,12 @@
 
                end do
 
-      ! Copy the final solution to vector.
+         ! Copy the final solution to vector.
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
 
-      ! Compute restart fields.
+         ! Compute restart fields.
                write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
-               call nek_log_debug(msg, this_module, 'exptA_temp_rmatvec')
+               call nek_log_debug(msg, this_module, this_procedure)
                ! We don't need to reset the end time but we do it to get a clean logfile
                itmp = nsteps
                rtmp = time
@@ -143,10 +145,10 @@
                time  = rtmp
 
             class default
-               call type_error('vec_out','nek_dvector','OUT',this_module,'exptA_proj_rmatvec')
+               call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_dvector','IN',this_module,'exptA_proj_rmatvec')
+            call type_error('vec_in','nek_dvector','IN',this_module, this_procedure)
          end select
          end procedure
       end submodule

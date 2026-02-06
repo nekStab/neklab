@@ -92,9 +92,12 @@
       ! Export eigenfunctions to disk.
             call outpost_dnek(eigvecs(:nev), file_prefix)
 
+            call nek_log_message('Exiting eigenvalue computation.', this_module, this_procedure)
+
       ! Finalize exptA timings
             call exptA%finalize_timer()
       ! Finalize timing
+            call logger_setup(logfile='lightkrylov_tmr.log', nio=0, log_level=warning_level, log_stdout=.false., log_timestamp=.true.)
             call timer%finalize()
 
             call nek_log_message('Exiting eigenvalue computation.', this_module, this_procedure)

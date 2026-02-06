@@ -93,6 +93,7 @@
             end subroutine
          end interface
 
+
       !-----------------------------------------------------------------------
       !-----     EXPONENTIAL PROPAGATOR with projection on wavenumber    -----
       !-----------------------------------------------------------------------
@@ -100,10 +101,17 @@
       ! --> Type.
          type, extends(abstract_exptA_linop_rdp), public :: exptA_proj_linop
             type(nek_dvector) :: baseflow
+            ! streamwise wavenumber
             real(kind=dp) :: alpha
+            ! projection basis
             real(kind=dp), dimension(lx1*ly1*lz1*lelv) :: cv = 0.0_dp
             real(kind=dp), dimension(lx1*ly1*lz1*lelv) :: sv = 0.0_dp
+            ! planar average
             integer :: hndl = 0
+            integer :: nelx = 0
+            integer :: nely = 0
+            integer :: nelz = 0
+            integer :: idir = 1 ! streamwise direction
          contains
             private
             procedure, pass(self), public :: init => init_exptA_proj
@@ -114,8 +122,12 @@
       
       ! --> Type-bound procedures: exponential_propagator.f90
          interface
-            module subroutine init_exptA_proj(self)
+         module subroutine init_exptA_proj(self, nelx, nely, nelz, idir)
                class(exptA_proj_linop), intent(inout) :: self
+            integer, intent(in) :: nelx
+            integer, intent(in) :: nely
+            integer, intent(in) :: nelz
+            integer, intent(in) :: idir
             end subroutine
 
             module subroutine proj_alpha(self)

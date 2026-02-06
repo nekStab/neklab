@@ -238,6 +238,7 @@
 
          module procedure dsave_rst
          integer :: m, lv, lp, torder
+         character(len=*), parameter :: this_procedure = 'dsave_rst'
          character(len=128) :: msg
 
          lv = nx1*ny1*nz1*nelv
@@ -248,11 +249,11 @@
          if (irst == torder) then
             write(msg,'(2(A,I0),A)') 'Cannot save rst fields ', torder, ' for a simulation of temporal order ', torder, '.'
             if (nid == 0) print "('ERROR: ',A)", msg
-            call log_error(msg, this_module, 'dsave_rst')
+            call log_error(msg, this_module, this_procedure)
          else
             write(msg,'(A,I0)') 'Saving rst fields: ', irst
             if (nid == 0) print "('INFO: ',A)", msg
-            call log_debug(msg, this_module, 'dsave_rst')
+            call log_debug(msg, this_module, this_procedure)
          end if
 
          select type (vec_rst)
@@ -272,7 +273,7 @@
             end if
 
          class default
-            call type_error('vec_rst','nek_dvector','IN',this_module,'dsave_rst')
+            call type_error('vec_rst','nek_dvector','IN', this_module, this_procedure)
          end select
 
          self%nrst = max(self%nrst, irst)
@@ -281,6 +282,7 @@
 
          module procedure dget_rst
          integer :: m, lv, lp
+         character(len=*), parameter :: this_procedure = 'dget_rst'
          character(len=128) :: msg
 
          lv = nx1*ny1*nz1*nelv
@@ -290,15 +292,15 @@
          if (irst < 1) then
             write(msg,'(A,I0)') 'Invalid input for irst: ', irst
             if (nid == 0) print "('ERROR: ',A)", msg
-            call log_error(msg, this_module, 'dget_rst')
+            call log_error(msg, this_module, this_procedure)
          else if (irst > self%nrst) then
             write(msg,'(A,I0)') 'No rst field to retrieve: ', irst
             if (nid == 0) print "('WARN: ',A)", msg
-            call log_warning(msg, this_module, 'dget_rst')
+            call log_warning(msg, this_module, this_procedure)
          else
             write(msg,'(A,I0)') 'Retrieving rst fields: ', irst
             if (nid == 0) print "('INFO: ',A)", msg
-            call log_debug(msg, this_module, 'dget_rst')
+            call log_debug(msg, this_module, this_procedure)
          end if
 
          select type (vec_rst)
@@ -316,7 +318,7 @@
                end do
             end if
          class default
-            call type_error('vec_rst','nek_dvector','OUT',this_module,'dget_rst')
+            call type_error('vec_rst','nek_dvector','OUT', this_module, this_procedure)
          end select
          end procedure
          
