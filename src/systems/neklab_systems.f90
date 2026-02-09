@@ -51,6 +51,7 @@
             private
             procedure, pass(self), public :: matvec => jac_exptA_matvec
             procedure, pass(self), public :: rmatvec => jac_exptA_rmatvec
+            procedure, pass(self), public :: compute_rst => jac_exptA_compute_rst
          end type nek_jacobian
       
       ! --> Type-bound procedures for nek_system & nek_jacobian
@@ -73,6 +74,12 @@
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine jac_exptA_rmatvec
+
+            module subroutine jac_exptA_compute_rst(self, vec_out, nrst)
+               class(nek_jacobian), intent(inout) :: self
+               class(abstract_vector_rdp), intent(out) :: vec_out
+               integer, intent(in) :: nrst
+            end subroutine
          end interface
 
       !--------------------------------------------------------------------
@@ -80,79 +87,93 @@
       !--------------------------------------------------------------------
       
       ! --> Type: nek_system
-         type, extends(abstract_system_rdp), public :: nek_system_temp
+         type, extends(abstract_system_rdp), public :: nek_temp_system
          contains
             private
             procedure, pass(self), public :: response => nonlinear_map_temp
-         end type nek_system_temp
+         end type nek_temp_system
       
       ! --> Type: nek_jacobian
-         type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian_temp
+         type, extends(abstract_jacobian_linop_rdp), public :: nek_temp_jacobian
          contains
             private
             procedure, pass(self), public :: matvec => jac_exptA_temp_matvec
             procedure, pass(self), public :: rmatvec => jac_exptA_temp_rmatvec
-         end type nek_jacobian_temp
+            procedure, pass(self), public :: compute_rst => jac_exptA_temp_compute_rst
+         end type nek_temp_jacobian
       
       ! --> Type-bound procedures for nek_system & nek_jacobian
          interface
             module subroutine nonlinear_map_temp(self, vec_in, vec_out, atol)
-               class(nek_system_temp), intent(inout) :: self
+               class(nek_temp_system), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
                real(dp), intent(in) :: atol
             end subroutine nonlinear_map_temp
       
             module subroutine jac_exptA_temp_matvec(self, vec_in, vec_out)
-               class(nek_jacobian_temp), intent(inout) :: self
+               class(nek_temp_jacobian), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine jac_exptA_temp_matvec
       
             module subroutine jac_exptA_temp_rmatvec(self, vec_in, vec_out)
-               class(nek_jacobian_temp), intent(inout) :: self
+               class(nek_temp_jacobian), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine jac_exptA_temp_rmatvec
+
+            module subroutine jac_exptA_temp_compute_rst(self, vec_out, nrst)
+               class(nek_temp_jacobian), intent(inout) :: self
+               class(abstract_vector_rdp), intent(out) :: vec_out
+               integer, intent(in) :: nrst
+            end subroutine
          end interface
 
       !-----------------------------------------------------
       !-----     NEKLAB SYSTEM FOR PERIODIC ORBITS   -------
       !-----------------------------------------------------
       
-         type, extends(abstract_system_rdp), public :: nek_system_upo
+         type, extends(abstract_system_rdp), public :: nek_upo_system
          contains
             private
             procedure, pass(self), public :: response => nonlinear_map_upo
-         end type nek_system_upo
+         end type nek_upo_system
       
-         type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian_upo
+         type, extends(abstract_jacobian_linop_rdp), public :: nek_upo_jacobian
          contains
             private
             procedure, pass(self), public :: matvec => jac_direct_map
             procedure, pass(self), public :: rmatvec => jac_adjoint_map
-         end type nek_jacobian_upo
+            procedure, pass(self), public :: compute_rst => jac_compute_rst
+         end type nek_upo_jacobian
       
-      ! --> Type-bound procedures for nek_system_upo & nek_jacobian_upo
+      ! --> Type-bound procedures for nek_upo_system & nek_upo_jacobian
          interface
             module subroutine nonlinear_map_upo(self, vec_in, vec_out, atol)
-               class(nek_system_upo), intent(inout) :: self
+               class(nek_upo_system), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
                real(dp), intent(in) :: atol
             end subroutine nonlinear_map_upo
       
             module subroutine jac_direct_map(self, vec_in, vec_out)
-               class(nek_jacobian_upo), intent(inout) :: self
+               class(nek_upo_jacobian), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine jac_direct_map
       
             module subroutine jac_adjoint_map(self, vec_in, vec_out)
-               class(nek_jacobian_upo), intent(inout) :: self
+               class(nek_upo_jacobian), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
             end subroutine jac_adjoint_map
+
+            module subroutine jac_compute_rst(self, vec_out, nrst)
+               class(nek_upo_jacobian), intent(inout) :: self
+               class(abstract_vector_rdp), intent(out) :: vec_out
+               integer, intent(in) :: nrst
+            end subroutine
          end interface
       
       contains
