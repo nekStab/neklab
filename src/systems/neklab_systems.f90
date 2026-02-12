@@ -52,6 +52,7 @@
             procedure, pass(self), public :: matvec => jac_exptA_matvec
             procedure, pass(self), public :: rmatvec => jac_exptA_rmatvec
             procedure, pass(self), public :: compute_rst => jac_exptA_compute_rst
+            procedure, pass(self), public :: get_rst => jac_exptA_get_rst
          end type nek_jacobian
       
       ! --> Type-bound procedures for nek_system & nek_jacobian
@@ -80,6 +81,12 @@
                class(abstract_vector_rdp), intent(out) :: vec_out
                integer, intent(in) :: nrst
             end subroutine
+
+            module subroutine jac_exptA_get_rst(self, vec_in, istep)
+               class(nek_jacobian), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               integer, intent(in) :: istep
+            end subroutine
          end interface
 
       !--------------------------------------------------------------------
@@ -100,6 +107,7 @@
             procedure, pass(self), public :: matvec => jac_exptA_temp_matvec
             procedure, pass(self), public :: rmatvec => jac_exptA_temp_rmatvec
             procedure, pass(self), public :: compute_rst => jac_exptA_temp_compute_rst
+            procedure, pass(self), public :: get_rst => jac_exptA_temp_get_rst
          end type nek_temp_jacobian
       
       ! --> Type-bound procedures for nek_system & nek_jacobian
@@ -128,6 +136,12 @@
                class(abstract_vector_rdp), intent(out) :: vec_out
                integer, intent(in) :: nrst
             end subroutine
+
+            module subroutine jac_exptA_temp_get_rst(self, vec_in, istep)
+               class(nek_temp_jacobian), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               integer, intent(in) :: istep
+            end subroutine
          end interface
 
       !-----------------------------------------------------
@@ -146,6 +160,7 @@
             procedure, pass(self), public :: matvec => jac_direct_map
             procedure, pass(self), public :: rmatvec => jac_adjoint_map
             procedure, pass(self), public :: compute_rst => jac_compute_rst
+            procedure, pass(self), public :: get_rst => jac_get_rst
          end type nek_upo_jacobian
       
       ! --> Type-bound procedures for nek_upo_system & nek_upo_jacobian
@@ -173,6 +188,12 @@
                class(nek_upo_jacobian), intent(inout) :: self
                class(abstract_vector_rdp), intent(out) :: vec_out
                integer, intent(in) :: nrst
+            end subroutine
+
+            module subroutine jac_get_rst(self, vec_in, istep)
+               class(nek_upo_jacobian), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               integer, intent(in) :: istep
             end subroutine
          end interface
       

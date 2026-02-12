@@ -40,6 +40,7 @@
             procedure, pass(self), public :: matvec => exptA_matvec
             procedure, pass(self), public :: rmatvec => exptA_rmatvec
             procedure, pass(self), public :: compute_rst => exptA_compute_rst
+            procedure, pass(self), public :: get_rst => exptA_get_rst
          end type exptA_linop
       
       ! --> Type-bound procedures: exponential_propagator.f90
@@ -65,6 +66,12 @@
                class(abstract_vector_rdp), intent(out) :: vec_out
                integer, intent(in) :: nrst
             end subroutine
+
+            module subroutine exptA_get_rst(self, vec_in, istep)
+               class(exptA_linop), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               integer, intent(in) :: istep
+            end subroutine
          end interface
 
       !---------------------------------------------------------
@@ -80,6 +87,7 @@
             procedure, pass(self), public :: matvec => exptA_temp_matvec
             procedure, pass(self), public :: rmatvec => exptA_temp_rmatvec
             procedure, pass(self), public :: compute_rst => exptA_temp_compute_rst
+            procedure, pass(self), public :: get_rst => exptA_temp_get_rst
          end type exptA_temp_linop
       
       ! --> Type-bound procedures: exponential_propagator_temp.f90
@@ -104,6 +112,12 @@
                class(exptA_temp_linop), intent(inout) :: self
                class(abstract_vector_rdp), intent(out) :: vec_out
                integer, intent(in) :: nrst
+            end subroutine
+
+            module subroutine exptA_temp_get_rst(self, vec_in, istep)
+               class(exptA_temp_linop), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               integer, intent(in) :: istep
             end subroutine
          end interface
 
@@ -133,12 +147,13 @@
             procedure, pass(self), public :: matvec => exptA_proj_matvec
             procedure, pass(self), public :: rmatvec => exptA_proj_rmatvec
             procedure, pass(self), public :: compute_rst => exptA_proj_compute_rst
+            procedure, pass(self), public :: get_rst => exptA_proj_get_rst
 
          end type exptA_proj_linop
       
       ! --> Type-bound procedures: exponential_propagator.f90
          interface
-         module subroutine init_exptA_proj(self, nelx, nely, nelz, idir)
+            module subroutine init_exptA_proj(self, nelx, nely, nelz, idir)
                class(exptA_proj_linop), intent(inout) :: self
             integer, intent(in) :: nelx
             integer, intent(in) :: nely
@@ -166,6 +181,12 @@
                class(exptA_proj_linop), intent(inout) :: self
                class(abstract_vector_rdp), intent(out) :: vec_out
                integer, intent(in) :: nrst
+            end subroutine
+
+            module subroutine exptA_proj_get_rst(self, vec_in, istep)
+               class(exptA_proj_linop), intent(inout) :: self
+               class(abstract_vector_rdp), intent(in) :: vec_in
+               integer, intent(in) :: istep
             end subroutine
          end interface
       

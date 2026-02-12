@@ -15,7 +15,6 @@
          module procedure exptA_matvec
          character(len=*), parameter :: this_procedure = 'exptA_matvec'
          integer :: nrst
-         type(nek_dvector) :: vec_rst
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
@@ -42,10 +41,7 @@
                   call nek_advance()
                   
                   ! Set restart fields if present.
-                  if (istep <= nrst .and. vec_in%has_rst_fields()) then
-                     call vec_in%get_rst(vec_rst, istep)
-                     call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
-                  end if
+                  if (istep <= nrst) call self%get_rst(vec_in, istep)
 
                end do
       
@@ -66,7 +62,6 @@
          module procedure exptA_rmatvec
          character(len=*), parameter :: this_procedure = 'exptA_rmatvec'
          integer :: nrst
-         type(nek_dvector) :: vec_rst
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
@@ -93,10 +88,7 @@
                   call nek_advance()
                   
                   ! Set restart fields if present.
-                  if (istep <= nrst.and.vec_in%has_rst_fields()) then
-                     call vec_in%get_rst(vec_rst, istep)
-                     call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
-                  end if
+                  if (istep <= nrst) call self%get_rst(vec_in, istep)
 
                end do
       
@@ -142,5 +134,19 @@
                call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
             end select
          end procedure
-      
+
+         module procedure exptA_get_rst
+            character(len=*), parameter :: this_procedure = 'exptA_get_rst'
+            type(nek_dvector) :: vec_rst
+            character(len=128) :: msg
+            select type(vec_in)
+            type is (nek_dvector)
+               if (vec_in%has_rst_fields()) then
+                  call vec_in%get_rst(vec_rst, istep)
+                  call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
+               end if
+            class default
+               call type_error('vec_in','nek_dvector','IN',this_module, this_procedure)
+            end select
+         end procedure
       end submodule
