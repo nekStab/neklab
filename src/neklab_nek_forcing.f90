@@ -27,7 +27,7 @@
             integer :: ipert
             character(len=128) :: msg
             write (msg, *) 'Setting all neklab_forcing vectors to zero.'
-            call nek_log_debug(msg, this_module, procedure='zero_neklab_forcing')
+            call nek_log_debug(msg, this_module, 'zero_neklab_forcing')
             neklab_ffx = 0.0_dp
             neklab_ffy = 0.0_dp
             neklab_ffz = 0.0_dp
@@ -42,12 +42,12 @@
             character(len=128) :: msg
             if (ipert < 0 .or. ipert > lpert) then
                write (msg, '(A,I0)') 'Invalid value for ipert specified! ipert = ', ipert
-               call nek_log_message(msg, this_module, procedure='get_neklab_forcing')
+               call nek_log_message(msg, this_module, 'get_neklab_forcing')
                if (nid == 0) print *, trim(msg)
                call nek_end()
             else
                write (msg, '(A,I0)') 'Retrieving value of the neklab forcing. ipert = ', ipert
-               call nek_log_debug(msg, this_module, procedure='get_neklab_forcing')
+               call nek_log_debug(msg, this_module, 'get_neklab_forcing')
             end if
             fx = neklab_ffx(:, ipert + 1)
             fy = neklab_ffy(:, ipert + 1)
@@ -63,12 +63,12 @@
             character(len=128) :: msg
             if (ipert < 0 .or. ipert > lpert) then
                write (msg, '(A,I0)') 'Invalid value for ipert specified! ipert = ', ipert
-               call nek_log_message(msg, this_module, procedure='set_neklab_forcing')
+               call nek_log_message(msg, this_module, 'set_neklab_forcing')
                if (nid == 0) print *, trim(msg)
                call nek_end()
             else
                write (msg, '(A,I0)') 'Setting value of the neklab forcing. ipert = ', ipert
-               call nek_log_debug(msg, this_module, procedure='get_neklab_forcing')
+               call nek_log_debug(msg, this_module, 'get_neklab_forcing')
             end if
             neklab_ffx(:, ipert + 1) = fx
             neklab_ffy(:, ipert + 1) = fy
@@ -81,12 +81,12 @@
             character(len=128) :: msg
             if (ipert < 0 .or. ipert > lpert) then
                write (msg, '(A,I0)') 'Invalid value for ipert specified! ipert = ', ipert
-               call nek_log_message(msg, this_module, procedure='zero_neklab_forcing_ipert')
+               call nek_log_message(msg, this_module, 'zero_neklab_forcing_ipert')
                if (nid == 0) print *, trim(msg)
                call nek_end()
             else
                write (msg, '(A,I0)') 'Setting value of the neklab forcing to zero. ipert = ', ipert
-               call nek_log_debug(msg, this_module, procedure='zero_neklab_forcing_ipert')
+               call nek_log_debug(msg, this_module, 'zero_neklab_forcing_ipert')
             end if
             neklab_ffx(:, ipert + 1) = 0.0_dp
             neklab_ffy(:, ipert + 1) = 0.0_dp

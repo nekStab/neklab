@@ -76,12 +76,9 @@
             call nek_daxpby(1.0_dp, wrk%im, 1.0_dp, self%im)
 
             do i = 1, self%nrst
-               call nek_daxpby(1.0_dp, wrk%re_rst(i), 1.0_dp, self%re_rst(i))
-               call nek_daxpby(1.0_dp, wrk%im_rst(i), 1.0_dp, self%im_rst(i))
+               call nek_daxpby(1.0_dp, wrk%re, 1.0_dp, self%re_rst(i))
+               call nek_daxpby(1.0_dp, wrk%im, 1.0_dp, self%im_rst(i))
             end do
-
-            self%nrst = max(self%nrst, wrk%nrst)
-
          class default
             call type_error('vec','nek_zvector','IN',this_module,'nek_zaxpby')
          end select
@@ -100,117 +97,116 @@
          end procedure
       
          module procedure nek_zsize
-         integer :: n1, m
-         n1 = nx1*ny1*nz1*nelv
-         n = 2*n1 + nx2*ny2*nz2*nelv
-         if (if3d) n = n + n1
-         if (ifto) n = n + n1
+         integer :: lv, m
+         lv = nx1*ny1*nz1*nelv
+         n = 2*lv + nx2*ny2*nz2*nelv
+         if (if3d) n = n + lv
+         if (ifto) n = n + lv
          if (ldimt > 1) then
             do m = 2, ldimt
-               if (ifpsco(m - 1)) n = n + n1
+               if (ifpsco(m - 1)) n = n + lv
             end do
          end if
          end procedure
 
          module procedure zsave_rst
-         integer :: irst, m, n1, n2, torder
+         integer :: m, lv, lp, torder
+         character(len=*), parameter :: this_procedure = 'zsave_rst'
          character(len=128) :: msg
 
-         n1 = nx1*ny1*nz1*nelv
-         n2 = nx2*ny2*nz2*nelv
+         lv = nx1*ny1*nz1*nelv
+         lp = nx2*ny2*nz2*nelv
          torder = abs(param(27)) ! integration order in time
 
          ! sanity checks
-         if (self%nrst == torder - 1) then
+         if (irst == torder) then
             write(msg,'(2(A,I0),A)') 'Cannot save rst fields ', torder, ' for a simulation of temporal order ', torder, '.'
-            call log_error(msg, this_module, 'zsave_rst')
+            call log_error(msg, this_module, this_procedure)
          else
-            self%nrst = self%nrst + 1
-            write(msg,'(A,I0)') 'Saving rst fields: ', self%nrst
-            call log_debug(msg, this_module, 'zsave_rst')
+            write(msg,'(A,I0)') 'Saving rst fields: ', irst
+            call log_debug(msg, this_module, this_procedure)
          end if
-
-         irst = self%nrst
 
          select type (vec_rst)
          type is (nek_zvector)
             ! associate?
-            call copy(self%re_rst(irst)%vx, vec_rst%re%vx, n1)
-            call copy(self%im_rst(irst)%vx, vec_rst%im%vx, n1)
-            call copy(self%re_rst(irst)%vy, vec_rst%re%vy, n1)
-            call copy(self%im_rst(irst)%vy, vec_rst%im%vy, n1)
+            call copy(self%re_rst(irst)%vx, vec_rst%re%vx, lv)
+            call copy(self%im_rst(irst)%vx, vec_rst%im%vx, lv)
+            call copy(self%re_rst(irst)%vy, vec_rst%re%vy, lv)
+            call copy(self%im_rst(irst)%vy, vec_rst%im%vy, lv)
             if (if3d) then
-               call copy(self%re_rst(irst)%vz, vec_rst%re%vz, n1)
-               call copy(self%im_rst(irst)%vz, vec_rst%im%vz, n1)
+               call copy(self%re_rst(irst)%vz, vec_rst%re%vz, lv)
+               call copy(self%im_rst(irst)%vz, vec_rst%im%vz, lv)
             end if
-            call copy(self%re_rst(irst)%pr, vec_rst%re%pr, n2)
-            call copy(self%im_rst(irst)%pr, vec_rst%im%pr, n2)
+            call copy(self%re_rst(irst)%pr, vec_rst%re%pr, lp)
+            call copy(self%im_rst(irst)%pr, vec_rst%im%pr, lp)
 
             if (ifto) then
-               call copy(self%re_rst(irst)%theta(:, 1), vec_rst%re%theta(:, 1), n1)
-               call copy(self%im_rst(irst)%theta(:, 1), vec_rst%im%theta(:, 1), n1)
+               call copy(self%re_rst(irst)%theta(:, 1), vec_rst%re%theta(:, 1), lv)
+               call copy(self%im_rst(irst)%theta(:, 1), vec_rst%im%theta(:, 1), lv)
             end if
             if (ldimt > 1) then
                do m = 2, ldimt
                   if (ifpsco(m - 1)) then
-                     call copy(self%re_rst(irst)%theta(:, m), vec_rst%re%theta(:, m), n1)
-                     call copy(self%im_rst(irst)%theta(:, m), vec_rst%im%theta(:, m), n1)
+                     call copy(self%re_rst(irst)%theta(:, m), vec_rst%re%theta(:, m), lv)
+                     call copy(self%im_rst(irst)%theta(:, m), vec_rst%im%theta(:, m), lv)
                   end if
                end do
             end if
 
          class default
-            call type_error('vec_rst','nek_zvector','IN',this_module,'zsave_rst')
+            call type_error('vec_rst','nek_zvector','IN', this_module, this_procedure)
          end select
          end procedure
    
          module procedure zget_rst
-         integer :: m, n1, n2
+         integer :: m, lv, lp
+         character(len=*), parameter :: this_procedure = 'zget_rst'
          character(len=128) :: msg
 
-         n1 = nx1*ny1*nz1*nelv
-         n2 = nx2*ny2*nz2*nelv
+         lv = nx1*ny1*nz1*nelv
+         lp = nx2*ny2*nz2*nelv
 
          ! sanity checks
          if (irst < 1) then
             write(msg,'(A,I0)') 'Invalid input for irst: ', irst
-            call log_error(msg, this_module, 'zget_rst')
+            call log_error(msg, this_module, this_procedure)
          else if (irst > self%nrst) then
             write(msg,'(A,I0)') 'No rst field to retrieve: ', irst
-            call log_warning(msg, this_module, 'zget_rst')
+            call log_warning(msg, this_module, this_procedure)
          else
             write(msg,'(A,I0)') 'Retrieving rst fields: ', irst
-            call log_information(msg, this_module, 'zget_rst')
+            call log_information(msg, this_module, this_procedure)
          end if
 
          select type (vec_rst)
          type is (nek_zvector)
 
-            call copy(vec_rst%re%vx, self%re_rst(irst)%vx, n1)
-            call copy(vec_rst%im%vx, self%im_rst(irst)%vx, n1)
-            call copy(vec_rst%re%vy, self%re_rst(irst)%vy, n1)
-            call copy(vec_rst%im%vy, self%im_rst(irst)%vy, n1)
+            call copy(vec_rst%re%vx, self%re_rst(irst)%vx, lv)
+            call copy(vec_rst%im%vx, self%im_rst(irst)%vx, lv)
+            call copy(vec_rst%re%vy, self%re_rst(irst)%vy, lv)
+            call copy(vec_rst%im%vy, self%im_rst(irst)%vy, lv)
             if (if3d) then
-               call copy(vec_rst%re%vz, self%re_rst(irst)%vz, n1)
-               call copy(vec_rst%im%vz, self%im_rst(irst)%vz, n1)
+               call copy(vec_rst%re%vz, self%re_rst(irst)%vz, lv)
+               call copy(vec_rst%im%vz, self%im_rst(irst)%vz, lv)
             end if
-            call copy(vec_rst%re%pr, self%re_rst(irst)%pr, n2)
-            call copy(vec_rst%im%pr, self%im_rst(irst)%pr, n2)
+            call copy(vec_rst%re%pr, self%re_rst(irst)%pr, lp)
+            call copy(vec_rst%im%pr, self%im_rst(irst)%pr, lp)
             if (ifto) then
-               call copy(vec_rst%re%theta(:, 1), self%re_rst(irst)%theta(:, 1), n1)
-               call copy(vec_rst%im%theta(:, 1), self%im_rst(irst)%theta(:, 1), n1)
+               call copy(vec_rst%re%theta(:, 1), self%re_rst(irst)%theta(:, 1), lv)
+               call copy(vec_rst%im%theta(:, 1), self%im_rst(irst)%theta(:, 1), lv)
             end if
             if (ldimt > 1) then
                do m = 2, ldimt
                   if (ifpsco(m - 1)) then
-                     call copy(vec_rst%re%theta(:, m), self%re_rst(irst)%theta(:, m), n1)
-                     call copy(vec_rst%im%theta(:, m), self%im_rst(irst)%theta(:, m), n1)
+                     call copy(vec_rst%re%theta(:, m), self%re_rst(irst)%theta(:, m), lv)
+                     call copy(vec_rst%im%theta(:, m), self%im_rst(irst)%theta(:, m), lv)
                   end if
                end do
             end if
 
          class default
-            call type_error('vec_rst','nek_zvector','OUT',this_module,'zget_rst')
+            call type_error('vec_rst','nek_zvector','OUT',this_module, this_procedure)
          end select
          end procedure
 

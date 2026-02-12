@@ -27,12 +27,12 @@
             real(kind=dp), dimension(lv) :: vx, vy, vz
             real(kind=dp), dimension(lp) :: pr
             real(kind=dp), dimension(lv, ldimt) :: theta
-            real(kind=dp), dimension(lv,lorder-1), private :: vxrst = 0.0_dp
-            real(kind=dp), dimension(lv,lorder-1), private :: vyrst = 0.0_dp
-            real(kind=dp), dimension(lv,lorder-1), private :: vzrst = 0.0_dp
-            real(kind=dp), dimension(lp,lorder-1), private :: prrst = 0.0_dp
-            real(kind=dp), dimension(lv,lorder-1,ldimt), private :: thetarst = 0.0_dp
-            integer, private :: nrst = 0
+            real(kind=dp), dimension(lv,lorder-1) :: vxrst = 0.0_dp
+            real(kind=dp), dimension(lv,lorder-1) :: vyrst = 0.0_dp
+            real(kind=dp), dimension(lv,lorder-1) :: vzrst = 0.0_dp
+            real(kind=dp), dimension(lp,lorder-1) :: prrst = 0.0_dp
+            real(kind=dp), dimension(lv,lorder-1,ldimt) :: thetarst = 0.0_dp
+            integer :: nrst = 0
          contains
             private
             ! required basic type-bound procedures
@@ -92,9 +92,10 @@
                class(nek_dvector), intent(in) :: self
             end function
             
-            module subroutine dsave_rst(self, vec_rst)
+            module subroutine dsave_rst(self, vec_rst, irst)
                class(nek_dvector), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_rst
+               integer, intent(in) :: irst
             end subroutine
             
             module subroutine dget_rst(self, vec_rst, irst)
@@ -189,9 +190,10 @@
                class(nek_ext_dvector), intent(in) :: self
             end function
 
-            module subroutine ext_dsave_rst(self, vec_rst)
+            module subroutine ext_dsave_rst(self, vec_rst, irst)
                class(nek_ext_dvector), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_rst
+               integer, intent(in) :: irst
             end subroutine
 
             module subroutine ext_dget_rst(self, vec_rst, irst)
@@ -279,9 +281,10 @@
                class(nek_zvector), intent(in) :: self
             end function
 
-            module subroutine zsave_rst(self, vec_rst)
+            module subroutine zsave_rst(self, vec_rst, irst)
                class(nek_zvector), intent(inout) :: self
                class(abstract_vector_cdp), intent(in) :: vec_rst
+               integer, intent(in) :: irst
             end subroutine
 
             module subroutine zget_rst(self, vec_rst, irst)

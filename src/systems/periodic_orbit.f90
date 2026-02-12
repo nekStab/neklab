@@ -2,12 +2,15 @@
          implicit none
       contains
          module procedure nonlinear_map_UPO
-      ! internal
+         character(len=*), parameter :: this_procedure = 'nonlinear_map_UPO'
          character(len=128) :: msg
          select type (vec_in)
          type is (nek_ext_dvector)
             select type (vec_out)
             type is (nek_ext_dvector)
+
+      ! Set the initial condition for the nonlinear solver.
+               call ext_vec2nek(vx, vy, vz, pr, t, vec_in)
 
       ! Set appropriate tolerances and Nek status.
                call setup_nonlinear_solver(recompute_dt = .true., 
@@ -16,10 +19,7 @@
      &                                     vtol         = atol*0.1,
      &                                     ptol         = atol*0.1)
                write (msg, '(A,F9.6)') 'Current period estimate, T = ', vec_in%T
-               call nek_log_message(msg, this_module, 'nonlinear_map_UPO')
-
-      ! Set the initial condition for the nonlinear solver.
-               call ext_vec2nek(vx, vy, vz, pr, t, vec_in)
+               call nek_log_message(msg, this_module, this_procedure)
 
       ! Integrate the nonlinear equations forward
                time = 0.0_dp
@@ -37,23 +37,28 @@
                call vec_out%sub(vec_in)
 
             class default
-               call type_error('vec_out','nek_ext_dvector','OUT',this_module,'nonlinear_map_UPO')
+               call type_error('vec_out','nek_ext_dvector','OUT',this_module,this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_ext_dvector','IN',this_module,'nonlinear_map_UPO')
+            call type_error('vec_in','nek_ext_dvector','IN',this_module,this_procedure)
          end select
          end procedure nonlinear_map_UPO
       
          module procedure jac_direct_map
-      ! internal
+         character(len=*), parameter :: this_procedure = 'jac_direct_map'
+         integer :: nrst
          real(dp) :: atol
          type(nek_ext_dvector) :: vec
          select type (vec_in)
          type is (nek_ext_dvector)
             select type (vec_out)
             type is (nek_ext_dvector)
-
+               nrst = abs(param(27)) - 1
                atol = param(22)
+
+      ! Set baseflow.
+               call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
+
       ! Ensure correct nek status -> set end time.
                call setup_linear_solver(solve_baseflow = .true.,
      &                                  transpose      = .false.,
@@ -63,22 +68,25 @@
      &                                  vtol           = atol*0.1,
      &                                  ptol           = atol*0.1)
 
-      ! Set baseflow.
-               call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
-
       ! Set the initial condition for the linearized solver.
                call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
-
+      
       ! Intgrate the coupled equations forward
                time = 0.0_dp
                do istep = 1, nsteps
 
                   call nek_advance()
 
+                  ! Set restart fields if present.
+                  if (istep <= nrst) call self%get_rst(vec_in, istep)
+
                end do
 
       ! Copy the final solution to vector.
                call nek2ext_vec(vec_out, vxp, vyp, vzp, prp, tp)
+
+      ! Compute restart fields.
+               call self%compute_rst(vec_out, nrst)
 
       ! Evaluate [ exp(tau*J) - I ] @ dx.
                call vec_out%sub(vec_in)
@@ -99,22 +107,26 @@
                param(21) = atol
 
             class default
-               call type_error('vec_out','nek_ext_dvector','OUT',this_module,'jac_direct_map')
+               call type_error('vec_out','nek_ext_dvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_ext_dvector','IN',this_module,'jac_direct_map')
+            call type_error('vec_in','nek_ext_dvector','IN',this_module, this_procedure)
          end select
          end procedure jac_direct_map
       
          module procedure jac_adjoint_map
-      ! internal
+         character(len=*), parameter :: this_procedure = 'jac_adjoint_map'
+         integer :: nrst
          real(dp) :: atol
          type(nek_ext_dvector) :: vec
          select type (vec_in)
          type is (nek_ext_dvector)
             select type (vec_out)
             type is (nek_ext_dvector)
+               nrst = abs(param(27)) - 1
                atol = param(22)
+      ! Set baseflow.
+               call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
 
       ! Ensure correct nek status -> set end time
                call setup_linear_solver(solve_baseflow = .true.,
@@ -125,9 +137,6 @@
      &                                  vtol           = atol*0.5,
      &                                  ptol           = atol*0.5)
 
-      ! Set baseflow.
-               call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
-
       ! Set the initial condition for the linearized solver.
                call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
 
@@ -137,10 +146,16 @@
 
                   call nek_advance()
 
+                  ! Set restart fields if present.
+                  if (istep <= nrst) call self%get_rst(vec_in, istep)
+
                end do
 
       ! Copy the final solution to vector.
                call nek2ext_vec(vec_out, vxp, vyp, vzp, prp, tp)
+
+      ! Compute restart fields.
+               call self%compute_rst(vec_out, nrst)
 
       ! Evaluate [ exp(tau*J) - I ] @ dx.
                call vec_out%sub(vec_in)
@@ -160,10 +175,55 @@
                param(21) = atol
             
             class default
-               call type_error('vec_out','nek_ext_dvector','OUT',this_module,'jac_adjoint_map')
+               call type_error('vec_out','nek_ext_dvector','OUT',this_module, this_procedure)
             end select
          class default
-            call type_error('vec_in','nek_ext_dvector','IN',this_module,'jac_adjoint_map')
+            call type_error('vec_in','nek_ext_dvector','IN',this_module, this_procedure)
          end select
          end procedure jac_adjoint_map
+
+         module procedure jac_compute_rst
+            ! internal
+            character(len=*), parameter :: this_procedure = 'jac_compute_rst'
+            type(nek_ext_dvector) :: vec_rst
+            character(len=128) :: msg
+            integer :: irst, itmp
+            real(dp) :: rtmp
+            select type(vec_out)
+            type is (nek_ext_dvector)
+               write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
+               call nek_log_debug(msg, this_module, this_procedure)
+               ! We don't need to reset the end time but we do it to get a clean logfile
+               itmp = nsteps
+               rtmp = time
+               call setup_linear_solver(endtime = time + nrst*dt)
+               nsteps = itmp
+               do istep = nsteps + 1, nsteps + nrst
+                  call nek_advance()
+                  irst = istep - nsteps
+                  call nek2ext_vec(vec_rst, vxp, vyp, vzp, prp, tp)
+                  call vec_out%save_rst(vec_rst, irst)
+               end do
+               ! Reset iteration count and time
+               istep = itmp
+               time  = rtmp
+            class default
+               call type_error('vec_out','nek_ext_dvector','OUT',this_module, this_procedure)
+            end select
+         end procedure
+
+         module procedure jac_get_rst
+            character(len=*), parameter :: this_procedure = 'jac_get_rst'
+            type(nek_ext_dvector) :: vec_rst
+            character(len=128) :: msg
+            select type(vec_in)
+            type is (nek_ext_dvector)
+               if (vec_in%has_rst_fields()) then
+                  call vec_in%get_rst(vec_rst, istep)
+                  call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
+               end if
+            class default
+               call type_error('vec_in','nek_ext_dvector','IN',this_module, this_procedure)
+            end select
+         end procedure
       end submodule

@@ -6,7 +6,7 @@
          use LightKrylov, only: gmres_rdp
          use LightKrylov, only: initialize_krylov_subspace, orthonormalize_basis, zero_basis, rand_basis
          use LightKrylov, only: linear_combination, innerprod
-         use LightKrylov, only: newton, newton_dp_opts, GMRES_dp_opts
+         use LightKrylov, only: newton, newton_dp_opts
          use LightKrylov_Logger
          use LightKrylov_Timing, only: timer => global_lightkrylov_timer
          use LightKrylov_AbstractVectors, only: abstract_vector_rdp
@@ -99,9 +99,9 @@
       ! Finalize timing
             call logger_setup(logfile='lightkrylov_tmr.log', nio=0, log_level=warning_level, log_stdout=.false., log_timestamp=.true.)
             call timer%finalize()
-      
-		call nek_log_message('Exiting eigenvalue computation.', this_module, this_procedure)
-      
+
+            call nek_log_message('Exiting eigenvalue computation.', this_module, this_procedure)
+            
          end subroutine linear_stability_analysis_fixed_point
       
          subroutine transient_growth_analysis_fixed_point(exptA, nsv, kdim)
@@ -146,6 +146,11 @@
             file_prefix = "prt"; call outpost_dnek(V(:nsv), file_prefix)
             file_prefix = "rsp"; call outpost_dnek(U(:nsv), file_prefix)
 
+      ! Finalize exptA timings
+            call exptA%finalize_timer()
+      ! Finalize timing
+            call timer%finalize()
+
             call nek_log_message('Exiting transient growth computation.', this_module, this_procedure)
       
          end subroutine transient_growth_analysis_fixed_point
@@ -164,27 +169,29 @@
       
       ! Misc
             character(len=*), parameter :: this_procedure = 'newton_main'
-            integer :: info, tol_mode_
-            type(newton_dp_opts) :: newton_opts
-            type(gmres_dp_opts) :: GMRES_opts
-            character(len=3) :: file_prefix
             type(newton_dp_metadata) :: meta
+            type(newton_dp_opts) :: opts
+            character(len=3) :: file_prefix
+            integer :: info, tol_mode_
       
-		tol_mode_ = optval(tol_mode, 1)
+      ! Optional arguments
+		      tol_mode_ = optval(tol_mode, 1)
 
-      	call nek_log_message('Starting newton iteration.', this_module, this_procedure)
+      ! Set up logging
+            call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+            ! Initialize timers
+            call timer%initialize()
+            call timer%add_timer('Newton Fixed-Point Iteration', start=.true.)
       
       ! Define options for the Newton solver
-         newton_opts = newton_dp_opts(maxiter=40, ifbisect=.false.)
-      ! Define options for the GMRES solver
-         GMRES_opts = GMRES_dp_opts(kdim = 30, maxiter = 10)
+            opts = newton_dp_opts(maxiter=40, ifbisect=.false.)
       
       ! Call to LightKrylov.
             if (tol_mode_ == 1) then
-               call newton(sys, bf, GMRES_rdp, info, atol=tol, options=newton_opts, linear_solver_options=GMRES_opts, scheduler=nek_constant_tol, meta=meta)
+               call newton(sys, bf, gmres_rdp, info, atol=tol, options=opts, scheduler=nek_constant_tol, meta=meta)
             else
-		   call newton(sys, bf, GMRES_rdp, info, atol=tol, options=newton_opts, linear_solver_options=GMRES_opts, scheduler=nek_dynamic_tol, meta=meta)
-		end if
+		         call newton(sys, bf, gmres_rdp, info, atol=tol, options=opts, scheduler=nek_dynamic_tol, meta=meta)
+		      end if
       
       ! Outpost initial condition.
             file_prefix = 'nwt'
@@ -194,7 +201,13 @@
                input_is_fixed_point = meta%input_is_fixed_point
             end if
 
-		call nek_log_message('Exiting newton iteration.', this_module, this_procedure)
+      ! Finalize sys & jacobian timings
+            call sys%finalize_timer()
+            call sys%jacobian%finalize_timer()
+      ! Finalize timing
+            call timer%finalize()
+
+		      call nek_log_message('Exiting newton iteration.', this_module, this_procedure)
       
          end subroutine newton_fixed_point_iteration
       
@@ -222,6 +235,9 @@
       
       ! Set up logging
             call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      ! Initialize timers
+            call timer%initialize()
+            call timer%add_timer('Optimally Time-Dependent Modes Analysis', start=.true.)
       
       ! initialize OTD structure
             call OTD%init(opts)
@@ -318,6 +334,11 @@
 
                end if ! istep >= otd_startstep
             end do ! istep ... nsteps
+
+      ! Finalize matvec timings
+            call OTD%finalize_timer()
+      ! Finalize timing
+            call timer%finalize()
 
             call nek_log_message('Exiting OTD computation.', this_module, this_procedure)
          end subroutine otd_analysis
