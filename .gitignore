@@ -55,3 +55,4 @@ examples/**/*.f
 **/*.log1.*
 **/logfile
 **/SESSION.NAME
+**/__pycache__/*
