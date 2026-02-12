@@ -161,15 +161,9 @@ if [[ $1 != "clean" ]]; then
  make -j4 2>&1 | tee -a build.log
  BUILD_RESULT=$?
  
- # Retry up to 5 times if needed (race condition in parallel build)
- ATTEMPT=1 # we try then up to 8 passes (1st try + 7 retries)
- # TODO: improve order of files in makefile_neklab to minimize this
- while [ $BUILD_RESULT -ne 0 ] && [ $ATTEMPT -lt 8 ]; do
-   ATTEMPT=$((ATTEMPT + 1))
-   echo "Retry $ATTEMPT/8..."
-   make -j4 2>&1 | tee -a build.log
-   BUILD_RESULT=$?
- done
+ if [ $BUILD_RESULT -ne 0 ]; then
+   make -j1 2>&1 | tee -a build.log
+ fi
  set +o pipefail
 fi
 if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
