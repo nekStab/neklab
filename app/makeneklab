@@ -152,30 +152,24 @@ echo ""
 set +a -e
 $NEK_SOURCE_ROOT/bin/nekconfig $@
 if [[ $1 != "clean" ]]; then
- $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
- set -o pipefail
- touch $1.usr 
- 
-  # First try with 4 procs (default for nek5000)
- set +e  # Don't exit on error (otherwise we can't retry)
- make -j1 2>&1 | tee -a build.log
- #BUILD_RESULT=$?
- 
- # Retry up to 5 times if needed (race condition in parallel build)
- #ATTEMPT=1 # we try then up to 8 passes (1st try + 7 retries)
- # TODO: improve order of files in makefile_neklab to minimize this
- #while [ $BUILD_RESULT -ne 0 ] && [ $ATTEMPT -lt 8 ]; do
- #  ATTEMPT=$((ATTEMPT + 1))
- #  echo "Retry $ATTEMPT/8..."
- #  make -j4 2>&1 | tee -a build.log
- #  BUILD_RESULT=$?
- #done
- 
- set +o pipefail
- if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
-     mv *.mod obj
-     mv *.smod obj 2>/dev/null || true
- fi
+   $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
+   set -o pipefail
+   touch $1.usr 
+   
+   # First try with 4 procs (default for nek5000)
+   set +e  # Don't exit on error (otherwise we can't retry)
+   make -j4 2>&1 | tee -a build.log
+   BUILD_RESULT=$?
+   
+   if [ $BUILD_RESULT -ne 0 ]; then
+      make -j1 2>&1 | tee -a build.log
+   done
+   
+   set +o pipefail
+   if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
+      mv *.mod obj
+      mv *.smod obj 2>/dev/null || true
+   fi
 fi
 
 if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
