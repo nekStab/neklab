@@ -34,9 +34,20 @@
          end procedure
       
          module procedure nek_ext_dzero
-         call self%scal(0.0_dp)
-      ! clear restart fields if present
+         self%vx = 0.0_dp
+         self%vy = 0.0_dp
+         self%vz = 0.0_dp
+         self%pr = 0.0_dp
+         self%theta = 0.0_dp
+         self%T = 0.0_dp
+         ! clear restart fields
          self%nrst = 0
+         self%vxrst = 0.0_dp
+         self%vyrst = 0.0_dp
+         self%vzrst = 0.0_dp
+         self%prrst = 0.0_dp
+         self%thetarst = 0.0_dp
+         self%Trst = 0.0_dp
          end procedure
       
          module procedure nek_ext_drand
@@ -115,20 +126,20 @@
          end procedure
       
          module procedure nek_ext_dscal
-         integer :: irst, m, lv, lp
+         integer :: irst, m, lvn, lpn
 
-         lv = nx1*ny1*nz1*nelv
-         lp = nx2*ny2*nz2*nelv
+         lvn = nx1*ny1*nz1*nelv
+         lpn = nx2*ny2*nz2*nelv
 
-         call           cmult(self%vx,          alpha, lv)
-         call           cmult(self%vy,          alpha, lv)
-         if (if3d) call cmult(self%vz,          alpha, lv)
-         call           cmult(self%pr,          alpha, lp)
-         if (ifto) call cmult(self%theta(:, 1), alpha, lv)
+         call           cmult(self%vx,          alpha, lvn)
+         call           cmult(self%vy,          alpha, lvn)
+         if (if3d) call cmult(self%vz,          alpha, lvn)
+         call           cmult(self%pr,          alpha, lpn)
+         if (ifto) call cmult(self%theta(:, 1), alpha, lvn)
          if (ldimt > 1) then
             do m = 2, ldimt
                if (ifpsco(m - 1)) then
-                  call  cmult(self%theta(:, m), alpha, lv)
+                  call  cmult(self%theta(:, m), alpha, lvn)
                end if
             end do
          end if
@@ -137,15 +148,15 @@
 
          do irst = 1, self%nrst
 
-            call           cmult(self%vxrst(:, irst),       alpha, lv)
-            call           cmult(self%vyrst(:, irst),       alpha, lv)
-            if (if3d) call cmult(self%vzrst(:, irst),       alpha, lv)
-            call           cmult(self%prrst(:, irst),       alpha, lp)
-            if (ifto) call cmult(self%thetarst(:, irst, 1), alpha, lv)
+            call           cmult(self%vxrst(:, irst),       alpha, lvn)
+            call           cmult(self%vyrst(:, irst),       alpha, lvn)
+            if (if3d) call cmult(self%vzrst(:, irst),       alpha, lvn)
+            call           cmult(self%prrst(:, irst),       alpha, lpn)
+            if (ifto) call cmult(self%thetarst(:, irst, 1), alpha, lvn)
             if (ldimt > 1) then
                do m = 2, ldimt
                   if (ifpsco(m - 1)) then
-                     call  cmult(self%thetarst(:, irst, m), alpha, lv)
+                     call  cmult(self%thetarst(:, irst, m), alpha, lvn)
                   end if
                end do
             end if
@@ -156,25 +167,25 @@
          end procedure
       
          module procedure nek_ext_daxpby
-         integer :: irst, m, lv, lp
+         integer :: irst, m, lvn, lpn
 
-         lv = nx1*ny1*nz1*nelv
-         lp = nx2*ny2*nz2*nelv
+         lvn = nx1*ny1*nz1*nelv
+         lpn = nx2*ny2*nz2*nelv
 
          call self%scal(beta)
 
          select type (vec)
          type is (nek_ext_dvector)
 
-            call           add2s2(self%vx,          vec%vx,          alpha, lv)
-            call           add2s2(self%vy,          vec%vy,          alpha, lv)
-            if (if3d) call add2s2(self%vz,          vec%vz,          alpha, lv)
-            call           add2s2(self%pr,          vec%pr,          alpha, lp)
-            if (ifto) call add2s2(self%theta(:, 1), vec%theta(:, 1), alpha, lv)
+            call           add2s2(self%vx,          vec%vx,          alpha, lvn)
+            call           add2s2(self%vy,          vec%vy,          alpha, lvn)
+            if (if3d) call add2s2(self%vz,          vec%vz,          alpha, lvn)
+            call           add2s2(self%pr,          vec%pr,          alpha, lpn)
+            if (ifto) call add2s2(self%theta(:, 1), vec%theta(:, 1), alpha, lvn)
             if (ldimt > 1) then
                do m = 2, ldimt
                   if (ifpsco(m - 1)) then
-                     call  add2s2(self%theta(:, m), vec%theta(:, m), alpha, lv)
+                     call  add2s2(self%theta(:, m), vec%theta(:, m), alpha, lvn)
                   end if
                end do
             end if
@@ -183,15 +194,15 @@
 
             do irst = 1, self%nrst
 
-               call           add2s2(self%vxrst(:, irst),       vec%vx,          alpha, lv)
-               call           add2s2(self%vyrst(:, irst),       vec%vy,          alpha, lv)
-               if (if3d) call add2s2(self%vzrst(:, irst),       vec%vz,          alpha, lv)
-               call           add2s2(self%prrst(:, irst),       vec%pr,          alpha, lp)
-               if (ifto) call add2s2(self%thetarst(:, irst, 1), vec%theta(:, 1), alpha, lv)
+               call           add2s2(self%vxrst(:, irst),       vec%vx,          alpha, lvn)
+               call           add2s2(self%vyrst(:, irst),       vec%vy,          alpha, lvn)
+               if (if3d) call add2s2(self%vzrst(:, irst),       vec%vz,          alpha, lvn)
+               call           add2s2(self%prrst(:, irst),       vec%pr,          alpha, lpn)
+               if (ifto) call add2s2(self%thetarst(:, irst, 1), vec%theta(:, 1), alpha, lvn)
                if (ldimt > 1) then
                   do m = 2, ldimt
                      if (ifpsco(m - 1)) then
-                        call  add2s2(self%thetarst(:, irst, m), vec%theta(:, m), alpha, lv)
+                        call  add2s2(self%thetarst(:, irst, m), vec%theta(:, m), alpha, lvn)
                      end if
                   end do
                end if
@@ -210,21 +221,21 @@
       
          module procedure nek_ext_ddot
          real(kind=dp), external :: glsc3
-         integer :: n, m
+         integer :: lvn, m
 
-         n = nx1*ny1*nz1*nelv
+         lvn = nx1*ny1*nz1*nelv
 
          select type (vec)
          type is (nek_ext_dvector)
 
-            alpha =                   glsc3(self%vx,          vec%vx,          bm1, n)
-            alpha =           alpha + glsc3(self%vy,          vec%vy,          bm1, n)
-            if (if3d) alpha = alpha + glsc3(self%vz,          vec%vz,          bm1, n)
-            if (ifto) alpha = alpha + glsc3(self%theta(:, 1), vec%theta(:, 1), bm1, n)
+            alpha =                   glsc3(self%vx,          vec%vx,          bm1, lvn)
+            alpha =           alpha + glsc3(self%vy,          vec%vy,          bm1, lvn)
+            if (if3d) alpha = alpha + glsc3(self%vz,          vec%vz,          bm1, lvn)
+            if (ifto) alpha = alpha + glsc3(self%theta(:, 1), vec%theta(:, 1), bm1, lvn)
             if (ldimt > 1) then
                do m = 2, ldimt
                   if (ifpsco(m - 1)) then
-                     alpha =  alpha + glsc3(self%theta(:, m), vec%theta(:, m), bm1, n)
+                     alpha =  alpha + glsc3(self%theta(:, m), vec%theta(:, m), bm1, lvn)
                   end if
                end do
             end if
@@ -238,25 +249,26 @@
          end procedure
       
          module procedure nek_ext_dsize
-         integer :: lv, m
-         lv = nx1*ny1*nz1*nelv
-         n = 2*lv + nx2*ny2*nz2*nelv + 1
-         if (if3d) n = n + lv
-         if (ifto) n = n + lv
+         integer :: lvn, lpn, m
+         lvn = nx1*ny1*nz1*nelv
+         lpn = nx2*ny2*nz2*nelv
+         n = 2*lv + lpn + 1
+         if (if3d) n = n + lvn
+         if (ifto) n = n + lvn
          if (ldimt > 1) then
             do m = 2, ldimt
-               if (ifpsco(m - 1)) n = n + lv
+               if (ifpsco(m - 1)) n = n + lvn
             end do
          end if
          end procedure
 
          module procedure ext_dsave_rst
-         integer :: m, lv, lp, torder
+         integer :: m, lvn, lpn, torder
          character(len=*), parameter :: this_procedure = 'ext_dsave_rst'
          character(len=128) :: msg
 
-         lv = nx1*ny1*nz1*nelv
-         lp = nx2*ny2*nz2*nelv
+         lvn = nx1*ny1*nz1*nelv
+         lpn = nx2*ny2*nz2*nelv
          torder = abs(param(27)) ! integration order in time
 
          ! sanity checks
@@ -273,15 +285,15 @@
          select type (vec_rst)
          type is (nek_ext_dvector)
 
-            call           copy(self%vxrst(:, irst),       vec_rst%vx,          lv)
-            call           copy(self%vyrst(:, irst),       vec_rst%vy,          lv)
-            if (if3d) call copy(self%vzrst(:, irst),       vec_rst%vz,          lv)
-            call           copy(self%prrst(:, irst),       vec_rst%pr,          lp)
-            if (ifto) call copy(self%thetarst(:, irst, 1), vec_rst%theta(:, 1), lv)
+            call           copy(self%vxrst(:, irst),       vec_rst%vx,          lvn)
+            call           copy(self%vyrst(:, irst),       vec_rst%vy,          lvn)
+            if (if3d) call copy(self%vzrst(:, irst),       vec_rst%vz,          lvn)
+            call           copy(self%prrst(:, irst),       vec_rst%pr,          lpn)
+            if (ifto) call copy(self%thetarst(:, irst, 1), vec_rst%theta(:, 1), lvn)
             if (ldimt > 1) then
                do m = 2, ldimt
                   if (ifpsco(m - 1)) then
-                     call  copy(self%thetarst(:, irst, m), vec_rst%theta(:, m), lv)
+                     call  copy(self%thetarst(:, irst, m), vec_rst%theta(:, m), lvn)
                   end if
                end do
             end if
@@ -294,12 +306,12 @@
          end procedure
 
          module procedure ext_dget_rst
-         integer :: m, lv, lp
+         integer :: m, lvn, lpn
          character(len=*), parameter :: this_procedure = 'ext_dget_rst'
          character(len=128) :: msg
 
-         lv = nx1*ny1*nz1*nelv
-         lp = nx2*ny2*nz2*nelv
+         lvn = nx1*ny1*nz1*nelv
+         lpn = nx2*ny2*nz2*nelv
 
          ! sanity checks
          if (irst < 1) then
@@ -319,14 +331,14 @@
          select type (vec_rst)
          type is (nek_ext_dvector)
 
-            call copy(vec_rst%vx, self%vxrst(:,irst), lv)
-            call copy(vec_rst%vy, self%vyrst(:,irst), lv)
-            if (if3d) call copy(vec_rst%vz, self%vzrst(:, irst), lv)
-            call copy(vec_rst%pr, self%prrst(:, irst), lp)
-            if (ifto) call copy(vec_rst%theta(:, 1), self%thetarst(:, irst, 1), lv)
+            call copy(vec_rst%vx, self%vxrst(:,irst), lvn)
+            call copy(vec_rst%vy, self%vyrst(:,irst), lvn)
+            if (if3d) call copy(vec_rst%vz, self%vzrst(:, irst), lvn)
+            call copy(vec_rst%pr, self%prrst(:, irst), lpn)
+            if (ifto) call copy(vec_rst%theta(:, 1), self%thetarst(:, irst, 1), lvn)
             if (ldimt > 1) then
                do m = 2, ldimt
-                  if (ifpsco(m - 1)) call copy(vec_rst%theta(:, m), self%thetarst(:, irst, m), lv)
+                  if (ifpsco(m - 1)) call copy(vec_rst%theta(:, m), self%thetarst(:, irst, m), lvn)
                end do
             end if
 

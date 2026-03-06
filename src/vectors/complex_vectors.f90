@@ -33,8 +33,30 @@
       !-----------------------------------------
       
          module procedure nek_zzero
-         call self%scal(zero_cdp)
-      ! clear restart fields if present
+         integer :: i
+         ! this causes an internal compiler error, switch to manual
+         !call self%re%zero()
+         !call self%im%zero()
+         self%re%vx = 0.0_dp
+         self%re%vy = 0.0_dp
+         self%re%vz = 0.0_dp
+         self%re%pr = 0.0_dp
+         self%re%theta = 0.0_dp
+         self%re%vyrst = 0.0_dp
+         self%re%vxrst = 0.0_dp
+         self%re%vzrst = 0.0_dp
+         self%re%prrst = 0.0_dp
+         self%re%thetarst = 0.0_dp
+         self%im%vx = 0.0_dp
+         self%im%vy = 0.0_dp
+         self%im%vz = 0.0_dp
+         self%im%pr = 0.0_dp
+         self%im%theta = 0.0_dp
+         self%im%vyrst = 0.0_dp
+         self%im%vxrst = 0.0_dp
+         self%im%vzrst = 0.0_dp
+         self%im%prrst = 0.0_dp
+         self%im%thetarst = 0.0_dp
          self%nrst = 0
          end procedure
       
@@ -55,10 +77,6 @@
       ! Scale complex vector.
          call nek_daxpby(alpha%re, wrk%im, -alpha%im, self%re)
          call nek_daxpby(alpha%re, wrk%re,  alpha%im, self%im)
-         do i = 1, self%nrst
-            call nek_daxpby(alpha%re, wrk%im_rst(i), -alpha%im, self%re_rst(i))
-            call nek_daxpby(alpha%re, wrk%re_rst(i),  alpha%im, self%im_rst(i))
-         end do
          end procedure
       
          module procedure nek_zaxpby
@@ -74,11 +92,6 @@
       ! Vector addition.
             call nek_daxpby(1.0_dp, wrk%re, 1.0_dp, self%re)
             call nek_daxpby(1.0_dp, wrk%im, 1.0_dp, self%im)
-
-            do i = 1, self%nrst
-               call nek_daxpby(1.0_dp, wrk%re, 1.0_dp, self%re_rst(i))
-               call nek_daxpby(1.0_dp, wrk%im, 1.0_dp, self%im_rst(i))
-            end do
          class default
             call type_error('vec','nek_zvector','IN',this_module,'nek_zaxpby')
          end select
@@ -97,25 +110,26 @@
          end procedure
       
          module procedure nek_zsize
-         integer :: lv, m
-         lv = nx1*ny1*nz1*nelv
-         n = 2*lv + nx2*ny2*nz2*nelv
-         if (if3d) n = n + lv
-         if (ifto) n = n + lv
+         integer :: lvn, lpn, m
+         lvn = nx1*ny1*nz1*nelv
+         lpn = nx2*ny2*nz2*nelv
+         n = 2*lvn + lpn
+         if (if3d) n = n + lvn
+         if (ifto) n = n + lvn
          if (ldimt > 1) then
             do m = 2, ldimt
-               if (ifpsco(m - 1)) n = n + lv
+               if (ifpsco(m - 1)) n = n + lvn
             end do
          end if
          end procedure
 
          module procedure zsave_rst
-         integer :: m, lv, lp, torder
+         integer :: m, lvn, lpn, torder
          character(len=*), parameter :: this_procedure = 'zsave_rst'
          character(len=128) :: msg
 
-         lv = nx1*ny1*nz1*nelv
-         lp = nx2*ny2*nz2*nelv
+         lvn = nx1*ny1*nz1*nelv
+         lpn = nx2*ny2*nz2*nelv
          torder = abs(param(27)) ! integration order in time
 
          ! sanity checks
@@ -130,26 +144,26 @@
          select type (vec_rst)
          type is (nek_zvector)
             ! associate?
-            call copy(self%re_rst(irst)%vx, vec_rst%re%vx, lv)
-            call copy(self%im_rst(irst)%vx, vec_rst%im%vx, lv)
-            call copy(self%re_rst(irst)%vy, vec_rst%re%vy, lv)
-            call copy(self%im_rst(irst)%vy, vec_rst%im%vy, lv)
+            call copy(self%re%vxrst(:, irst), vec_rst%re%vx, lvn)
+            call copy(self%im%vxrst(:, irst), vec_rst%im%vx, lvn)
+            call copy(self%re%vyrst(:, irst), vec_rst%re%vy, lvn)
+            call copy(self%im%vyrst(:, irst), vec_rst%im%vy, lvn)
             if (if3d) then
-               call copy(self%re_rst(irst)%vz, vec_rst%re%vz, lv)
-               call copy(self%im_rst(irst)%vz, vec_rst%im%vz, lv)
+               call copy(self%re%vzrst(:, irst), vec_rst%re%vz, lvn)
+               call copy(self%im%vzrst(:, irst), vec_rst%im%vz, lvn)
             end if
-            call copy(self%re_rst(irst)%pr, vec_rst%re%pr, lp)
-            call copy(self%im_rst(irst)%pr, vec_rst%im%pr, lp)
+            call copy(self%re%prrst(:, irst), vec_rst%re%pr, lpn)
+            call copy(self%im%prrst(:, irst), vec_rst%im%pr, lpn)
 
             if (ifto) then
-               call copy(self%re_rst(irst)%theta(:, 1), vec_rst%re%theta(:, 1), lv)
-               call copy(self%im_rst(irst)%theta(:, 1), vec_rst%im%theta(:, 1), lv)
+               call copy(self%re%thetarst(:, irst, 1), vec_rst%re%theta(:, 1), lvn)
+               call copy(self%im%thetarst(:, irst, 1), vec_rst%im%theta(:, 1), lvn)
             end if
             if (ldimt > 1) then
                do m = 2, ldimt
                   if (ifpsco(m - 1)) then
-                     call copy(self%re_rst(irst)%theta(:, m), vec_rst%re%theta(:, m), lv)
-                     call copy(self%im_rst(irst)%theta(:, m), vec_rst%im%theta(:, m), lv)
+                     call copy(self%re%thetarst(:, irst, m), vec_rst%re%theta(:, m), lvn)
+                     call copy(self%im%thetarst(:, irst, m), vec_rst%im%theta(:, m), lvn)
                   end if
                end do
             end if
@@ -160,12 +174,12 @@
          end procedure
    
          module procedure zget_rst
-         integer :: m, lv, lp
+         integer :: m, lvn, lpn
          character(len=*), parameter :: this_procedure = 'zget_rst'
          character(len=128) :: msg
 
-         lv = nx1*ny1*nz1*nelv
-         lp = nx2*ny2*nz2*nelv
+         lvn = nx1*ny1*nz1*nelv
+         lpn = nx2*ny2*nz2*nelv
 
          ! sanity checks
          if (irst < 1) then
@@ -182,25 +196,25 @@
          select type (vec_rst)
          type is (nek_zvector)
 
-            call copy(vec_rst%re%vx, self%re_rst(irst)%vx, lv)
-            call copy(vec_rst%im%vx, self%im_rst(irst)%vx, lv)
-            call copy(vec_rst%re%vy, self%re_rst(irst)%vy, lv)
-            call copy(vec_rst%im%vy, self%im_rst(irst)%vy, lv)
+            call copy(vec_rst%re%vx, self%re%vxrst(:, irst), lvn)
+            call copy(vec_rst%im%vx, self%im%vxrst(:, irst), lvn)
+            call copy(vec_rst%re%vy, self%re%vyrst(:, irst), lvn)
+            call copy(vec_rst%im%vy, self%im%vyrst(:, irst), lvn)
             if (if3d) then
-               call copy(vec_rst%re%vz, self%re_rst(irst)%vz, lv)
-               call copy(vec_rst%im%vz, self%im_rst(irst)%vz, lv)
+               call copy(vec_rst%re%vz, self%re%vzrst(:, irst), lvn)
+               call copy(vec_rst%im%vz, self%im%vzrst(:, irst), lvn)
             end if
-            call copy(vec_rst%re%pr, self%re_rst(irst)%pr, lp)
-            call copy(vec_rst%im%pr, self%im_rst(irst)%pr, lp)
+            call copy(vec_rst%re%pr, self%re%prrst(:, irst), lpn)
+            call copy(vec_rst%im%pr, self%im%prrst(:, irst), lpn)
             if (ifto) then
-               call copy(vec_rst%re%theta(:, 1), self%re_rst(irst)%theta(:, 1), lv)
-               call copy(vec_rst%im%theta(:, 1), self%im_rst(irst)%theta(:, 1), lv)
+               call copy(vec_rst%re%theta(:, 1), self%re%thetarst(:, irst, 1), lvn)
+               call copy(vec_rst%im%theta(:, 1), self%im%thetarst(:, irst, 1), lvn)
             end if
             if (ldimt > 1) then
                do m = 2, ldimt
                   if (ifpsco(m - 1)) then
-                     call copy(vec_rst%re%theta(:, m), self%re_rst(irst)%theta(:, m), lv)
-                     call copy(vec_rst%im%theta(:, m), self%im_rst(irst)%theta(:, m), lv)
+                     call copy(vec_rst%re%theta(:, m), self%re%thetarst(:, irst, m), lvn)
+                     call copy(vec_rst%im%theta(:, m), self%im%thetarst(:, irst, m), lvn)
                   end if
                end do
             end if

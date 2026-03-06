@@ -100,7 +100,7 @@
             
             module subroutine dget_rst(self, vec_rst, irst)
                class(nek_dvector), intent(in) :: self
-               class(abstract_vector_rdp), intent(out) :: vec_rst
+               class(abstract_vector_rdp), intent(inout) :: vec_rst
                integer, intent(in) :: irst
             end subroutine
             
@@ -219,8 +219,6 @@
          type, extends(abstract_vector_cdp), public :: nek_zvector
             type(nek_dvector) :: re
             type(nek_dvector) :: im
-            type(nek_dvector), dimension(lorder-1), private :: re_rst
-            type(nek_dvector), dimension(lorder-1), private :: im_rst
             integer, private :: nrst
          contains
             private
