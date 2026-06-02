@@ -109,21 +109,26 @@
          module procedure exptA_compute_rst
             character(len=*), parameter :: this_procedure = 'exptA_compute_rst'
             type(nek_dvector) :: vec_rst
-            character(len=128) :: msg
+            integer :: irst, itmp
             real(dp) :: rtmp
             select type(vec_out)
             type is (nek_dvector)
                write(msg,'(A,I0,A)') 'Run ', nrst, ' extra step(s) to fill up restart arrays.'
                call nek_log_information(msg, this_module, this_procedure)
-               fintim = fintim + nrst*dt
+               ! We don't need to reset the end time but we do it to get a clean logfile
+               itmp = nsteps
+               rtmp = time
+               call setup_linear_solver(endtime = time + nrst*dt, silent = .true.)
+               nsteps = itmp
                do istep = nsteps + 1, nsteps + nrst
                   call nek_advance()
                   call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
                   call vec_out%save_rst(vec_rst, istep - nsteps)
                end do
-            class default
-               call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
-            end select
+               ! Reset iteration count and time
+               istep = itmp
+               time  = rtmp
+               call setup_linear_solver(endtime = time, silent = .true.)
          end procedure
 
          module procedure exptA_get_rst

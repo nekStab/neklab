@@ -165,7 +165,7 @@
                ! We don't need to reset the end time but we do it to get a clean logfile
                itmp = nsteps
                rtmp = time
-               call setup_linear_solver(endtime = time + nrst*dt)
+               call setup_linear_solver(endtime = time + nrst*dt, silent = .true.)
                nsteps = itmp
                do istep = nsteps + 1, nsteps + nrst
                   call nek_advance()
@@ -176,6 +176,7 @@
                ! Reset iteration count and time
                istep = itmp
                time  = rtmp
+               call setup_linear_solver(endtime = time, silent = .true.)
             class default
                call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
             end select
