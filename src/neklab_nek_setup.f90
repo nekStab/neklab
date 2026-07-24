@@ -213,7 +213,11 @@
                   nsteps = ceiling(param(10)/dt)
                   param(12) = dt
                end if
-               fintim = nsteps*dt
+               if (nsteps > 0 .and. dt > 0.0_dp) then
+                  fintim = nsteps*dt
+               else
+                  fintim = param(10)
+               end if
                param(12) = -abs(param(12))
                write (msg, '(A,E15.8)') padl('Force constant timestep: ', 30), -param(12)
                if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
@@ -305,7 +309,11 @@
                   write (msg, '(A,L15)') padl('OIFS: ', 20), ifchar
                   call nek_log_message(msg, this_module, this_procedure, nekfmt)
                else
-                  call nek_log_message('LINEAR MODE', this_module, this_procedure, nekfmt)
+                  if (ifadj) then
+                      call nek_log_message('LINEAR ADJOINT MODE', this_module, this_procedure, nekfmt)
+                  else
+                      call nek_log_message('LINEAR DIRECT MODE', this_module, this_procedure, nekfmt)
+                  end if
                end if
             else
                if (full_summary_) then
