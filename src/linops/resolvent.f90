@@ -31,6 +31,7 @@
       ! Compute forced-response with zero initial condition.
                b = evaluate_rhs(vec_in, self%omega, ifadj)
       ! Solve the linear system for the real part.
+               call vec_out%init()
                vec_out%re = solve_resolvent_real_part(exptA, b, ifadj)
       ! Evaluate the imaginary part.
                exptA%tau = tau/4.0_dp; call exptA%init()
@@ -61,6 +62,7 @@
       ! Compute forced-response with zero initial condition.
                b = evaluate_rhs(vec_in, self%omega, .true.)
       ! Solve the linear system for the real part.
+               call vec_out%init()
                vec_out%re = solve_resolvent_real_part(exptA, b, .true.)
       ! Evaluate the imaginary part.
                exptA%tau = tau/4.0_dp; call exptA%init()
@@ -92,6 +94,7 @@
       ! Time integration.
             call opzero(vxp, vyp, vzp)
             time = 0.0_dp; lastep = 0; fintim = param(10)
+            call resolvent_forcing%init()
             do istep = 1, nsteps
       ! Update the resolvent forcing for the corresponding time.
                alpha = exp(sign*im_cdp*omega*time)
@@ -102,6 +105,7 @@
       ! Nek5000 step.
                call nek_advance()
             end do
+            call b%init()
             call nek2vec(b, vxp, vyp, vzp, prp, tp)
       ! Cleanup
             call zero_neklab_forcing()
@@ -123,7 +127,7 @@
             real(dp) :: alpha
       ! Initialize S = I - exptA.
             S = axpby_linop_rdp(Id_rdp(), exptA, 1.0_dp, -1.0_dp)
-            call x%zero()
+            call x%init()
       ! GMRES call.
             call logger_setup(nio=0, log_level=information_level, log_stdout=.true., log_timestamp=.true.)
             opts = gmres_dp_opts(kdim=64)
@@ -147,6 +151,7 @@
             call vec2nek(vxp, vyp, vzp, prp, tp, x)
       ! Time-integration.
             time = 0.0_dp; lastep = 0; fintim = param(10)
+            call resolvent_forcing%init()
             do istep = 1, nsteps
       ! Update resolvent forcing.
                alpha = exp(sign*im_cdp*omega*time)
@@ -159,6 +164,7 @@
             end do
       ! Cleanup
             call zero_neklab_forcing()
+            call y%init()
             call nek2vec(y, vxp, vyp, vzp, prp, tp)
             if (adjoint) then
                ifadj = .false.; call bcast(ifadj, lsize)

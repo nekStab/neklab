@@ -26,6 +26,7 @@
                end do
 
       ! Extract the final solution to vector.
+               call vec_out%init()
                call nek2vec(vec_out, vx, vy, vz, pr, t)
 
       ! Evaluate residual F(X) - X.
@@ -42,6 +43,7 @@
          module procedure jac_exptA_matvec
          character(len=*), parameter :: this_procedure = 'jac_exptA_matvec'
          integer :: nrst
+         logical :: do_rst
          real(dp) :: atol
          select type (vec_in)
          type is (nek_dvector)
@@ -49,6 +51,7 @@
             type is (nek_dvector)
 
                nrst = abs(param(27)) - 1
+               do_rst = (nrst > 0)
                atol = param(22)
 
       ! Set baseflow.
@@ -75,7 +78,8 @@
 
                end do
 
-      ! Extract the final solution to vector.   
+      ! Extract the final solution to vector.
+               call vec_out%init(alloc_rst = do_rst)
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
 
       ! Compute restart fields.
@@ -98,6 +102,7 @@
          module procedure jac_exptA_rmatvec
          character(len=*), parameter :: this_procedure = 'jac_exptA_rmatvec'
          integer :: nrst
+         logical :: do_rst
          real(dp) :: atol
          select type (vec_in)
          type is (nek_dvector)
@@ -105,6 +110,7 @@
             type is (nek_dvector)
 
                nrst = abs(param(27)) - 1
+               do_rst = (nrst > 0)
                atol = param(22)
             
       ! Set baseflow.
@@ -133,6 +139,7 @@
                end do
 
       ! Extract the final solution to vector.
+               call vec_out%init(alloc_rst = do_rst)
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
 
       ! Compute restart fields.
@@ -170,6 +177,7 @@
                do istep = nsteps + 1, nsteps + nrst
                   call nek_advance()
                   irst = istep - nsteps
+                  call vec_rst%init()
                   call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
                   call vec_out%save_rst(vec_rst, irst)
                end do
@@ -189,6 +197,7 @@
             select type(vec_in)
             type is (nek_dvector)
                if (vec_in%has_rst_fields()) then
+                  call vec_rst%init()
                   call vec_in%get_rst(vec_rst, istep)
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
                end if

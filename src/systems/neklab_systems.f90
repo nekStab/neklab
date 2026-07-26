@@ -49,10 +49,10 @@
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian
          contains
             private
-            procedure, pass(self), public :: matvec => jac_exptA_matvec
-            procedure, pass(self), public :: rmatvec => jac_exptA_rmatvec
+            procedure, pass(self), public :: matvec      => jac_exptA_matvec
+            procedure, pass(self), public :: rmatvec     => jac_exptA_rmatvec
             procedure, pass(self), public :: compute_rst => jac_exptA_compute_rst
-            procedure, pass(self), public :: get_rst => jac_exptA_get_rst
+            procedure, pass(self), public :: get_rst     => jac_exptA_get_rst
          end type nek_jacobian
       
       ! --> Type-bound procedures for nek_system & nek_jacobian
@@ -200,7 +200,7 @@
       contains
       
          subroutine compute_fdot(vec)
-            class(nek_ext_dvector), intent(out) :: vec
+            class(nek_ext_dvector), intent(inout) :: vec
       ! internal
             type(nek_ext_dvector) :: vec_in
       ! copy initial condition

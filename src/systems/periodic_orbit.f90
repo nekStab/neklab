@@ -30,6 +30,7 @@
                end do
 
       ! Copy the final solution to vector.
+               call vec_out%init()
                call nek2ext_vec(vec_out, vx, vy, vz, pr, t)
                vec_out%T = vec_in%T
 
@@ -47,13 +48,16 @@
          module procedure jac_direct_map
          character(len=*), parameter :: this_procedure = 'jac_direct_map'
          integer :: nrst
+         logical :: do_rst
          real(dp) :: atol
          type(nek_ext_dvector) :: vec
          select type (vec_in)
          type is (nek_ext_dvector)
             select type (vec_out)
             type is (nek_ext_dvector)
+
                nrst = abs(param(27)) - 1
+               do_rst = (nrst > 0)
                atol = param(22)
 
       ! Set baseflow.
@@ -83,6 +87,7 @@
                end do
 
       ! Copy the final solution to vector.
+               call vec_out%init(alloc_rst = do_rst)
                call nek2ext_vec(vec_out, vxp, vyp, vzp, prp, tp)
 
       ! Compute restart fields.
@@ -117,14 +122,18 @@
          module procedure jac_adjoint_map
          character(len=*), parameter :: this_procedure = 'jac_adjoint_map'
          integer :: nrst
+         logical :: do_rst
          real(dp) :: atol
          type(nek_ext_dvector) :: vec
          select type (vec_in)
          type is (nek_ext_dvector)
             select type (vec_out)
             type is (nek_ext_dvector)
+
                nrst = abs(param(27)) - 1
+               do_rst = (nrst > 0)
                atol = param(22)
+
       ! Set baseflow.
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
 
@@ -152,6 +161,7 @@
                end do
 
       ! Copy the final solution to vector.
+               call vec_out%init(alloc_rst = do_rst)
                call nek2ext_vec(vec_out, vxp, vyp, vzp, prp, tp)
 
       ! Compute restart fields.
@@ -201,6 +211,7 @@
                do istep = nsteps + 1, nsteps + nrst
                   call nek_advance()
                   irst = istep - nsteps
+                  call vec_rst%init()
                   call nek2ext_vec(vec_rst, vxp, vyp, vzp, prp, tp)
                   call vec_out%save_rst(vec_rst, irst)
                end do
@@ -220,6 +231,7 @@
             select type(vec_in)
             type is (nek_ext_dvector)
                if (vec_in%has_rst_fields()) then
+                  call vec_rst%init()
                   call vec_in%get_rst(vec_rst, istep)
                   call ext_vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
                end if

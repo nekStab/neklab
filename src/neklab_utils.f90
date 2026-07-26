@@ -83,26 +83,30 @@
       
          subroutine nek2vec_prt(vec, vx_, vy_, vz_, pr_, t_)
             include "SIZE"
-            type(nek_dvector), intent(out) :: vec
+            type(nek_dvector), intent(inout) :: vec
             real(kind=dp), dimension(lv, lpert), intent(in) :: vx_
             real(kind=dp), dimension(lv, lpert), intent(in) :: vy_
             real(kind=dp), dimension(lv, lpert), intent(in) :: vz_
             real(kind=dp), dimension(lp, lpert), intent(in) :: pr_
             real(kind=dp), dimension(lx1*ly1*lz1*lelt, ldimt, lpert), intent(in) :: t_
+            character(len=*), parameter :: this_procedure = 'nek2vec_prt'
 
+            if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
             call nopcopy(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1))
 
          end subroutine nek2vec_prt
       
          subroutine nek2vec_std(vec, vx_, vy_, vz_, pr_, t_)
             include "SIZE"
-            type(nek_dvector), intent(out) :: vec
+            type(nek_dvector), intent(inout) :: vec
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(in) :: vx_
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(in) :: vy_
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(in) :: vz_
             real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(in) :: pr_
             real(kind=dp), dimension(lx1, ly1, lz1, lelt, ldimt), intent(in) :: t_
+            character(len=*), parameter :: this_procedure = 'nek2vec_std'
 
+            if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
             call nopcopy(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, vx_, vy_, vz_, pr_, t_)
 
          end subroutine nek2vec_std
@@ -115,7 +119,9 @@
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(out) :: vz_
             real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(out) :: pr_
             real(kind=dp), dimension(lx1, ly1, lz1, lelt, ldimt), intent(out) :: t_
+            character(len=*), parameter :: this_procedure = 'vec2nek_std'
       
+            if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
             call nopcopy(vx_, vy_, vz_, pr_, t_, vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
       
          end subroutine vec2nek_std
@@ -128,7 +134,9 @@
             real(kind=dp), dimension(lv, 1), intent(out) :: vz_
             real(kind=dp), dimension(lp, 1), intent(out) :: pr_
             real(kind=dp), dimension(lt, ldimt, 1), intent(out) :: t_
+            character(len=*), parameter :: this_procedure = 'vec2nek_prt'
       
+            if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
             call nopcopy(vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1), vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
       
          end subroutine vec2nek_prt
@@ -141,13 +149,15 @@
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(out) :: vz_
             real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(out) :: pr_
             real(kind=dp), dimension(lx1, ly1, lz1, lelt, ldimt), intent(out) :: t_
+            character(len=*), parameter :: this_procedure = 'abstract_vec2nek_std'
             select type (vec)
             type is (nek_dvector)
 
+               if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
                call nopcopy(vx_, vy_, vz_, pr_, t_, vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
 
             class default
-               call type_error('vec','nek_dvector','IN',this_module,'abstract_vec2nek_std')
+               call type_error('vec','nek_dvector','IN',this_module,this_procedure)
             end select
          end subroutine abstract_vec2nek_std
       
@@ -159,13 +169,15 @@
             real(kind=dp), dimension(lv, 1), intent(out) :: vz_
             real(kind=dp), dimension(lp, 1), intent(out) :: pr_
             real(kind=dp), dimension(lt, ldimt, 1), intent(out) :: t_
+            character(len=*), parameter :: this_procedure = 'abstract_vec2nek_prt'
             select type (vec)
             type is (nek_dvector)
 
+               if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
                call nopcopy(vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1), vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
 
             class default
-               call type_error('vec','nek_dvector','IN',this_module,'abstract_vec2nek_prt')
+               call type_error('vec','nek_dvector','IN',this_module,this_procedure)
             end select
          end subroutine abstract_vec2nek_prt
       
@@ -173,26 +185,30 @@
       
          subroutine nek2ext_vec_prt(vec, vx_, vy_, vz_, pr_, t_)
             include "SIZE"
-            type(nek_ext_dvector), intent(out) :: vec
+            type(nek_ext_dvector), intent(inout) :: vec
             real(kind=dp), dimension(lv, 1), intent(in) :: vx_
             real(kind=dp), dimension(lv, 1), intent(in) :: vy_
             real(kind=dp), dimension(lv, 1), intent(in) :: vz_
             real(kind=dp), dimension(lp, 1), intent(in) :: pr_
             real(kind=dp), dimension(lt, ldimt, 1), intent(in) :: t_
+            character(len=*), parameter :: this_procedure = 'nek2ext_vec_prt'
       
+            if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
             call nopcopy(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1))
       
          end subroutine nek2ext_vec_prt
       
          subroutine nek2ext_vec_std(vec, vx_, vy_, vz_, pr_, t_)
             include "SIZE"
-            type(nek_ext_dvector), intent(out) :: vec
+            type(nek_ext_dvector), intent(inout) :: vec
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(in) :: vx_
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(in) :: vy_
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(in) :: vz_
             real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(in) :: pr_
             real(kind=dp), dimension(lx1, ly1, lz1, lelt, ldimt), intent(in) :: t_
+            character(len=*), parameter :: this_procedure = 'nek2ext_vec_std'
       
+            if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
             call nopcopy(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, vx_, vy_, vz_, pr_, t_)
       
          end subroutine nek2ext_vec_std
@@ -205,7 +221,9 @@
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(out) :: vz_
             real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(out) :: pr_
             real(kind=dp), dimension(lx1, ly1, lz1, lelt, ldimt), intent(out) :: t_
+            character(len=*), parameter :: this_procedure = 'ext_vec2nek_std'
       
+            if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
             call nopcopy(vx_, vy_, vz_, pr_, t_, vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
       
          end subroutine ext_vec2nek_std
@@ -218,7 +236,9 @@
             real(kind=dp), dimension(lv, 1), intent(out) :: vz_
             real(kind=dp), dimension(lp, 1), intent(out) :: pr_
             real(kind=dp), dimension(lt, ldimt, 1), intent(out) :: t_
+            character(len=*), parameter :: this_procedure = 'ext_vec2nek_prt'
       
+            if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
             call nopcopy(vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1), vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
       
          end subroutine ext_vec2nek_prt
@@ -231,13 +251,15 @@
             real(kind=dp), dimension(lx1, ly1, lz1, lelv), intent(out) :: vz_
             real(kind=dp), dimension(lx2, ly2, lz2, lelv), intent(out) :: pr_
             real(kind=dp), dimension(lx1, ly1, lz1, lelt, ldimt), intent(out) :: t_
+            character(len=*), parameter :: this_procedure = 'abstract_ext_vec2nek_std'
             select type (vec)
             type is (nek_ext_dvector)
 
+               if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
                call nopcopy(vx_, vy_, vz_, pr_, t_, vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
 
             class default
-               call type_error('vec','nek_ext_dvector','IN',this_module,'abstract_ext_vec2nek_std')
+               call type_error('vec','nek_ext_dvector','IN',this_module,this_procedure)
             end select
          end subroutine abstract_ext_vec2nek_std
       
@@ -249,31 +271,39 @@
             real(kind=dp), dimension(lv, 1), intent(out) :: vz_
             real(kind=dp), dimension(lp, 1), intent(out) :: pr_
             real(kind=dp), dimension(lt, ldimt, 1), intent(out) :: t_
+            character(len=*), parameter :: this_procedure = 'abstract_ext_vec2nek_prt'
             select type (vec)
             type is (nek_ext_dvector)
 
+               if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
                call nopcopy(vx_(:, 1), vy_(:, 1), vz_(:, 1), pr_(:, 1), t_(:, :, 1), vec%vx, vec%vy, vec%vz, vec%pr, vec%theta)
 
             class default
-               call type_error('vec','nek_ext_dvector','IN',this_module,'abstract_ext_vec2nek_prt')
+               call type_error('vec','nek_ext_dvector','IN',this_module,this_procedure)
             end select
          end subroutine abstract_ext_vec2nek_prt
       
          real(dp) function get_period_abs(vec) result(period)
             class(abstract_vector_rdp), intent(in) :: vec
+            character(len=*), parameter :: this_procedure = 'get_period_abs'
             select type (vec)
             type is (nek_ext_dvector)
 
+               if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
                period = vec%T
 
             class default
-               call type_error('vec','nek_ext_dvector','IN',this_module,'get_period_abs')
+               call type_error('vec','nek_ext_dvector','IN',this_module,this_procedure)
             end select
          end function get_period_abs
       
-         pure real(dp) function get_period(vec) result(period)
+         real(dp) function get_period(vec) result(period)
             class(nek_ext_dvector), intent(in) :: vec
+            character(len=*), parameter :: this_procedure = 'get_period'
+            
+            if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
             period = vec%T
+
          end function get_period
       
          subroutine nopcopy(a1, a2, a3, a4, a5, b1, b2, b3, b4, b5)
@@ -305,7 +335,9 @@
          subroutine outpost_dnek_vector(vec, prefix)
             type(nek_dvector), intent(in) :: vec
             character(len=3), intent(in) :: prefix
+            character(len=*), parameter :: this_procedure = 'outpost_dnek_vector'
 
+            if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
             call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
 
          end subroutine outpost_dnek_vector
@@ -313,13 +345,15 @@
          subroutine outpost_dnek_abs_vector(vec, prefix)
             class(abstract_vector_rdp), intent(in) :: vec
             character(len=3), intent(in) :: prefix
+            character(len=*), parameter :: this_procedure = 'outpost_dnek_abs_vector'
             select type (vec)
             type is (nek_dvector)
 
+               if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
                call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
                
             class default
-               call type_error('vec','nek_dvector','IN',this_module,'outpost_dnek_abs_vector')
+               call type_error('vec','nek_dvector','IN',this_module,this_procedure)
             end select
          end subroutine outpost_dnek_abs_vector
       
@@ -335,6 +369,8 @@
          subroutine outpost_ext_dnek_vector(vec, prefix)
             type(nek_ext_dvector), intent(in) :: vec
             character(len=3), intent(in) :: prefix
+            character(len=*), parameter :: this_procedure = 'outpost_ext_dnek_vector'
+            if (.not. vec%is_initialized()) call nek_stop_error('vec not initialized', this_module, this_procedure)
             call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
          end subroutine outpost_ext_dnek_vector
       
@@ -350,13 +386,14 @@
          subroutine outpost_nek(vec, prefix)
             class(abstract_vector_rdp), intent(in) :: vec
             character(len=3), intent(in) :: prefix
+            character(len=*), parameter :: this_procedure = 'outpost_nek'
             select type (vec)
             type is (nek_dvector)
                call outpost_dnek    (vec, prefix)
             type is (nek_ext_dvector)
                call outpost_ext_dnek(vec, prefix)
             class default
-               call type_error('vec','nek_dvector/nek_ext_dvector','IN',this_module,'outpost_nek')
+               call type_error('vec','nek_dvector/nek_ext_dvector','IN',this_module,this_procedure)
             end select
          end subroutine outpost_nek
 

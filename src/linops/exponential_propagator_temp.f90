@@ -15,6 +15,7 @@
          module procedure exptA_temp_matvec
          character(len=*), parameter :: this_procedure = 'exptA_temp_matvec'
          integer :: nrst
+         logical :: do_rst
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
@@ -46,6 +47,7 @@
                end do
          
       ! Copy the final solution to vector.
+               call vec_out%init(alloc_rst = do_rst)
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
 
       ! Compute restart fields.
@@ -62,12 +64,15 @@
          module procedure exptA_temp_rmatvec
          character(len=*), parameter :: this_procedure = 'exptA_temp_rmatvec'
          integer :: nrst
+         logical :: do_rst
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
 
                nrst = abs(param(27)) - 1
+               do_rst = (nrst > 0)
+
       ! Set baseflow.
                call vec2nek(vx, vy, vz, pr, t, self%baseflow)
       
@@ -93,6 +98,7 @@
                end do
 
       ! Copy the final solution to vector.
+               call vec_out%init(alloc_rst = do_rst)
                call nek2vec(vec_out, vxp, vyp, vzp, prp, tp)
 
       ! Compute restart fields.
@@ -123,6 +129,7 @@
                nsteps = itmp
                do istep = nsteps + 1, nsteps + nrst
                   call nek_advance()
+                  call vec_rst%init()
                   call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
                   call vec_out%save_rst(vec_rst, istep - nsteps)
                end do
@@ -142,6 +149,7 @@
             select type(vec_in)
             type is (nek_dvector)
                if (vec_in%has_rst_fields()) then
+                  call vec_rst%init()
                   call vec_in%get_rst(vec_rst, istep)
                   call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
                end if

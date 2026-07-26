@@ -44,7 +44,7 @@
       !! Desired number of eigenpairs to converge.
             logical, intent(in), optional :: adjoint
       !! Whether direct or adjoint analysis should be conducted.
-		type(nek_dvector), optional, intent(in) :: X0
+		      type(nek_dvector), optional, intent(in) :: X0
       !! Initial guess for the eigenvectors
       
       ! Eigenvalue computation related variables.
@@ -74,7 +74,10 @@
             end if
       
       ! Allocate eigenvectors and initialize Krylov basis.
-            allocate (eigvecs(nev)); call zero_basis(eigvecs)
+            allocate(eigvecs(nev)); !call zero_basis(eigvecs)
+            do i = 1, nev
+               call eigvecs(i)%init(alloc_rst=.true.)
+            end do
       
       ! Run the eigenvalue analysis.
             call eigs(exptA, eigvecs, eigvals, residuals, info, x0=X0, kdim=kdim,
@@ -129,8 +132,14 @@
             call timer%add_timer('Transient Growth Fixed Point', start=.true.)
 
       ! Allocate singular vectors.
-            allocate (U(nsv)); call initialize_krylov_subspace(U)
-            allocate (V(nsv)); call initialize_krylov_subspace(V)
+            allocate (U(nsv))
+            allocate (V(nsv))
+            do i = 1, nsv
+               call U(i)%init(alloc_rst=.true.)
+               call V(i)%init(alloc_rst=.true.)
+            end do
+            call initialize_krylov_subspace(U)
+            call initialize_krylov_subspace(V)
       
       ! Call to LightKrylov.
             call svds(exptA, U, S, V, residuals, info, kdim=kdim, write_intermediate=.true.)
@@ -247,7 +256,11 @@
             allocate (sigma(r), svec(r, r)); sigma = 0.0_dp; svec = 0.0_dp
             allocate (lambda(r), eigvec(r, r)); lambda = 0.0_dp; eigvec = 0.0_dp
             allocate (Lr(r, r), Phi(r, r)); Lr = 0.0_dp; Phi = 0.0_dp
-            allocate (Lu(r), source=OTD%baseflow); call zero_basis(Lu)
+            allocate (Lu(r), source=OTD%baseflow); 
+            do i = 1, r
+               call Lu(i)%init(alloc_rst=.true.)
+            end do
+            !call zero_basis(Lu)
       
       ! Intgrate the nonlinear equations forward
             time = 0.0_dp

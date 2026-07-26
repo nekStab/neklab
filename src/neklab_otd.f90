@@ -80,10 +80,12 @@
             class(abstract_vector_rdp), intent(in) :: vec_in
       ! Output vector.
             class(abstract_vector_rdp), intent(out) :: vec_out
+            character(len=*), parameter :: this_procedure = 'apply_LNS'
             select type (vec_in)
             type is (nek_dvector)
                select type (vec_out)
                type is (nek_dvector)
+                  call vec_out%init()
                   call apply_L(vec_out%vx, vec_out%vy, vec_out%vz,
      & vec_in%vx, vec_in%vy, vec_in%vz, vec_in%pr, trans = .false.)
                class default
@@ -105,6 +107,7 @@
             type is (nek_dvector)
                select type (vec_out)
                type is (nek_dvector)
+                  call vec_out%init()
                   call apply_L(vec_out%vx, vec_out%vy, vec_out%vz,
      & vec_in%vx, vec_in%vy, vec_in%vz, vec_in%pr, trans = .true.)
                class default
@@ -130,7 +133,10 @@
       
       ! allocate variables
             allocate (self%basis(r), source=self%baseflow)
-            call zero_basis(self%basis)
+            do i = 1, r
+               call self%basis(i)%init(alloc_rst=.true.)
+            end do
+            !call zero_basis(self%basis)
       
             loadIC = .false.
             if (opts%n_usrIC < 0) then
