@@ -55,7 +55,6 @@ else
     FFLAGS+=" -g" # Enables debugging information.
     FFLAGS+=" -fbacktrace" # Provides a backtrace in case of errors, useful for debugging.
     FFLAGS+=" -std=legacy -Wall" # Provides a backtrace in case of errors, useful for debugging.
-    
 fi
 
 CFLAGS+=" -w" # Disable warnings for C compiler
@@ -134,6 +133,11 @@ USR_NEKLAB+=" fixed_point_temp.o"
 USR_NEKLAB+=" periodic_orbit.o"
 USR_NEKLAB+=" neklab_otd.o"
 USR_NEKLAB+=" neklab_analysis.o"
+if [[ -n "$NEKLAB_TESTS" ]]; then
+   USR_NEKLAB+=" neklab_test.o"
+   PPLIST+=" NEKLAB_TESTS"
+   echo "  neklab unit tests: ENABLED (NEKLAB_TESTS set)"
+fi
 USR_NEKLAB+=" neklab.o"
 
 # get casename from .usr file

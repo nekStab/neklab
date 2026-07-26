@@ -1,7 +1,6 @@
-import os
-from subprocess import Popen, PIPE, STDOUT
+import os, re
+from subprocess import Popen, PIPE, STDOUT, DEVNULL
 from pathlib import Path
-
 
 def build_tools(
     tools_root,
@@ -43,6 +42,21 @@ def build_tools(
             print(text)
             exit(-1)
 
+_OBJ = re.compile(r'-o\s+(\S+\.o)\b')
+_ERR = re.compile(r'[Ee]rror|FATAL|make(\[|\:)')
+
+def _stream_filtered(proc, logfile):
+    with open(logfile, "w") as log:
+        for line in proc.stdout:
+            log.write(line)          # raw log: everything
+            log.flush()
+            m = _OBJ.search(line)    # stdout: filtered only
+            if m:
+                print(os.path.basename(m.group(1)))
+            elif _ERR.search(line):
+                print(line.rstrip())
+    proc.wait()
+    return None
 
 def build_nek(source_root, usr_file, cwd=None, opts=None, verbose=False):
 
@@ -71,18 +85,19 @@ def build_nek(source_root, usr_file, cwd=None, opts=None, verbose=False):
     makenek_in = Path(source_root) / "bin" / "makenek"
     logfile = Path(cwd) / "build.log"
 
-    proc = Popen([makenek_in, "clean"], cwd=cwd, env=my_env, stdin=PIPE, text=True)
+    proc = Popen([makenek_in, "clean"], cwd=cwd, env=my_env, stdin=PIPE, stdout=PIPE, stderr=STDOUT, text=True)
     proc.communicate(input="Y\n")
     proc.wait()
 
-    proc = Popen([makenek_in, usr_file], cwd=cwd, env=my_env, stdin=PIPE, stderr=STDOUT)
+    proc = Popen([makenek_in, usr_file], cwd=cwd, env=my_env, stdin=PIPE, stdout=PIPE, stderr=STDOUT, text=True)
+    out, _ = proc.communicate(input="\n")
 
     proc.wait()
 
     if proc.returncode != 0:
-        with open(logfile, "r") as file:
-            text = file.read()
-        print(text)
+        print(out)
+        with open(logfile, "w") as f:
+            f.write(out)
         exit(-1)
 
 def build_neklab(source_root, usr_file, cwd=None, opts=None, verbose=False):
@@ -108,20 +123,39 @@ def build_neklab(source_root, usr_file, cwd=None, opts=None, verbose=False):
         my_env["CC"] = _opts.get("CC")
     if _opts.get("PPLIST"):
         my_env["PPLIST"] = _opts.get("PPLIST")
+    if "MPI" in _opts:
+        my_env["MPI"] = str(int(_opts["MPI"]))   # force 0/1, not "true"
 
     makeneklab_in = Path(source_root) / "app" / "makeneklab"
     logfile = Path(cwd) / "build.log"
 
-    proc = Popen([makeneklab_in, "clean"], cwd=cwd, env=my_env, stdin=PIPE, text=True)
-    proc.communicate(input="Y\n")
-    proc.wait()
+    cwd_p = Path(cwd)
+    # Recover from a crashed prior run of makeneklab, which does:
+    #   mv <case>.usr <case>.usr_tmp ; cp dummy ; ... ; cp <case>.usr_tmp <case>.usr
+    # A crash can leave <case>.usr_tmp without <case>.usr, and/or a stray nek_dummy.usr.
+    for tmp in cwd_p.glob("*.usr_tmp"):
+        real = tmp.with_suffix("")          # cav.usr_tmp -> cav.usr
+        real = tmp.parent / tmp.name[:-4]   # strip "_tmp" -> cav.usr
+        if not real.exists():
+            # swap was interrupted; the tmp IS the real case file — restore it
+            tmp.rename(real)
+        else:
+            # both exist: real is intact, tmp is a stale leftover — safe to drop
+            tmp.unlink()
 
-    proc = Popen([makeneklab_in, usr_file], cwd=cwd, env=my_env, stdin=PIPE, stderr=STDOUT)
+    # Only ever a build artifact; never the real case file.
+    dummy = cwd_p / "nek_dummy.usr"
+    if dummy.exists():
+        dummy.unlink()
 
+    proc = Popen([makeneklab_in, "clean"], cwd=cwd, env=my_env,
+             stdin=PIPE, text=True)
+    out, _ = proc.communicate(input="Y\n")
+
+    proc = Popen([makeneklab_in], cwd=cwd, env=my_env,
+                stdin=DEVNULL, text=True)
     proc.wait()
 
     if proc.returncode != 0:
-        with open(logfile, "r") as file:
-            text = file.read()
-        print(text)
         exit(-1)
+    

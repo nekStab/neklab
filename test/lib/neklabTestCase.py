@@ -66,11 +66,17 @@ class NeklabTestCase(unittest.TestCase):
       self.cc = ""
       self.pplist = ""
       self.usr_lflags = ""
-      self.ifmpi = True
+      self.ifmpi = str(os.environ.get("MPI", "0")).lower() == "true"
 
-      self.neklab_source_root = os.path.dirname(os.path.dirname(inspect.getabsfile(self.__class__)))
-      self.examples_root = os.path.join(self.neklab_source_root, "examples")
-      self.makeneklab = os.path.join(self.neklab_source_root, "app", "makeneklab")
+      try:
+         self.neklab_source_root = os.path.abspath(os.environ["NEKLAB_SOURCE_ROOT"])
+      except KeyError:
+         print('NEKLAB_SOURCE_ROOT not defined')
+         sys.exit(1)
+      else:
+         self.makeneklab = os.path.join(self.neklab_source_root, "app", "makeneklab")
+         self.examples_root = os.path.join(self.neklab_source_root, "examples")
+         self.tests_root = os.path.join(self.neklab_source_root, "test", "cases")
       self.nek_source_root = os.path.join(self.neklab_source_root, "Nek5000")
       self.tools_root = os.path.join(self.nek_source_root, "tools")
       self.tools_bin = os.path.join(self.nek_source_root, "bin")
@@ -141,13 +147,13 @@ class NeklabTestCase(unittest.TestCase):
       self.cc = os.environ.get("CC", self.cc)
       self.pplist = os.environ.get("PPLIST", self.pplist)
       self.usr_lflags = os.environ.get("USR_LFLAGS", self.usr_lflags)
-      self.ifmpi = os.environ.get("MPI", self.ifmpi)
+      self.ifmpi = str(os.environ.get("MPI", self.ifmpi)).lower() == "true"
 
       # Get paths from env
       try:
          self.neklab_source_root = os.path.abspath(os.environ["NEKLAB_SOURCE_ROOT"])
       except KeyError:
-         print('NEKLAB_SOURCE_ROOT nto defined')
+         print('NEKLAB_SOURCE_ROOT not defined')
          sys.exit(1)
       else:
          self.makeneklab = os.path.join(self.neklab_source_root, "app", "makeneklab")
@@ -163,6 +169,9 @@ class NeklabTestCase(unittest.TestCase):
 
       self.examples_root = os.path.abspath(
          os.environ.get("EXAMPLES_ROOT", self.examples_root)
+      )
+      self.tests_root = os.path.abspath(
+         os.environ.get("TESTS_ROOT", self.tests_root)
       )
       self.tools_root = os.path.abspath(os.environ.get("TOOLS_ROOT", self.tools_root))
       self.tools_bin = os.path.abspath(os.environ.get("TOOLS_BIN", self.tools_bin))
@@ -187,6 +196,7 @@ class NeklabTestCase(unittest.TestCase):
          ("NEKLAB_SOURCE_ROOT", self.neklab_source_root),
          ("NEK_SOURCE_ROOT", self.nek_source_root),
          ("EXAMPLES_ROOT", self.examples_root),
+         ("TESTS_ROOT", self.tests_root),
          ("LOG_ROOT", self.log_root),
          ("TOOLS_ROOT", self.tools_root),
          ("TOOLS_BIN", self.tools_bin),
@@ -214,6 +224,11 @@ class NeklabTestCase(unittest.TestCase):
 
       print("Finished getting setup options!")
 
+   def case_dir(self):
+      """Directory holding this case's files. Unit cases override the root."""
+      root = getattr(self, "_case_root", None) or self.examples_root
+      return os.path.join(root, self.__class__.example_subdir)
+
    def build_tools(
          self,
          targets=None,
@@ -239,12 +254,10 @@ class NeklabTestCase(unittest.TestCase):
    def config_size(self, params=None, infile=None, outfile=None):
       from lib.neklabFileConfig import config_size
 
-      cls = self.__class__
-
       if not infile:
          infile = os.path.join(self.nek_source_root, "core", "SIZE.template")
       if not outfile:
-         outfile = os.path.join(self.examples_root, cls.example_subdir, "SIZE")
+         outfile = os.path.join(self.case_dir(), "SIZE")
       if not params:
          params = self.size_params
 
@@ -256,7 +269,7 @@ class NeklabTestCase(unittest.TestCase):
       if not case:
          case = cls.case_name
 
-      workdir = os.path.join(self.examples_root, cls.example_subdir)
+      workdir = self.case_dir()
       os.system("cd " + workdir + " ; " + self.source_root + "/bin/mkSIZE " + case)
 
    def config_parfile(self, opts=None, infile=None, outfile=None):
@@ -265,9 +278,7 @@ class NeklabTestCase(unittest.TestCase):
       cls = self.__class__
 
       if not infile:
-         infile = os.path.join(
-               self.examples_root, cls.example_subdir, cls.case_name + ".par"
-         )
+         infile = os.path.join(self.case_dir(), cls.case_name + ".par")
       if not outfile:
          outfile = infile
       if not opts:
@@ -287,7 +298,7 @@ class NeklabTestCase(unittest.TestCase):
       run_meshgen(
          command=os.path.join(self.tools_bin, "genmap"),
          stdin=[rea_file, tol],
-         cwd=os.path.join(self.examples_root, cls.example_subdir),
+         cwd=self.case_dir(),
          verbose=self.verbose,
       )
 
@@ -305,7 +316,7 @@ class NeklabTestCase(unittest.TestCase):
       run_meshgen(
          command=os.path.join(self.tools_bin, "genbox"),
          stdin=[box_file],
-         cwd=os.path.join(self.examples_root, self.__class__.example_subdir),
+         cwd=self.case_dir(),
          verbose=self.verbose,
       )
 
@@ -315,7 +326,7 @@ class NeklabTestCase(unittest.TestCase):
       run_meshgen(
          command=os.path.join(self.tools_bin, "n2to3"),
          stdin=stdin,
-         cwd=os.path.join(self.examples_root, self.__class__.example_subdir),
+         cwd=self.case_dir(),
       )
 
    def run_gmsh2nek(self, dim="3", fmsh_file=None, smsh_file=None, out_file=None, fP_list=None, sP_list=None):
@@ -355,7 +366,7 @@ class NeklabTestCase(unittest.TestCase):
       run_meshgen(
          command=os.path.join(self.tools_bin, "gmsh2nek"),
          stdin=stdin,
-         cwd=os.path.join(self.examples_root, self.__class__.example_subdir),
+         cwd=self.case_dir(),
          verbose=self.verbose,
       )
 
@@ -381,7 +392,7 @@ class NeklabTestCase(unittest.TestCase):
       build_neklab(
          source_root=self.neklab_source_root,
          usr_file=usr_file,
-         cwd=os.path.join(self.examples_root, cls.example_subdir),
+         cwd=self.case_dir(),
          opts=all_opts,
          verbose=self.verbose,
       )
@@ -391,7 +402,7 @@ class NeklabTestCase(unittest.TestCase):
 
       cls = self.__class__
       run_nek(
-         cwd=os.path.join(self.examples_root, cls.example_subdir),
+         cwd=self.case_dir(),
          rea_file=cls.case_name if not rea_file else rea_file,
          ifmpi=self.ifmpi,
          log_suffix=self.log_suffix,
@@ -407,15 +418,14 @@ class NeklabTestCase(unittest.TestCase):
       mvn(
          src_prefix,
          dest_prefix,
-         cwd=os.path.join(self.examples_root, cls.example_subdir),
+         cwd=self.case_dir(),
       )
 
    def get_converged_eigs_data(self, logfile=None):
       cls = self.__class__
       if not logfile:
          logfile = os.path.join(
-               self.examples_root,
-               cls.example_subdir,
+               self.case_dir(),
                f"eigs_output.txt",
          )
       eigs = {}
@@ -457,9 +467,7 @@ class NeklabTestCase(unittest.TestCase):
    def get_value_from_log(self, label, column, row=0, logfile=None):
       cls = self.__class__
       if not logfile:
-         logfile = os.path.join(
-               self.examples_root,
-               cls.example_subdir,
+         logfile = os.path.join(self.case_dir(),
                f"{cls.case_name}.log.{self.mpi_procs}{self.log_suffix}",
          )
       # Get all lines with label
@@ -489,8 +497,7 @@ class NeklabTestCase(unittest.TestCase):
       cls = self.__class__
       if not logfile:
          logfile = os.path.join(
-               self.examples_root,
-               cls.example_subdir,
+               self.case_dir(),
                f"{cls.case_name}.log.{self.mpi_procs}{self.log_suffix}",
          )
 
