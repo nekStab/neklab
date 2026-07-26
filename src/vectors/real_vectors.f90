@@ -185,15 +185,15 @@
 
             do irst = 1, self%nrst
 
-               call           add2s2(self%vxrst(:, irst),       vec%vx,          alpha, lvn)
-               call           add2s2(self%vyrst(:, irst),       vec%vy,          alpha, lvn)
-               if (if3d) call add2s2(self%vzrst(:, irst),       vec%vz,          alpha, lvn)
-               call           add2s2(self%prrst(:, irst),       vec%pr,          alpha, lpn)
-               if (ifto) call add2s2(self%thetarst(:, irst, 1), vec%theta(:, 1), alpha, lvn)
+               call           add2s2(self%vxrst(:, irst),       vec%vxrst(:, irst),       alpha, lvn)
+               call           add2s2(self%vyrst(:, irst),       vec%vyrst(:, irst),       alpha, lvn)
+               if (if3d) call add2s2(self%vzrst(:, irst),       vec%vzrst(:, irst),       alpha, lvn)
+               call           add2s2(self%prrst(:, irst),       vec%prrst(:, irst),       alpha, lpn)
+               if (ifto) call add2s2(self%thetarst(:, irst, 1), vec%thetarst(:, irst, 1), alpha, lvn)
                if (ldimt > 1) then
                   do m = 2, ldimt
                      if (ifpsco(m - 1)) then
-                        call  add2s2(self%thetarst(:, irst, m), vec%theta(:, m), alpha, lvn)
+                        call  add2s2(self%thetarst(:, irst, m), vec%thetarst(:, irst, m), alpha, lvn)
                      end if
                   end do
                end if
