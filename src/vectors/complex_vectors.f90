@@ -5,27 +5,29 @@
       !-------------------------------
       !-----     CONSTRUCTOR     -----
       !-------------------------------
-      
+
          module procedure construct_nek_zvector
-      ! Definition of the constructor cause an Internal Compiler Error.
-      ! Implementation is delayed for now.
-         out%re%vx = vx(:, 1); out%im%vx = vx(:, 2)
-         out%re%vy = vy(:, 1); out%im%vy = vy(:, 2)
-         if (present(vz)) then
-            out%re%vz = vz(:, 1); out%im%vz = vz(:, 2)
-         else
-            out%re%vz = 0.0_dp; out%im%vz = 0.0_dp
-         end if
-         if (present(pr)) then
-            out%re%pr = pr(:, 1); out%im%pr = pr(:, 2)
-         else
-            out%re%pr = 0.0_dp; out%im%pr = 0.0_dp
-         end if
-         if (present(theta)) then
-            out%re%theta = theta(:, :, 1); out%im%theta = theta(:, :, 2)
-         else
-            out%re%theta = 0.0_dp; out%im%theta = 0.0_dp
-         end if
+            character(len=*), parameter :: this_procedure = 'construct_nek_zvector'
+            call out%init() ! re/im initialized without rst storage
+            out%re%vx = vx(:, 1); out%im%vx = vx(:, 2)
+            out%re%vy = vy(:, 1); out%im%vy = vy(:, 2)
+            if (present(vz)) then
+               if (if3d) then
+                  out%re%vz = vz(:, 1); out%im%vz = vz(:, 2)
+               else
+                  call stop_error('vz passed but if3d = .false.', this_module, this_procedure)
+               end if
+            end if
+            if (present(pr)) then
+               out%re%pr = pr(:, 1); out%im%pr = pr(:, 2)
+            end if
+            if (present(theta)) then
+               if (ifto) then
+                  out%re%theta = theta(:, :, 1); out%im%theta = theta(:, :, 2)
+               else
+                  call stop_error('theta passed but ifto = .false.', this_module, this_procedure)
+               end if
+            end if
          end procedure
       
       !-----------------------------------------
@@ -33,211 +35,161 @@
       !-----------------------------------------
       
          module procedure nek_zzero
-         integer :: i
-         ! this causes an internal compiler error, switch to manual
-         !call self%re%zero()
-         !call self%im%zero()
-         self%re%vx = 0.0_dp
-         self%re%vy = 0.0_dp
-         self%re%vz = 0.0_dp
-         self%re%pr = 0.0_dp
-         self%re%theta = 0.0_dp
-         self%re%vyrst = 0.0_dp
-         self%re%vxrst = 0.0_dp
-         self%re%vzrst = 0.0_dp
-         self%re%prrst = 0.0_dp
-         self%re%thetarst = 0.0_dp
-         self%im%vx = 0.0_dp
-         self%im%vy = 0.0_dp
-         self%im%vz = 0.0_dp
-         self%im%pr = 0.0_dp
-         self%im%theta = 0.0_dp
-         self%im%vyrst = 0.0_dp
-         self%im%vxrst = 0.0_dp
-         self%im%vzrst = 0.0_dp
-         self%im%prrst = 0.0_dp
-         self%im%thetarst = 0.0_dp
-         self%nrst = 0
+            character(len=*), parameter :: this_procedure = 'nek_zzero'
+            call assert_zinitialized(self, this_procedure)
+            call nek_dzero(self%re)
+            call nek_dzero(self%im)
+            ! this causes an internal compiler error, switch to manual
+            !call self%re%zero()
+            !call self%im%zero()
          end procedure
       
          module procedure nek_zrand
-         real(dp) :: alpha
-         call nek_drand(self%re); call nek_drand(self%im)
-         if (optval(ifnorm, .false.)) then
-            alpha = self%norm(); call self%scal(one_cdp/alpha)
-         end if
-      ! clear restart fields already cleared in nek_drand
+            character(len=*), parameter :: this_procedure = 'nek_zrand'
+            real(dp) :: alpha
+            call assert_zinitialized(self, this_procedure)
+            call nek_drand(self%re)
+            call nek_drand(self%im)
+            if (optval(ifnorm, .false.)) then
+               alpha = self%norm()
+               call nek_zscal(self, one_cdp/alpha)
+            end if
          end procedure
       
          module procedure nek_zscal
-         type(nek_dvector) :: re_old, im_old
-      ! Save components of complex vector before scaling.
-         re_old = self%re
-         im_old = self%im
-      ! re_new = ar*re_old - ai*im_old
-         call nek_dzero(self%re)
-         call nek_daxpby(alpha%re,  re_old, 1.0_dp, self%re)
-         call nek_daxpby(-alpha%im, im_old, 1.0_dp, self%re)
-      ! im_new = ar*im_old + ai*re_old
-         call nek_dzero(self%im)
-         call nek_daxpby(alpha%re, im_old, 1.0_dp, self%im)
-         call nek_daxpby(alpha%im, re_old, 1.0_dp, self%im)
+            character(len=*), parameter :: this_procedure = 'nek_zscal'
+            type(nek_dvector) :: re_old, im_old
+            call assert_zinitialized(self, this_procedure)
+
+            ! Save components of complex vector before scaling.
+            re_old = self%re
+            im_old = self%im
+
+            ! re_new = ar*re_old - ai*im_old
+            call nek_dzero(self%re)
+            call nek_daxpby(alpha%re,  re_old, 1.0_dp, self%re)
+            call nek_daxpby(-alpha%im, im_old, 1.0_dp, self%re)
+
+            ! im_new = ar*im_old + ai*re_old
+            call nek_dzero(self%im)
+            call nek_daxpby(alpha%re, im_old, 1.0_dp, self%im)
+            call nek_daxpby(alpha%im, re_old, 1.0_dp, self%im)
          end procedure
-      
+         
          module procedure nek_zaxpby
-         integer :: i
-         type(nek_zvector) :: wrk
-      ! Scratch array.
-         select type (vec)
-         type is (nek_zvector)
-            wrk = vec
-      ! Scale vectors before addition.
-            call self%scal(beta); call wrk%scal(alpha)
-      ! Vector addition.
-            call nek_daxpby(1.0_dp, wrk%re, 1.0_dp, self%re)
-            call nek_daxpby(1.0_dp, wrk%im, 1.0_dp, self%im)
-         class default
-            call type_error('vec','nek_zvector','IN',this_module,'nek_zaxpby')
-         end select
+            character(len=*), parameter :: this_procedure = 'nek_zaxpby'
+            type(nek_zvector) :: wrk
+            call assert_zinitialized(self, this_procedure)
+         
+            select type (vec)
+            type is (nek_zvector)
+            call assert_zinitialized(vec, this_procedure)
+
+               wrk = vec                       ! deep copy (re/im allocatables)
+               call nek_zscal(self, beta)
+               call nek_zscal(wrk, alpha)
+               call nek_daxpby(1.0_dp, wrk%re, 1.0_dp, self%re)
+               call nek_daxpby(1.0_dp, wrk%im, 1.0_dp, self%im)
+
+            class default
+               call type_error('vec','nek_zvector','IN',this_module,this_procedure)
+            end select
+
          end procedure
       
          module procedure nek_zdot
-         real(kind=dp) :: alpha_r, alpha_i
-         select type (vec)
-         type is (nek_zvector)
-            alpha_r = self%re%dot(vec%re) + self%im%dot(vec%im)
-            alpha_i = self%re%dot(vec%im) - self%im%dot(vec%re)
-            alpha = cmplx(alpha_r, alpha_i, kind=dp)
-         class default
-            call type_error('vec','nek_zvector','IN',this_module,'nek_zdot')
-         end select
+            character(len=*), parameter :: this_procedure = 'nek_zdot'
+            real(kind=dp) :: alpha_r, alpha_i
+            call assert_zinitialized(self, this_procedure)
+
+            select type (vec)
+            type is (nek_zvector)
+               call assert_zinitialized(vec, this_procedure)
+               ! <self, vec> = <re,re> + <im,im> + i(<re,im> - <im,re>)
+               alpha_r = nek_ddot(self%re, vec%re) + nek_ddot(self%im, vec%im)
+               alpha_i = nek_ddot(self%re, vec%im) - nek_ddot(self%im, vec%re)
+               alpha = cmplx(alpha_r, alpha_i, kind=dp)
+
+            class default
+               call type_error('vec','nek_zvector','IN',this_module,this_procedure)
+            end select
          end procedure
       
          module procedure nek_zsize
-         integer :: lvn, lpn, m
-         lvn = nx1*ny1*nz1*nelv
-         lpn = nx2*ny2*nz2*nelv
-         n = 2*lvn + lpn
-         if (if3d) n = n + lvn
-         if (ifto) n = n + lvn
-         if (ldimt > 1) then
-            do m = 2, ldimt
-               if (ifpsco(m - 1)) n = n + lvn
-            end do
-         end if
+            ! delegate: real + imaginary linear-algebra dimensions
+            n = nek_dsize(self%re) + nek_dsize(self%im)
+         end procedure
+
+         ! initialization
+
+         module procedure nek_zinit
+            character(len=*), parameter :: this_procedure = 'nek_zinit'
+            ! re and im are always initialized together with identical layout,
+            ! so their state flags (initialized / has_rst / nrst) stay in lockstep.
+            call nek_dinit(self%re, alloc_rst)
+            call nek_dinit(self%im, alloc_rst)
+         end procedure
+
+         module procedure nek_zis_initialized
+            ok = .false.
+            if (nek_dis_initialized(self%re) .and. nek_dis_initialized(self%im)) ok = .true.
          end procedure
 
          module procedure zsave_rst
-         integer :: m, lvn, lpn, torder
-         character(len=*), parameter :: this_procedure = 'zsave_rst'
-         character(len=128) :: msg
-
-         lvn = nx1*ny1*nz1*nelv
-         lpn = nx2*ny2*nz2*nelv
-         torder = abs(param(27)) ! integration order in time
-
-         ! sanity checks
-         if (irst == torder) then
-            write(msg,'(2(A,I0),A)') 'Cannot save rst fields ', torder, ' for a simulation of temporal order ', torder, '.'
-            call log_error(msg, this_module, this_procedure)
-         else
-            write(msg,'(A,I0)') 'Saving rst fields: ', irst
-            call log_debug(msg, this_module, this_procedure)
-         end if
-
-         select type (vec_rst)
-         type is (nek_zvector)
-            ! associate?
-            call copy(self%re%vxrst(:, irst), vec_rst%re%vx, lvn)
-            call copy(self%im%vxrst(:, irst), vec_rst%im%vx, lvn)
-            call copy(self%re%vyrst(:, irst), vec_rst%re%vy, lvn)
-            call copy(self%im%vyrst(:, irst), vec_rst%im%vy, lvn)
-            if (if3d) then
-               call copy(self%re%vzrst(:, irst), vec_rst%re%vz, lvn)
-               call copy(self%im%vzrst(:, irst), vec_rst%im%vz, lvn)
-            end if
-            call copy(self%re%prrst(:, irst), vec_rst%re%pr, lpn)
-            call copy(self%im%prrst(:, irst), vec_rst%im%pr, lpn)
-
-            if (ifto) then
-               call copy(self%re%thetarst(:, irst, 1), vec_rst%re%theta(:, 1), lvn)
-               call copy(self%im%thetarst(:, irst, 1), vec_rst%im%theta(:, 1), lvn)
-            end if
-            if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) then
-                     call copy(self%re%thetarst(:, irst, m), vec_rst%re%theta(:, m), lvn)
-                     call copy(self%im%thetarst(:, irst, m), vec_rst%im%theta(:, m), lvn)
-                  end if
-               end do
-            end if
-
-         class default
-            call type_error('vec_rst','nek_zvector','IN', this_module, this_procedure)
-         end select
+            character(len=*), parameter :: this_procedure = 'zsave_rst'
+            call assert_zrst_storage(self, this_procedure)
+            select type (vec_rst)
+            type is (nek_zvector)
+               call dsave_rst(self%re, vec_rst%re, irst)
+               call dsave_rst(self%im, vec_rst%im, irst)
+            class default
+               call type_error('vec_rst','nek_zvector','IN', this_module, this_procedure)
+            end select
          end procedure
-   
+
          module procedure zget_rst
-         integer :: m, lvn, lpn
-         character(len=*), parameter :: this_procedure = 'zget_rst'
-         character(len=128) :: msg
-
-         lvn = nx1*ny1*nz1*nelv
-         lpn = nx2*ny2*nz2*nelv
-
-         ! sanity checks
-         if (irst < 1) then
-            write(msg,'(A,I0)') 'Invalid input for irst: ', irst
-            call log_error(msg, this_module, this_procedure)
-         else if (irst > self%nrst) then
-            write(msg,'(A,I0)') 'No rst field to retrieve: ', irst
-            call log_warning(msg, this_module, this_procedure)
-         else
-            write(msg,'(A,I0)') 'Retrieving rst fields: ', irst
-            call log_information(msg, this_module, this_procedure)
-         end if
-
-         select type (vec_rst)
-         type is (nek_zvector)
-
-            call copy(vec_rst%re%vx, self%re%vxrst(:, irst), lvn)
-            call copy(vec_rst%im%vx, self%im%vxrst(:, irst), lvn)
-            call copy(vec_rst%re%vy, self%re%vyrst(:, irst), lvn)
-            call copy(vec_rst%im%vy, self%im%vyrst(:, irst), lvn)
-            if (if3d) then
-               call copy(vec_rst%re%vz, self%re%vzrst(:, irst), lvn)
-               call copy(vec_rst%im%vz, self%im%vzrst(:, irst), lvn)
-            end if
-            call copy(vec_rst%re%pr, self%re%prrst(:, irst), lpn)
-            call copy(vec_rst%im%pr, self%im%prrst(:, irst), lpn)
-            if (ifto) then
-               call copy(vec_rst%re%theta(:, 1), self%re%thetarst(:, irst, 1), lvn)
-               call copy(vec_rst%im%theta(:, 1), self%im%thetarst(:, irst, 1), lvn)
-            end if
-            if (ldimt > 1) then
-               do m = 2, ldimt
-                  if (ifpsco(m - 1)) then
-                     call copy(vec_rst%re%theta(:, m), self%re%thetarst(:, irst, m), lvn)
-                     call copy(vec_rst%im%theta(:, m), self%im%thetarst(:, irst, m), lvn)
-                  end if
-               end do
-            end if
-
-         class default
-            call type_error('vec_rst','nek_zvector','OUT',this_module, this_procedure)
-         end select
+            character(len=*), parameter :: this_procedure = 'zget_rst'
+            call assert_zrst_storage(self, this_procedure)
+            select type (vec_rst)
+            type is (nek_zvector)
+               call dget_rst(self%re, vec_rst%re, irst)
+               call dget_rst(self%im, vec_rst%im, irst)
+            class default
+               call type_error('vec_rst','nek_zvector','OUT', this_module, this_procedure)
+            end select
          end procedure
 
          module procedure zhas_rst_fields
-         has_rst_fields = .false.
-         if (self%nrst > 0) has_rst_fields = .true.
-         end procedure 
+            has = dhas_rst_fields(self%re)
+         end procedure
+
+         module procedure zhas_rst_storage
+            has = dhas_rst_storage(self%re)
+         end procedure
 
          module procedure zclear_rst_fields
-         if (self%nrst == 0) then
-            call log_debug('No rst fields to clear', this_module, 'zclear_rst_fields')
-         end if
-         self%nrst = 0
+            call dclear_rst_fields(self%re, dealloc_rst)
+            call dclear_rst_fields(self%im, dealloc_rst)
          end procedure
-      
+
+         ! --- private helpers ---
+
+         subroutine assert_zinitialized(vec, procedure_name)
+            class(nek_zvector), intent(in) :: vec
+            character(len=*), intent(in) :: procedure_name
+            if (.not. (nek_dis_initialized(vec%re) .and. nek_dis_initialized(vec%im))) then
+               call stop_error('nek_zvector used before init', this_module, procedure_name)
+            end if
+         end subroutine
+
+         subroutine assert_zrst_storage(vec, procedure_name)
+            class(nek_zvector), intent(in) :: vec
+            character(len=*), intent(in) :: procedure_name
+            if (.not. (nek_dis_initialized(vec%re) .and. nek_dis_initialized(vec%im))) then
+               call stop_error('nek_zvector used before init', this_module, procedure_name)
+            else if (.not. dhas_rst_storage(vec%re)) then
+               call stop_error('nek_zvector initialized without rst storage', this_module, procedure_name)
+            end if
+         end subroutine
+
       end submodule

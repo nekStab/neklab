@@ -13,8 +13,8 @@
          integer, parameter :: lv = lx1*ly1*lz1*lelv
          integer, parameter :: lp = lx2*ly2*lz2*lelv
          complex(kind=dp), parameter :: zero_cdp = cmplx(0.0_dp, 0.0_dp, kind=dp)
-         complex(kind=dp), parameter :: one_cdp = cmplx(1.0_dp, 0.0_dp, kind=dp)
-         complex(kind=dp), parameter :: im_cdp = cmplx(0.0_dp, 1.0_dp, kind=dp)
+         complex(kind=dp), parameter :: one_cdp  = cmplx(1.0_dp, 0.0_dp, kind=dp)
+         complex(kind=dp), parameter :: im_cdp   = cmplx(0.0_dp, 1.0_dp, kind=dp)
       
          public :: mth_rand
       
@@ -24,34 +24,40 @@
       
       ! --> Type.
          type, extends(abstract_vector_rdp), public :: nek_dvector
-            real(kind=dp), dimension(lv) :: vx, vy, vz
-            real(kind=dp), dimension(lp) :: pr
-            real(kind=dp), dimension(lv, ldimt) :: theta
-            real(kind=dp), dimension(lv,lorder-1) :: vxrst = 0.0_dp
-            real(kind=dp), dimension(lv,lorder-1) :: vyrst = 0.0_dp
-            real(kind=dp), dimension(lv,lorder-1) :: vzrst = 0.0_dp
-            real(kind=dp), dimension(lp,lorder-1) :: prrst = 0.0_dp
-            real(kind=dp), dimension(lv,lorder-1,ldimt) :: thetarst = 0.0_dp
-            integer :: nrst = 0
+            ! public data
+            real(kind=dp), allocatable :: vx(:), vy(:), vz(:)
+            real(kind=dp), allocatable :: pr(:)
+            real(kind=dp), allocatable :: theta(:,:)
+            ! private state and restart storage
+            real(kind=dp), allocatable, private :: vxrst(:,:), vyrst(:,:), vzrst(:,:)
+            real(kind=dp), allocatable, private :: prrst(:,:)
+            real(kind=dp), allocatable, private :: thetarst(:,:,:)
+            integer, private :: nrst = 0
+            logical, private :: has_rst = .false.
+            logical, private :: initialized = .false.
          contains
             private
             ! required basic type-bound procedures
-            procedure, pass(self), public :: zero => nek_dzero
-            procedure, pass(self), public :: rand => nek_drand
-            procedure, pass(self), public :: scal => nek_dscal
-            procedure, pass(self), public :: axpby => nek_daxpby
-            procedure, pass(self), public :: dot => nek_ddot
+            procedure, pass(self), public :: zero     => nek_dzero
+            procedure, pass(self), public :: rand     => nek_drand
+            procedure, pass(self), public :: scal     => nek_dscal
+            procedure, pass(self), public :: axpby    => nek_daxpby
+            procedure, pass(self), public :: dot      => nek_ddot
             procedure, pass(self), public :: get_size => nek_dsize
+            ! initialization
+            procedure, pass(self), public :: init           => nek_dinit
+            procedure, pass(self), public :: is_initialized => nek_dis_initialized
             ! additional type-bound procedures
-            procedure, pass(self), public :: save_rst => dsave_rst
-            procedure, pass(self), public :: get_rst => dget_rst
-            procedure, pass(self), public :: has_rst_fields => dhas_rst_fields
+            procedure, pass(self), public :: save_rst         => dsave_rst
+            procedure, pass(self), public :: get_rst          => dget_rst
+            procedure, pass(self), public :: has_rst_fields   => dhas_rst_fields
+            procedure, pass(self), public :: has_rst_storage  => dhas_rst_storage
             procedure, pass(self), public :: clear_rst_fields => dclear_rst_fields
          end type nek_dvector
       
       ! --> Constructor.
          interface nek_dvector
-            pure module function construct_nek_dvector(vx, vy, vz, pr, theta) result(out)
+            module function construct_nek_dvector(vx, vy, vz, pr, theta) result(out)
                real(kind=dp), dimension(lv), intent(in) :: vx, vy
                real(kind=dp), dimension(lv), optional, intent(in) :: vz
                real(kind=dp), dimension(lp), optional, intent(in) :: pr
@@ -62,6 +68,8 @@
       
       ! --> Type-bound procedures.
          interface
+
+            ! required by LightKrylov abstract_vector_rdp
             module subroutine nek_dzero(self)
                class(nek_dvector), intent(inout) :: self
             end subroutine
@@ -91,7 +99,18 @@
             integer pure module function nek_dsize(self) result(n)
                class(nek_dvector), intent(in) :: self
             end function
-            
+
+            ! initialization
+            module subroutine nek_dinit(self, alloc_rst)
+               class(nek_dvector), intent(inout) :: self
+               logical, optional, intent(in) :: alloc_rst ! default is .false. (no restart storage)
+            end subroutine
+
+            logical pure module function nek_dis_initialized(self) result(ok)
+               class(nek_dvector), intent(in) :: self
+            end function
+
+            ! restart storage and organization
             module subroutine dsave_rst(self, vec_rst, irst)
                class(nek_dvector), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_rst
@@ -104,12 +123,17 @@
                integer, intent(in) :: irst
             end subroutine
             
-            logical pure module function dhas_rst_fields(self) result(has_rst_fields)
+            logical pure module function dhas_rst_fields(self) result(has) ! nrst > 0
+               class(nek_dvector), intent(in) :: self
+            end function
+
+            logical pure module function dhas_rst_storage(self) result(has)
                class(nek_dvector), intent(in) :: self
             end function
             
-            module subroutine dclear_rst_fields(self)
+            module subroutine dclear_rst_fields(self, dealloc_rst)
                class(nek_dvector), intent(inout) :: self
+               logical, optional, intent(in) :: dealloc_rst   ! default is .false. .true. => free stacks, mrst = 0
             end subroutine
          end interface
       
@@ -119,47 +143,55 @@
       
       ! --> Type.
          type, extends(abstract_vector_rdp), public :: nek_ext_dvector
-            real(kind=dp), dimension(lv) :: vx, vy, vz
-            real(kind=dp), dimension(lp) :: pr
-            real(kind=dp), dimension(lv, ldimt) :: theta
+            ! public data
+            real(kind=dp), allocatable :: vx(:), vy(:), vz(:)
+            real(kind=dp), allocatable :: pr(:)
+            real(kind=dp), allocatable :: theta(:,:)
             real(kind=dp) :: T
-            real(kind=dp), dimension(lv,lorder-1), private :: vxrst = 0.0_dp
-            real(kind=dp), dimension(lv,lorder-1), private :: vyrst = 0.0_dp
-            real(kind=dp), dimension(lv,lorder-1), private :: vzrst = 0.0_dp
-            real(kind=dp), dimension(lp,lorder-1), private :: prrst = 0.0_dp
-            real(kind=dp), dimension(lv,lorder-1,ldimt), private :: thetarst = 0.0_dp
-            real(kind=dp), private :: Trst(lorder-1) = 0.0_dp
+            ! private state and restart storage
+            real(kind=dp), allocatable, private :: vxrst(:,:), vyrst(:,:), vzrst(:,:)
+            real(kind=dp), allocatable, private :: prrst(:,:)
+            real(kind=dp), allocatable, private :: thetarst(:,:,:)
+            real(kind=dp), allocatable, private :: Trst(:)
             integer, private :: nrst = 0
+            logical, private :: has_rst = .false.
+            logical, private :: initialized = .false.
          contains
             private
             ! required basic type-bound procedures
-            procedure, pass(self), public :: zero => nek_ext_dzero
-            procedure, pass(self), public :: rand => nek_ext_drand
-            procedure, pass(self), public :: scal => nek_ext_dscal
-            procedure, pass(self), public :: axpby => nek_ext_daxpby
-            procedure, pass(self), public :: dot => nek_ext_ddot
+            procedure, pass(self), public :: zero     => nek_ext_dzero
+            procedure, pass(self), public :: rand     => nek_ext_drand
+            procedure, pass(self), public :: scal     => nek_ext_dscal
+            procedure, pass(self), public :: axpby    => nek_ext_daxpby
+            procedure, pass(self), public :: dot      => nek_ext_ddot
             procedure, pass(self), public :: get_size => nek_ext_dsize
+            ! initialization
+            procedure, pass(self), public :: init           => nek_ext_dinit
+            procedure, pass(self), public :: is_initialized => nek_ext_dis_initialized
             ! additional type-bound procedures
-            procedure, pass(self), public :: save_rst => ext_dsave_rst
-            procedure, pass(self), public :: get_rst => ext_dget_rst
-            procedure, pass(self), public :: has_rst_fields => ext_dhas_rst_fields
+            procedure, pass(self), public :: save_rst         => ext_dsave_rst
+            procedure, pass(self), public :: get_rst          => ext_dget_rst
+            procedure, pass(self), public :: has_rst_fields   => ext_dhas_rst_fields
+            procedure, pass(self), public :: has_rst_storage  => ext_dhas_rst_storage
             procedure, pass(self), public :: clear_rst_fields => ext_dclear_rst_fields
          end type nek_ext_dvector
       
       ! --> Constructor.
          interface nek_ext_dvector
-            pure module function construct_nek_ext_dvector(vx, vy, vz, pr, theta, time) result(out)
+            module function construct_nek_ext_dvector(vx, vy, vz, pr, theta, T) result(out)
                real(kind=dp), dimension(lv), intent(in) :: vx, vy
                real(kind=dp), dimension(lv), optional, intent(in) :: vz
                real(kind=dp), dimension(lp), optional, intent(in) :: pr
                real(kind=dp), dimension(lv, ldimt), optional, intent(in) :: theta
-               real(kind=dp), optional, intent(in) :: time
+               real(kind=dp), optional, intent(in) :: T
                type(nek_ext_dvector) :: out
             end function
          end interface
       
       ! --> Type-bound procedures.
          interface
+
+            ! required by LightKrylov abstract_vector_rdp
             module subroutine nek_ext_dzero(self)
                class(nek_ext_dvector), intent(inout) :: self
             end subroutine
@@ -190,6 +222,17 @@
                class(nek_ext_dvector), intent(in) :: self
             end function
 
+            ! initialization
+            module subroutine nek_ext_dinit(self, alloc_rst)
+               class(nek_ext_dvector), intent(inout) :: self
+               logical, optional, intent(in) :: alloc_rst ! default is .false. (no restart storage)
+            end subroutine
+
+            logical pure module function nek_ext_dis_initialized(self) result(ok)
+               class(nek_ext_dvector), intent(in) :: self
+            end function
+
+            ! restart storage and organization
             module subroutine ext_dsave_rst(self, vec_rst, irst)
                class(nek_ext_dvector), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_rst
@@ -198,16 +241,21 @@
 
             module subroutine ext_dget_rst(self, vec_rst, irst)
                class(nek_ext_dvector), intent(in) :: self
-               class(abstract_vector_rdp), intent(out) :: vec_rst
+               class(abstract_vector_rdp), intent(inout) :: vec_rst
                integer, intent(in) :: irst
             end subroutine
             
-            logical pure module function ext_dhas_rst_fields(self) result(has_rst_fields)
+            logical pure module function ext_dhas_rst_fields(self) result(has) ! nrst > 0
+               class(nek_ext_dvector), intent(in) :: self
+            end function
+
+            logical pure module function ext_dhas_rst_storage(self) result(has)
                class(nek_ext_dvector), intent(in) :: self
             end function
             
-            module subroutine ext_dclear_rst_fields(self)
+            module subroutine ext_dclear_rst_fields(self, dealloc_rst)
                class(nek_ext_dvector), intent(inout) :: self
+               logical, optional, intent(in) :: dealloc_rst   ! default is .false. .true. => free stacks, mrst = 0
             end subroutine
          end interface
       
@@ -219,26 +267,30 @@
          type, extends(abstract_vector_cdp), public :: nek_zvector
             type(nek_dvector) :: re
             type(nek_dvector) :: im
-            integer, private :: nrst
          contains
             private
             ! required basic type-bound procedures
-            procedure, pass(self), public :: zero => nek_zzero
-            procedure, pass(self), public :: rand => nek_zrand
-            procedure, pass(self), public :: scal => nek_zscal
-            procedure, pass(self), public :: axpby => nek_zaxpby
-            procedure, pass(self), public :: dot => nek_zdot
+            ! required basic type-bound procedures
+            procedure, pass(self), public :: zero     => nek_zzero
+            procedure, pass(self), public :: rand     => nek_zrand
+            procedure, pass(self), public :: scal     => nek_zscal
+            procedure, pass(self), public :: axpby    => nek_zaxpby
+            procedure, pass(self), public :: dot      => nek_zdot
             procedure, pass(self), public :: get_size => nek_zsize
+            ! initialization
+            procedure, pass(self), public :: init           => nek_zinit
+            procedure, pass(self), public :: is_initialized => nek_zis_initialized
             ! additional type-bound procedures
-            procedure, pass(self), public :: save_rst => zsave_rst
-            procedure, pass(self), public :: get_rst => zget_rst
-            procedure, pass(self), public :: has_rst_fields => zhas_rst_fields
+            procedure, pass(self), public :: save_rst         => zsave_rst
+            procedure, pass(self), public :: get_rst          => zget_rst
+            procedure, pass(self), public :: has_rst_fields   => zhas_rst_fields
+            procedure, pass(self), public :: has_rst_storage  => zhas_rst_storage
             procedure, pass(self), public :: clear_rst_fields => zclear_rst_fields
          end type nek_zvector
       
       ! --> Constructor.
          interface nek_zvector
-            pure module function construct_nek_zvector(vx, vy, vz, pr, theta) result(out)
+            module function construct_nek_zvector(vx, vy, vz, pr, theta) result(out)
                real(kind=dp), dimension(lv, 2), intent(in) :: vx, vy
                real(kind=dp), dimension(lv, 2), optional, intent(in) :: vz
                real(kind=dp), dimension(lp, 2), optional, intent(in) :: pr
@@ -249,6 +301,8 @@
       
       ! --> Type-bound procedures.
          interface
+
+            ! required by LightKrylov abstract_vector_cdp
             module subroutine nek_zzero(self)
                class(nek_zvector), intent(inout) :: self
             end subroutine
@@ -279,6 +333,17 @@
                class(nek_zvector), intent(in) :: self
             end function
 
+            ! initialization
+            module subroutine nek_zinit(self, alloc_rst)
+               class(nek_zvector), intent(inout) :: self
+               logical, optional, intent(in) :: alloc_rst ! default is .false. (no restart storage)
+            end subroutine
+
+            logical pure module function nek_zis_initialized(self) result(ok)
+               class(nek_zvector), intent(in) :: self
+            end function
+
+            ! restart storage and organization
             module subroutine zsave_rst(self, vec_rst, irst)
                class(nek_zvector), intent(inout) :: self
                class(abstract_vector_cdp), intent(in) :: vec_rst
@@ -287,16 +352,21 @@
 
             module subroutine zget_rst(self, vec_rst, irst)
                class(nek_zvector), intent(in) :: self
-               class(abstract_vector_cdp), intent(out) :: vec_rst
+               class(abstract_vector_cdp), intent(inout) :: vec_rst
                integer, intent(in) :: irst
             end subroutine
 
-            logical pure module function zhas_rst_fields(self) result(has_rst_fields)
+            logical pure module function zhas_rst_fields(self) result(has) ! nrst > 0
                class(nek_zvector), intent(in) :: self
             end function
-            
-            module subroutine zclear_rst_fields(self)
+
+            logical pure module function zhas_rst_storage(self) result(has)
+               class(nek_zvector), intent(in) :: self
+            end function
+
+            module subroutine zclear_rst_fields(self, dealloc_rst)
                class(nek_zvector), intent(inout) :: self
+               logical, optional, intent(in) :: dealloc_rst ! default is .false. .true. => free stacks
             end subroutine
          end interface
       
