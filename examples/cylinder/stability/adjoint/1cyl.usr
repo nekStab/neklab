@@ -5,14 +5,15 @@ c-----------------------------------------------------------------------
       include "TOTAL"
       integer :: i
 
-        type(nek_dvector), allocatable :: bf, wrk_vec1, wrk_vec2
+        type(nek_dvector), allocatable :: bf
         type(exptA_linop), allocatable :: exptA
         integer, parameter :: kdim = 128, nev = 2
 
         if (istep.eq.0) then
             ! Load baseflow.
             call load_fld("BF_1cyl0.f00001")
-            allocate(bf) ; call nek2vec(bf, vx, vy, vz, pr, t)
+            allocate(bf); call bf%init()
+	    call nek2vec(bf, vx, vy, vz, pr, t)
             call vec2nek(vx, vy, vz, pr, t, bf)
 
             ! Exponential propagator.

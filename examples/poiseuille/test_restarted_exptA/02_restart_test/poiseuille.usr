@@ -1,0 +1,839 @@
+      subroutine userchk
+
+      use LightKrylov
+      use neklab
+      use neklab_nek_setup
+      implicit none
+      include "SIZE"
+      include "TOTAL"
+      
+      integer, parameter :: nsnap = 10
+      integer, parameter :: nvec = 5
+      ! vectors
+      type(nek_dvector), allocatable :: bf, pert, vec_rst
+      type(nek_dvector), allocatable :: reference(:), test(:)
+      type(nek_dvector), allocatable :: basis_ref(:), basis(:)
+      type(nek_dvector), allocatable :: p1, rst1(:), p2, rst2(:), tmp
+      type(nek_dvector), allocatable :: p_in, p_out
+      ! exponential propagator
+      type(exptA_linop), allocatable :: exptA
+      real(dp) :: norm, alpha, IP(nvec,nvec)
+      real(dp), allocatable :: G(:,:), beta(:)
+      integer :: i, j, irst, ivec, info
+      character(len=128) :: fname, msg
+
+      integer, parameter :: lv = lx1*ly1*lz1*lelv
+      integer, parameter :: lp = lx2*ly2*lz2*lelv
+
+      real(dp), dimension(lv, lorder-1) :: vxr, vyr, vzr
+      real(dp), dimension(lp, lorder-1) :: prr
+      real(dp), dimension(lv,3) :: vx1, vy1, vz1
+      real(dp), dimension(lv,3) :: vx2, vy2, vz2
+      real(dp), dimension(lp,3) :: pr1, pr2
+      real(dp), dimension(lv, lorder-1) :: vxr_ref, vyr_ref, vzr_ref
+
+      real(dp), external :: pert_inner_prod, glsc3
+
+      real(dp) :: pran, ray, rayc
+      common/normset/pran, ray, rayc
+
+      pran = 1.0_dp
+      ray  = 1.0_dp
+      rayc = 1.0_dp
+
+      if (istep.eq.0) then
+         ! read reference solution
+	 allocate(reference(nsnap))
+	 do i = 1, nsnap
+	    call reference(i)%init()
+	 end do
+         !call zero_basis(reference)
+         do i = 1, nsnap
+            write(fname,'(A,I5.5)') 'prtpoiseuille0.f', i
+            call load_fld(fname) ; call nek2vec(reference(i), vx,vy,vz,pr,t)
+         end do
+         ! load initial condition
+         write(fname,'(A,I5.5)') 'ic_poiseuille0.f', 1
+         call load_fld(fname)
+	 allocate(pert); call pert%init()
+	 call nek2vec(pert, vx, vy, vz, pr, t)
+         ! reset baseflow
+         call blank(initc(1),132) ; call setics()
+	 allocate(bf); call bf%init()
+	 call nek2vec(bf,vx,vy,vz,pr,t)
+
+         allocate(p1); call p1%init()
+         p1      = pert
+	 allocate(rst1(2))
+	 do i = 1, 2
+	    call rst1(i)%init()
+            rst1(i) = reference(i)
+	 end do
+         !rst1(1) = reference(1)
+         !rst1(2) = reference(2)
+
+         allocate(p2); call p2%init()
+         p2      = reference(5)
+	 allocate(rst2(2))
+	 do i = 1, 2
+	    call rst2(i)%init()
+            rst2(i) = reference(5+i)
+	 end do
+         !rst2(1) = reference(6)
+         !rst2(2) = reference(7)
+         
+         ! integrate initial condition without restart
+         ! msg = 'integrate without restart'//char(10)
+         ! call nek_log_message(msg, procedure='userchk')
+         ! call vec2nek(vxp, vyp, vzp, prp, tp, pert)
+         ! call zero_basis(test)
+         ! do istep = 1, nsnap
+            ! call nek_advance()
+            ! call nek2vec(test(istep), vxp, vyp, vzp, prp, tp)
+         ! end do
+         ! 
+         ! call axpby_basis(-1.0_dp, reference, 1.0_dp, test)
+         ! do i = 1, nsnap
+            ! norm = test(i)%norm()
+	         ! if (nid == 0) print *, 'userchk: Step', i, 'diff norm', norm
+         ! end do
+! 
+         ! integrate initial condition with restart
+         ! msg = 'integrate with restart'//char(10)
+         ! call nek_log_message(msg, procedure='userchk')
+         ! call vec2nek(vxp, vyp, vzp, prp, tp, pert)
+         ! call zero_basis(test)
+         ! do istep = 1, nsnap
+            ! call nek_advance()
+            ! if (istep < 3) call vec2nek(vxp, vyp, vzp, prp, tp, reference(istep))
+            ! call nek2vec(test(istep), vxp, vyp, vzp, prp, tp)
+         ! end do
+         ! 
+         ! call axpby_basis(-1.0_dp, reference, 1.0_dp, test)
+         ! do i = 1, nsnap
+            ! norm = test(i)%norm()
+	         ! if (nid == 0) print *, 'userchk: Step', i, 'diff norm', norm
+         ! end do
+! 
+!         !! integrate initial condition in two steps without restart
+!         msg = 'integrate in 2 steps without restart'//char(10)
+!         call nek_log_message(msg, procedure='userchk')
+!         call vec2nek(vxp, vyp, vzp, prp, tp, p1)
+!         call zero_basis(test)
+!         do istep = 1, 5
+!            call nek_advance()
+!            call nek2vec(test(istep), vxp, vyp, vzp, prp, tp)
+!         end do
+!         call vec2nek(vxp, vyp, vzp, prp, tp, p2)
+!         do istep = 1, 5
+!            call nek_advance()
+!            call nek2vec(test(istep+5), vxp, vyp, vzp, prp, tp)
+!         end do
+!
+!         call axpby_basis(-1.0_dp, reference, 1.0_dp, test)
+!         do i = 1, nsnap
+!            norm = test(i)%norm()
+!	         if (nid == 0) print *, 'userchk: Step', i, 'diff norm', norm
+!         end do
+!
+!         !! integrate initial condition in two steps
+!         msg = 'integrate in 2 steps'//char(10)
+!         call nek_log_message(msg, procedure='userchk')
+!         call vec2nek(vxp, vyp, vzp, prp, tp, p1)
+!         call zero_basis(test)
+!         do istep = 1, 5
+!            call nek_advance()
+!            if (istep == 1) call vec2nek(vxp, vyp, vzp, prp, tp, rst1(1))
+!            if (istep == 2) call vec2nek(vxp, vyp, vzp, prp, tp, rst1(2))
+!            call nek2vec(test(istep), vxp, vyp, vzp, prp, tp)
+!         end do
+!         call vec2nek(vxp, vyp, vzp, prp, tp, p2)
+!         do istep = 1, 5
+!            call nek_advance()
+!            if (istep == 1) call vec2nek(vxp, vyp, vzp, prp, tp, rst2(1))
+!            if (istep == 2) call vec2nek(vxp, vyp, vzp, prp, tp, rst2(2))
+!            call nek2vec(test(istep+5), vxp, vyp, vzp, prp, tp)
+!         end do
+!
+!         call axpby_basis(-1.0_dp, reference, 1.0_dp, test)
+!         do i = 1, nsnap
+!            norm = test(i)%norm()
+!	         if (nid == 0) print *, 'userchk: Step', i, 'diff norm', norm
+!         end do
+!
+!         !! integrate initial condition in two steps using intrinsic restarts
+!         msg = 'integrate in 2 steps using intrinsic restarts'//char(10)
+!         call nek_log_message(msg, procedure='userchk')
+!         call p1%clear_rst_fields()
+!         call p1%save_rst(rst1(1))
+!         call p1%save_rst(rst1(2))
+!         call vec2nek(vxp, vyp, vzp, prp, tp, p1)
+!         call zero_basis(test)
+!         do istep = 1, 5
+!            call nek_advance()
+!            if (istep <= 2 .and. p1%has_rst_fields()) then
+!               call p1%get_rst(vec_rst, istep)
+!               call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
+!            end if
+!            call nek2vec(test(istep), vxp, vyp, vzp, prp, tp)
+!         end do
+!         call p2%clear_rst_fields()
+!         call p2%save_rst(rst2(1))
+!         call p2%save_rst(rst2(2))
+!         call vec2nek(vxp, vyp, vzp, prp, tp, p2)
+!         do istep = 1, 5
+!            call nek_advance()
+!            if (istep <= 2 .and. p2%has_rst_fields()) then
+!               call p2%get_rst(vec_rst, istep)
+!               call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
+!            end if
+!	         if (nid == 0) print *, 'userchk: Step', i, 'diff norm', norm
+!         end do
+!
+!         !! integrate initial condition in two steps using intrinsic restarts and setting them
+!         msg = 'integrate in 2 steps using intrinsic restarts and setting them'//char(10)
+!         call nek_log_message(msg, procedure='userchk')
+!         call p1%clear_rst_fields()
+!         call p1%save_rst(rst1(1))
+!         call p1%save_rst(rst1(2))
+!         call p2%zero()
+!         call vec2nek(vxp, vyp, vzp, prp, tp, p1)
+!         call zero_basis(test)
+!         do istep = 1, 5
+!            call nek_advance()
+!            if (istep <= 2 .and. p1%has_rst_fields()) then
+!               call p1%get_rst(vec_rst, istep)
+!               call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
+!            end if
+!            call nek2vec(test(istep), vxp, vyp, vzp, prp, tp)
+!         end do
+!         call nek2vec(p2, vxp, vyp, vzp, prp, tp)
+!         do istep = 6, 7
+!            call nek_advance()
+!            call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
+!            call p2%save_rst(vec_rst)
+!         end do
+!         call vec2nek(vxp, vyp, vzp, prp, tp, p2)
+!         do istep = 1, 5
+!            call nek_advance()
+!            if (istep <= 2 .and. p2%has_rst_fields()) then
+!               call p2%get_rst(vec_rst, istep)
+!               call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
+!            end if
+!            call nek2vec(test(istep+5), vxp, vyp, vzp, prp, tp)
+!         end do
+!
+!         call axpby_basis(-1.0_dp, reference, 1.0_dp, test)
+!         do i = 1, nsnap
+!            norm = test(i)%norm()
+!	         if (nid == 0) print *, 'userchk: Step', i, 'diff norm', norm
+!         end do
+!
+!         ! exponential propagator full integration
+!         msg = 'exponential propagator full integration'//char(10)
+!         call nek_log_message(msg, procedure='userchk')
+!         exptA = exptA_linop(tau=10*dt, baseflow=bf); call exptA%init()
+!         call exptA%matvec(p1, p2)
+!         call p2%sub(reference(nsnap))
+!         norm = p2%norm()
+!	      if (nid == 0) print *, 'userchk: Step', i, 'exptA diff norm        ', norm
+!
+!         !! exponential propagator full integration two steps
+!         msg = 'exponential propagator full integration in 2 steps'//char(10)
+!         call nek_log_message(msg, procedure='userchk')
+!         exptA = exptA_linop(tau=5*dt, baseflow=bf); call exptA%init()
+!         !!call nek_log_message('int 1 start', procedure='userchk')
+!         call exptA%matvec(p1, pert)
+!         !!call nek_log_message('int 1 end'//char(10), procedure='userchk')
+!         p2 = pert
+!         call p2%sub(reference(5))
+!         norm = p2%norm()
+!	      if (nid == 0) print *, 'userchk: Step', i, 'exptA 1 diff2 norm sol ', norm
+!         
+!         exptA = exptA_linop(tau=5*dt, baseflow=bf); call exptA%init()
+!         call p2%get_rst(rst1(1), 1)
+!         call rst1(1)%sub(reference(6))
+!         norm = rst1(1)%norm()
+!	      if (nid == 0) print *, 'userchk: Step', i, 'exptA 1 diff2 norm rst1', norm
+!         call p2%get_rst(rst1(2), 2)
+!         call rst1(2)%sub(reference(7))
+!         norm = rst1(2)%norm()
+!	      if (nid == 0) print *, 'userchk: Step', i, 'exptA 1 diff2 norm rst2', norm
+!         !!call nek_log_message('int 2 start', procedure='userchk')
+!         call exptA%matvec(pert, p2)
+!         !!call nek_log_message('int 2 end'//char(10), procedure='userchk')
+!         call p2%sub(reference(nsnap))
+!         norm = p2%norm()
+!	      if (nid == 0) print *, 'userchk: Step', i, 'exptA 2 diff2 norm     ', norm
+
+         ! load initial condition
+         write(fname,'(A,I5.5)') 'ic_poiseuille0.f', 1
+         call load_fld(fname) ; call nek2vec(pert, vx, vy, vz, pr, t)
+         ! reset baseflow
+         call blank(initc(1),132) ; call setics() ; call nek2vec(bf,vx,vy,vz,pr,t)
+
+
+
+         !! Create orthonormal Krylov basis
+
+
+         msg = 'integrate directly'//char(10)
+         call nek_log_message(msg, procedure='userchk')
+         call vec2nek(vxp, vyp, vzp, prp, tp, pert)
+         ivec = 0
+
+         allocate(basis_ref(nvec))
+         do istep = 1, nvec*nsnap
+            call nek_advance()
+            if (mod(istep,nsnap)==0) then
+               ivec = ivec + 1
+	       call basis_ref(ivec)%init()
+               call nek2vec(basis_ref(ivec), vxp, vyp, vzp, prp, tp)
+            end if
+         end do
+         call orthonormalize_basis(basis_ref)
+
+         G = gram(basis_ref)
+
+         if (nid==0) then
+            print *, 'userchk: gram matrix, regular run'
+            do ivec = 1, nvec
+               print '("userchk: ",*(1x,F14.12))', ( G(ivec, i), i = 1, nvec)
+            end do
+         end if
+
+         msg = 'integrate in nsub steps'//char(10)
+         call nek_log_message(msg, procedure='userchk')
+         call vec2nek(vxp, vyp, vzp, prp, tp, pert)
+
+         allocate(basis(nvec))
+         do ivec = 1, nvec
+            do istep = 1, nsnap
+               call nek_advance()
+               if (ivec > 1 .and. istep <= lorder - 1) then
+                  call opcopy(vxp, vyp, vzp, vxr(1,istep), vyr(1,istep),vzr(1,istep))
+                  prp(:lp,1) = prr(:lp, istep)
+               end if
+            end do
+            istep = istep - 1
+	    call basis(ivec)%init()
+            call nek2vec(basis(ivec), vxp, vyp, vzp, prp, tp)
+            irst = 0
+            do istep = nsnap + 1, nsnap + lorder - 1
+               irst = istep - nsnap
+               call nek_advance()
+               call opcopy(vxr(1,irst), vyr(1,irst), vzr(1,irst), vxp, vyp, vzp)
+               prr(:lp, irst) = prp(:lp, 1)
+            end do
+            call vec2nek(vxp, vyp, vzp, prp, tp, basis(ivec))
+         end do
+         call orthonormalize_basis(basis)
+         
+         G = gram(basis)
+
+         if (nid==0) then
+            print *, 'userchk: gram matrix, run in nsub steps'
+            do ivec = 1, nvec
+               print '("userchk: ",*(1x,F14.12))', ( G(ivec, i), i = 1, nvec)
+            end do
+         end if
+
+         G = innerprod(basis, basis_ref)
+
+         if (nid==0) then
+            print *, 'userchk: B.T B between bases'
+            do ivec = 1, nvec
+               print '("userchk: ",*(1x,F14.12))', ( G(ivec, i), i = 1, nvec)
+            end do
+         end if
+
+         msg = 'integrate in nsub steps and copy to aux fields'//char(10)
+         call nek_log_message(msg, procedure='userchk')
+         call vec2nek(vxp, vyp, vzp, prp, tp, pert)
+
+         norm = pert%norm()
+         if (nid==0) print *, 'userchk: norm init', norm
+
+         do ivec = 1, nvec
+            do istep = 1, nsnap
+               call nek_advance()
+               if (ivec > 1 .and. istep <= lorder - 1) then
+                  call opcopy(vxp, vyp, vzp, vxr(1,istep), vyr(1,istep),vzr(1,istep))
+                  prp(:lp,1) = prr(:lp, istep)
+               end if
+            end do
+            istep = istep - 1
+            i = ivec+1
+            ! copy vxyzp
+            call opcopy(vxp(1,i), vyp(1,i), vzp(1,i), vxp, vyp, vzp)
+            ! copy prp
+            prp(:lp,i) = prp(:lp,1)
+            ! copy exx1p
+            call opcopy(exx1p(1,i),exy1p(1,i),exy1p(1,i), exx1p, exy1p, exz1p)
+            ! copy exx2p
+            call opcopy(exx2p(1,i),exy2p(1,i),exy2p(1,i), exx2p, exy2p, exz2p)
+            ! copy vxyzlagp & prlagp
+            do irst = 1, lorder-1
+               call opcopy(vxlagp(1,irst,i), vylagp(1,irst,i), vzlagp(1,irst,i), 
+     &                     vxlagp(1,irst,1), vylagp(1,irst,1), vzlagp(1,irst,1))
+               prlagp(:lp,irst,i) = prlagp(:lp,irst,i)
+            end do
+            irst = 0
+            do istep = nsnap + 1, nsnap + lorder - 1
+               irst = istep - nsnap
+               call nek_advance()
+               call opcopy(vxr(1,irst), vyr(1,irst), vzr(1,irst), vxp, vyp, vzp)
+               prr(:lp, irst) = prp(:lp, 1)
+            end do
+            ! copy vxyzp
+            call opcopy(vxp, vyp, vzp, vxp(1,i), vyp(1,i), vzp(1,i))
+            
+            norm = glsc3(vxp,bm1,vxp,lv) + glsc3(vyp,bm1,vyp,lv)
+            if (nid==0) print *, 'userchk: norm', ivec, norm
+         end do
+
+         call zero_basis(basis)
+         do ivec = 1, nvec
+            i = ivec + 1
+            call opcopy(vxp, vyp, vzp, vxp(1,i), vyp(1,i), vzp(1,i))
+            call nek2vec(basis(ivec), vxp, vyp, vzp, prp, tp)
+         end do
+         call orthonormalize_basis(basis)
+
+         G = innerprod(basis, basis_ref)
+
+         if (nid==0) then
+            print *, 'userchk: B.T B between bases'
+            do ivec = 1, nvec
+               print '("userchk: ",*(1x,F14.12))', ( G(ivec, i), i = 1, nvec)
+            end do
+         end if
+
+
+
+
+
+
+
+
+
+   !       call p1%rand()
+   !       call opcopy(vx1(1,1), vy1(1,1), vz1(1,1), p1%vx, p1%vy, p1%vz)
+   !       do irst = 1, lorder-1
+   !          call vec_rst%rand()
+   !          call p1%save_rst(vec_rst, irst)
+   !          call opcopy(   vx1(1,1+irst),    vy1(1,1+irst),    vz1(1,1+irst), 
+   !   &                  p1%vxrst(1,irst), p1%vyrst(1,irst), p1%vzrst(1,irst))
+   !       end do
+
+   !       call p2%rand()
+   !       call opcopy(vx2(1,1), vy2(1,1), vz2(1,1), p2%vx, p2%vy, p2%vz)
+   !       do irst = 1, lorder-1
+   !          call vec_rst%rand()
+   !          call p2%save_rst(vec_rst, irst)
+   !          call opcopy(   vx2(1,1+irst),    vy2(1,1+irst),    vz2(1,1+irst), 
+   !   &                  p2%vxrst(1,irst), p2%vyrst(1,irst), p2%vzrst(1,irst))
+   !       end do
+
+         ! norm = p1%norm()
+         ! call p1%scal(1.0/norm)
+         ! norm = p1%norm()
+         ! if (nid==0) print *, 'userchk: norm', 1, norm
+         ! norm = p2%norm()
+         ! call p2%scal(1.0/norm)
+         ! norm = p2%norm()
+         ! if (nid==0) print *, 'userchk: norm', 2, norm
+         ! alpha = p1%dot(p2)
+         ! if (nid==0) print *, 'userchk: ip             ', alpha
+
+         ! alpha = glsc3(p1%vx,bm1,p2%vx,lv) + glsc3(p1%vy,bm1,p2%vy,lv)
+         ! if (nid==0) print *, 'userchk: ip 1_main, 2_main', alpha
+         ! alpha = glsc3(p1%vx,bm1,p2%vxrst(1,1),lv) + glsc3(p1%vy,bm1,p2%vyrst(1,1),lv)
+         ! if (nid==0) print *, 'userchk: ip 1_main, 2_rst1', alpha
+         ! alpha = glsc3(p1%vx,bm1,p2%vxrst(1,2),lv) + glsc3(p1%vy,bm1,p2%vyrst(1,2),lv)
+         ! if (nid==0) print *, 'userchk: ip 1_main, 2_rst2', alpha
+
+         ! if (nid==0) print *, 'userchk: p2 - p1.T p2 * p1'
+         ! alpha = p1%dot(p2)
+         ! call p2%axpby(-alpha, p1, 1.0_dp)
+
+         ! alpha = glsc3(p1%vx,bm1,p2%vx,lv) + glsc3(p1%vy,bm1,p2%vy,lv)
+         ! if (nid==0) print *, 'userchk: ip 1_main, 2_main', alpha
+         ! alpha = glsc3(p1%vx,bm1,p2%vxrst(1,1),lv) + glsc3(p1%vy,bm1,p2%vyrst(1,1),lv)
+         ! if (nid==0) print *, 'userchk: ip 1_main, 2_rst1', alpha
+         ! alpha = glsc3(p1%vx,bm1,p2%vxrst(1,2),lv) + glsc3(p1%vy,bm1,p2%vyrst(1,2),lv)
+         ! if (nid==0) print *, 'userchk: ip 1_main, 2_rst2', alpha
+
+
+
+         ! if (nid==0) print *, 'userchk: normalize'
+         ! norm = p2%norm()
+         ! call p2%scal(1.0/norm)
+
+         ! alpha = glsc3(p1%vx,bm1,p2%vx,lv) + glsc3(p1%vy,bm1,p2%vy,lv)
+         ! if (nid==0) print *, 'userchk: ip 1_main, 2_main', alpha
+         ! alpha = glsc3(p1%vx,bm1,p2%vxrst(1,1),lv) + glsc3(p1%vy,bm1,p2%vyrst(1,1),lv)
+         ! if (nid==0) print *, 'userchk: ip 1_main, 2_rst1', alpha
+         ! alpha = glsc3(p1%vx,bm1,p2%vxrst(1,2),lv) + glsc3(p1%vy,bm1,p2%vyrst(1,2),lv)
+         ! if (nid==0) print *, 'userchk: ip 1_main, 2_rst2', alpha
+
+         msg = 'integrate in nsub steps and orthonormalize on the fly'//char(10)
+         call nek_log_message(msg, procedure='userchk')
+         call vec2nek(vxp, vyp, vzp, prp, tp, pert)
+
+         norm = pert%norm()
+         if (nid==0) print *, 'userchk: norm init', norm
+
+         call zero_basis(test)
+         do ivec = 1, nvec
+            do istep = 1, nsnap
+               call nek_advance()
+               !if (nid==0) print *, 'userchk: ', ivec, 'nek_advance', istep
+               if (ivec > 1 .and. istep < lorder) then
+                  call test(ivec-1)%get_rst(vec_rst, istep)
+                  call vec2nek(vxp, vyp, vzp, prp, tp, vec_rst)
+               end if
+            end do
+            istep = istep - 1
+
+            ! save current vectors
+            call nek2vec(tmp, vxp, vyp, vzp, prp, tp)
+            ! generate restart fields
+            do istep = nsnap + 1, nsnap + lorder - 1
+               call nek_advance()
+               irst = istep - nsnap
+               call nek2vec(vec_rst, vxp, vyp, vzp, prp, tp)
+               call tmp%save_rst(vec_rst, irst)
+            end do
+
+            ! orthogonalize tmp vxyzp
+            norm = tmp%norm()
+            if (nid==0) print *, 'userchk: norm', ivec, norm
+            if (ivec > 1) then
+               call orthogonalize_against_basis(tmp, test(:ivec-1), info)
+               call orthogonalize_against_basis(tmp, test(:ivec-1), info)
+               ! by hand
+               !do i = 1, ivec -1
+               !   call vec2nek(vx2, vy2, vz2, pr2, tp, test(i))
+               !   ! main
+               !   call vec2nek(vx1, vy1, vz1, pr1, tp, tmp)
+               !   alpha = -glsc3(vx1,bm1,vx2,lv) -glsc3(vy1,bm1,vy2,lv)
+               !   call tmp%axpby(alpha, test(i), 1.0_dp)
+               !   ! rst
+               !   do irst = 1, lorder-1
+               !      call tmp%get_rst(vec_rst, irst)
+               !      call vec2nek(vx1, vy1, vz1, pr1, tp, vec_rst)
+               !      alpha = -glsc3(vx1,bm1,vx2,lv) -glsc3(vy1,bm1,vy2,lv)
+               !      call vec_rst%axpby(alpha, test(i), 1.0_dp)
+               !      call tmp%save_rst(vec_rst, irst)
+               !   end do
+               !end do
+            end if
+            norm = tmp%norm()
+            call tmp%scal(1.0/norm)
+
+            ! check
+            ! if (ivec > 1) then
+            !    beta = innerprod(test(:ivec-1), tmp)
+            !    if (nid==0) print *, 'userchk: inner product test.T tmp    ',0,beta
+            !    do irst = 1, lorder-1
+            !       call tmp%get_rst(vec_rst, irst)
+            !       beta = innerprod(test(:ivec-1), vec_rst)
+            !       if (nid==0) print *, 'userchk: inner product test.T tmp%rst',irst,beta
+            !    end do
+            !    !if (nid==0) print *, 'userchk: hand check ips'
+            !    !do irst = 1, lorder-1
+            !    !   call opcopy(vx1, vy1, vz1, tmp%vxrst(1,irst), tmp%vyrst(1,irst), tmp%vzrst(1,irst))
+            !    !   do i = 1, ivec - 1
+            !    !      call opcopy(vx2, vy2, vz2, test(i)%vx, test(i)%vy, test(i)%vz)
+            !    !      alpha = glsc3(vx1,bm1,vx2,lv) + glsc3(vy1,bm1,vy2,lv)
+            !    !      if (nid==0) print *, 'userchk:', i, alpha
+            !    !   end do
+            !    !end do
+            !    !call nek_end()
+            ! end if
+
+            ! copy resulting vector out
+            test(ivec) = tmp
+            !G = innerprod(test(:ivec), test(:ivec))
+            !if (nid==0) then
+            !   do i = 1, ivec
+            !      print '("userchk: G",*(1x,F14.12))', ( G(i, j), j =1, ivec)
+            !   end do
+            !end if
+
+            !if (nid == 0) print *, 'userchk ivec', ivec, 'nrst test', (test(i)%nrst, i = 1, ivec)
+            
+            ! update current velocity
+            call vec2nek(vxp, vyp, vzp, prp, tp, tmp)
+         end do
+
+         G = innerprod(test, basis_ref)
+
+         if (nid==0) then
+            print *, 'userchk: B.T B between bases'
+            do ivec = 1, nvec
+               print '("userchk: ",*(1x,F14.12))', ( G(ivec, i), i = 1, nvec)
+            end do
+         end if
+
+         ! exponential propagator full integration two steps
+         !msg = 'exponential propagator full integration in 2 steps'//char(10)
+         !call nek_log_message(msg, procedure='userchk')
+         !exptA = exptA_linop(tau=nsnap*dt, baseflow=bf); call exptA%init()
+         !p_in = pert
+         !p_in%nrst = 0
+         !call zero_basis(test)
+         !do ivec = 1, nvec
+         !   call exptA%matvec(p_in, p_out)
+         !   if (ivec > 1) call orthogonalize_against_basis(p_out, test(:ivec-1), info)
+         !   norm = p_out%norm()
+         !   call p_out%scal(1.0/norm)
+         !   test(ivec) = p_out
+         !   p_in = p_out
+         !end do
+
+         ! ! orthonormalize against previous
+         ! if (ivec > 1) then
+         !    do i = 2, ivec
+         !       alpha =                   glsc3(vxp(1,1),bm1,vxp(1,i),lv)
+         !       alpha =           alpha + glsc3(vyp(1,1),bm1,vyp(1,i),lv)
+         !       if (if3d) alpha = alpha + glsc3(vzp(1,1),bm1,vzp(1,i),lv)
+         !       call pert_add2s2(1,i,alpha)   ! xi = xi + scale * xj
+         !    enddo
+         ! end if
+         ! norm =                  glsc3(vxp,bm1,vxp,lv)
+         ! norm =           norm + glsc3(vyp,bm1,vyp,lv)
+         ! if (if3d) norm = norm + glsc3(vzp,bm1,vzp,lv)
+         ! if (nid==0) print *, 'userchk:    norm 1 ', norm
+         ! if (norm.gt.0) alpha = 1./norm
+         ! if (nid==0) print *, 'userchk: invnorm 1 ', alpha
+         ! call           cmult(vxp,alpha,lv)
+         ! call           cmult(vyp,alpha,lv)
+         ! if (if3d) call cmult(vzp,alpha,lv)
+
+         ! norm =                  glsc3(vxp,bm1,vxp,lv)
+         ! norm =           norm + glsc3(vyp,bm1,vyp,lv)
+         ! if (if3d) norm = norm + glsc3(vzp,bm1,vzp,lv)
+         ! if (nid==0) print *, 'userchk:    norm 1 ', norm
+         ! call nek_end()
+
+         ! call cmult(tp(1,1,1),alpha,lv)
+         ! call cmult(prp(1,1),alpha,lp)
+
+         ! call opscale(exx1p(1,1),exy1p(1,1),exz1p(1,1),vgradt1p(1,1,1),alpha)
+         ! call opscale(exx2p(1,1),exy2p(1,1),exz2p(1,1),vgradt2p(1,1,1),alpha)
+
+         ! call cmult( tlagp(1,1,1,1),alpha,lv*(lorder-1)*ldimt)
+         ! call cmult(vxlagp(1,1,1),  alpha,lv*(lorder-1))
+         ! call cmult(vylagp(1,1,1),  alpha,lv*(lorder-1))
+         ! call cmult(vzlagp(1,1,1),  alpha,lv*(lorder-1))
+         ! call cmult(prlagp(1,1,1),  alpha,lp*(lorder-1))
+
+         ! if (nid==0) print *, 'userchk: norm 1 ', norm
+
+
+         ! do i = 1, ivec
+         !    do j = 1, ivec
+         !       IP(i,j) = pert_inner_prod(i,j)
+         !    end do
+         !    if (nid==0) print '("userchk IP: ",*(1x,F14.1))', (IP(i, j), j = 1, ivec)
+         ! end do
+         call nek_end()
+      end if
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'NEKUSE'          ! UDIFF, UTRANS
+
+      integer ix,iy,iz,ieg
+
+      UDIFF =0.
+      UTRANS=0.
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf  (ix,iy,iz,ieg)
+
+      use neklab, only: neklab_forcing
+      implicit none
+      include 'SIZE'
+      include 'SOLN'            ! jp
+      include 'NEKUSE'          ! FFX, FFY, FFZ
+      include 'PARALLEL'        ! GLLEL
+      integer ix,iy,iz,ieg
+!
+      FFX = 0.0 
+      FFY = 0.0 
+      FFZ = 0.0 
+     
+      !call neklab_forcing(FFX,FFY,FFZ,ix,iy,iz,ieg,jp)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq  (ix,iy,iz,ieg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'NEKUSE'          ! QVOL
+
+      integer ix,iy,iz,ieg
+
+      QVOL   = 0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,eg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'NEKUSE'          ! UX, UY, UZ, TEMP, X, Y
+      include 'SOLN'            ! jp
+
+      integer ix,iy,iz,iside,eg
+
+      if (jp.eq.0) then
+c     baseflow
+        if (cbu.eq.'v  ') then
+          UX = 0.0
+          UY = 0.0
+          UZ = 0.0
+        endif
+      else
+c     perturbations
+        UX = 0.0
+        UY = 0.0
+        UZ = 0.0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'
+      include 'NEKUSE'          ! UX, UY, UZ, TEMP, Z
+      include 'SOLN'            ! JP
+      include 'PARALLEL'        ! gllel
+
+      integer ix,iy,iz,ieg
+      integer ie, ijke
+
+      real amp, pi, kx(lpert), ky(lpert) 
+
+      real mth_rand
+      real xl(LDIM)
+      real fcoeff(3)
+
+      ie = gllel(ieg)
+
+      pi = 4.0*atan(1.0)
+
+c     velocity
+c     base flow
+      if (jp.eq.0) then
+        UX = (1.0-Y**2)
+        UY = 0.0
+        UZ = 0.0
+      else
+c     perturbation
+        ijke = ix + lx1*((iy-1) + ly1*((iz-1) + lz1*(ie-1)))
+        UX   = 0.0
+        UY   = 0.0
+        UZ   = 0.0
+        temp = 0.0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+
+      subroutine make_actuator(forcing)
+         use neklab
+         include 'SIZE'
+         include 'TOTAL'
+      
+         type(nek_dvector), intent(out) :: forcing
+         real(dp), parameter :: alpha = 1.0_dp
+         real(dp), parameter :: sigma = 0.1_dp
+         real(dp), parameter :: amplitude = 1.0_dp
+         real(dp) :: shape
+         integer :: i, n
+         
+         n = nx1*ny1*nz1*nelv
+         do i = 1, n
+            ! Position.
+            x = xm1(i, 1, 1, 1)
+            y = ym1(i, 1, 1, 1)
+         
+            shape = amplitude * exp(-y**2/sigma**2)
+         
+            ! Actuator: we want a single streamwise wavenumber
+            forcing%vx(i) = shape*cos(alpha*x)
+            forcing%vy(i) = shape*sin(alpha*x)
+         enddo
+         return
+      end
+
+c-----------------------------------------------------------------------
+c     This routine to modify element vertices
+      subroutine usrdat
+
+      implicit none
+
+      include 'SIZE'
+      include 'TOTAL'
+
+      real glmin,glmax
+           
+      real fact,x_min,x_max,y_max,y_min,z_min,z_max
+      integer n
+
+      n = 8*nelv
+      
+      fact = 4.*atan(1.)
+      call cmult(xc,fact,n)
+      if (if3d) then    
+        call cmult(zc,fact,n)
+      endif     
+
+      x_min=glmin(xc,n)
+      y_min=glmin(yc,n)
+      x_max=glmax(xc,n)
+      y_max=glmax(yc,n)
+      if (if3d) then
+        z_min=glmin(zc,n)
+        z_max=glmax(zc,n)
+      endif
+      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      use stdlib_logger, only: debug_level, information_level
+      use LightKrylov_Logger
+      implicit none
+
+      call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+  
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      implicit none
+
+      return
+      end

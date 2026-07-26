@@ -8,8 +8,8 @@
       include "TOTAL"
 
       ! input/output
-      type(nek_dvector) :: bf
-      type(exptA_linop) :: exptA
+      type(nek_dvector), allocatable :: bf
+      type(exptA_linop), allocatable :: exptA
       integer, parameter :: kdim = 128, nev = 20
 
       real(dp) :: alpha, beta
@@ -18,7 +18,8 @@
       integer :: i
       
       if (istep.eq.0) then
-            call nek2vec(bf, vx, vy, vz, pr, t)
+         allocate(bf); call bf%init()
+         call nek2vec(bf, vx, vy, vz, pr, t)
 
          ! Exponential propagator.
          exptA = exptA_linop(1.0_dp, bf) ; call exptA%init()

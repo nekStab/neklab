@@ -81,12 +81,16 @@ c-----------------------------------------------------------------------
             if (nid == 0) open(unit=1234, file="resolvent.txt")
             ! Load forcing.
             allocate(forcing, sensor, response)
-            call forcing%zero(); call sensor%zero(); call response%zero()
+            !call forcing%zero(); call sensor%zero(); call response%zero()
+	    call forcing%init()
+	    call sensor%init()
+	    call response%init()
             call make_actuator(forcing) ; call outpost_dnek(forcing%re, "for")
             call make_sensor(sensor); call outpost_dnek(sensor%re, "sen")
 
             ! Load baseflow.
-    		allocate(bf) ; call load_fld("BF_1cyl0.f00001")
+    		allocate(bf) ; call bf%init()
+		call load_fld("BF_1cyl0.f00001")
     		call nek2vec(bf, vx, vy, vz, pr, t)
 
             ! Initialize resolvent operator.

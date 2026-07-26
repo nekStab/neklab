@@ -13,14 +13,14 @@ c-----------------------------------------------------------------------
       type(exptA_linop_temp), allocatable :: exptA_temp
 
       ! State vectors
-      type(nek_dvector) :: bf
+      type(nek_dvector), allocatable :: bf
 
       ! Tolerance for the Newton solver
       real(dp) :: tol
       type(nek_dvector), allocatable :: eigvecs(:)
       complex(kind=dp), allocatable :: eigvals(:)
       real(kind=dp), allocatable :: residuals(:)
-      integer :: info
+      integer :: i, info
       character(len=3) :: file_prefix
 
       ! Stability analysis parameters
@@ -32,6 +32,7 @@ c-----------------------------------------------------------------------
             
          ! Load initial guess
          call load_fld('BF_Ra500_tsyphon0.f00001')
+	 allocate(bf); call bf%init()
          call nek2vec(bf, vx, vy, vz, pr, t)
          
          ! Define system
@@ -50,7 +51,11 @@ c-----------------------------------------------------------------------
 
          ! Exponential propagator
          exptA_temp = exptA_linop_temp(1.0_dp, bf) ; call exptA_temp%init()
-         allocate (eigvecs(nev)); call zero_basis(eigvecs)
+         allocate (eigvecs(nev))
+	 do i = 1, nev
+	    call eigvecs(i)%init()
+	 end do
+	 !call zero_basis(eigvecs)
 
          call eigs(exptA_temp, eigvecs, eigvals, residuals, info, kdim=kdim, write_intermediate=.true.)
 

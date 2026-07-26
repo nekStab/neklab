@@ -1,0 +1,269 @@
+      subroutine userchk
+
+      use neklab
+      use LightKrylov, only: innerprod, zero_basis
+      use LightKrylov_BaseKrylov, only: double_gram_schmidt_step
+      use stdlib_linalg, only: eig, svdvals
+      use stdlib_math, only: logspace
+      implicit none
+      include "SIZE"
+      include "TOTAL"
+
+      ! baseflow
+      type(nek_dvector), allocatable :: bf
+      ! input/output
+      type(nek_dvector), allocatable :: input(:)
+      type(nek_dvector), allocatable :: output(:)
+      ! system matrix and exponential propagator
+      type(exptA_proj_linop), allocatable :: exptA
+      ! time
+      real(dp) :: Tend, tau, norm, norm_old, energy, energy_old, alpha
+      integer  :: i, nsub, info
+      
+      if (istep.eq.0) then
+         
+         ! Load baseflow into LK
+	 allocate(bf); call bf%init()
+    	 call nek2vec(bf, vx, vy, vz, pr, t)
+
+         ! Define inputs
+	 allocate(input(1)); call input(1)%init()
+         call make_actuator(input)
+
+         Tend = 0.2_dp
+         tau = 0.1_dp
+         nsub = nint(Tend/tau)
+         allocate(output(nsub)); 
+	 do i = 1, nsub
+	    call output(i)%init()
+	 end do
+	 !call zero_basis(output)
+
+         ! Define exponential propagator
+         exptA = exptA_proj_linop(tau, bf, 1.0_dp); call exptA%init()
+      
+         exptA%tau = Tend
+         call make_actuator(input)
+	   norm = input(1)%norm();
+         call input(1)%scal(1.0/norm);
+         call outpost_dnek(input(1), 'ini')
+         energy_old = norm
+
+         call exptA%matvec(input(1), output(1))
+         call outpost_dnek(output(1), 'out')
+         norm_old = output(1)%norm(); energy_old = energy_old*norm_old
+	   if (nid == 0) print *, 'Step', 1, 'norm', norm_old, 'energy1', energy_old
+         call output(1)%scal(1.0/norm_old)
+
+         exptA%tau = tau
+         call make_actuator(input)
+	   norm = input(1)%norm(); call input(1)%scal(1.0/norm); call outpost_dnek(input(1), 'ini')
+         energy = norm
+         do i = 1, nsub
+            norm_old = norm
+            call exptA%matvec(input(1), output(i))
+            call outpost_dnek(output(i), 'out')
+	      norm = output(i)%norm(); energy = energy*norm
+	      if (nid == 0) print *, 'Step', i, 'norm', norm, 'energy2', energy
+            call output(i)%scal(1.0/norm)
+            input(1) = output(i)
+         end do
+         if (nid == 0) print *, 'norm_dif', norm-norm_old, 'energy_dif',energy-energy_old
+         call nek_end()
+      end if
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'NEKUSE'          ! UDIFF, UTRANS
+
+      integer ix,iy,iz,ieg
+
+      UDIFF =0.
+      UTRANS=0.
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf  (ix,iy,iz,ieg)
+
+      use neklab, only: neklab_forcing
+      implicit none
+      include 'SIZE'
+      include 'SOLN'            ! jp
+      include 'NEKUSE'          ! FFX, FFY, FFZ
+      include 'PARALLEL'        ! GLLEL
+      integer ix,iy,iz,ieg
+!
+      FFX = 0.0 
+      FFY = 0.0 
+      FFZ = 0.0 
+     
+      call neklab_forcing(FFX,FFY,FFZ,ix,iy,iz,ieg,jp)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq  (ix,iy,iz,ieg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'NEKUSE'          ! QVOL
+
+      integer ix,iy,iz,ieg
+
+      QVOL   = 0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,eg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'NEKUSE'          ! UX, UY, UZ, TEMP, X, Y
+      include 'SOLN'            ! jp
+
+      integer ix,iy,iz,iside,eg
+
+      if (jp.eq.0) then
+c     baseflow
+        if (cbu.eq.'v  ') then
+          UX = 0.0
+          UY = 0.0
+          UZ = 0.0
+        endif
+      else
+c     perturbations
+        UX = 0.0
+        UY = 0.0
+        UZ = 0.0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'
+      include 'NEKUSE'          ! UX, UY, UZ, TEMP, Z
+      include 'SOLN'            ! JP
+      include 'PARALLEL'        ! gllel
+
+      integer ix,iy,iz,ieg
+      integer ie, ijke
+
+      real amp, pi, kx(lpert), ky(lpert) 
+
+      real mth_rand
+      real xl(LDIM)
+      real fcoeff(3)
+
+      ie = gllel(ieg)
+
+      pi = 4.0*atan(1.0)
+
+c     velocity
+c     base flow
+      if (jp.eq.0) then
+        UX = (1.0-Y**2)
+        UY = 0.0
+        UZ = 0.0
+      else
+c     perturbation
+        ijke = ix + lx1*((iy-1) + ly1*((iz-1) + lz1*(ie-1)))
+        UX   = 0.0
+        UY   = 0.0
+        UZ   = 0.0
+        temp = 0.0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+
+      subroutine make_actuator(forcing)
+         use neklab
+         include 'SIZE'
+         include 'TOTAL'
+      
+         type(nek_dvector), intent(out) :: forcing
+         real(kind=dp), parameter :: alpha = 1.0_dp
+         real(kind=dp), parameter :: sigma = 0.1_dp
+         real(kind=dp), parameter :: amplitude = 1.0_dp
+         real(kind=dp) :: shape
+         integer :: i, n
+            
+         n = nx1*ny1*nz1*nelv
+         do i = 1, n
+            ! Position.
+            x = xm1(i, 1, 1, 1)
+            y = ym1(i, 1, 1, 1)
+      
+            shape = amplitude * exp(-y**2/sigma**2)
+         
+            ! Actuator: we want a single streamwise wavenumber
+            forcing%vx(i) = shape*cos(alpha*x)
+            forcing%vy(i) = shape*sin(alpha*x)
+         enddo
+         return
+      end
+
+c-----------------------------------------------------------------------
+c     This routine to modify element vertices
+      subroutine usrdat
+
+      implicit none
+
+      include 'SIZE'
+      include 'TOTAL'
+
+      real glmin,glmax
+           
+      real fact,x_min,x_max,y_max,y_min,z_min,z_max
+      integer n
+
+      n = 8*nelv
+      
+      fact = 4.*atan(1.)
+      call cmult(xc,fact,n)
+      if (if3d) then    
+        call cmult(zc,fact,n)
+      endif     
+
+      x_min=glmin(xc,n)
+      y_min=glmin(yc,n)
+      x_max=glmax(xc,n)
+      y_max=glmax(yc,n)
+      if (if3d) then
+        z_min=glmin(zc,n)
+        z_max=glmax(zc,n)
+      endif
+      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      use stdlib_logger, only: debug_level, information_level
+      use LightKrylov_Logger
+      implicit none
+
+      call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+  
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      implicit none
+
+      return
+      end

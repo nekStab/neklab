@@ -9,7 +9,7 @@ c-----------------------------------------------------------------------
       ! System for which we seek a fixed point
       type(nek_system_upo), allocatable :: sys
       ! State vectors
-      type(nek_ext_dvector) :: bf
+      type(nek_ext_dvector), allocatable :: bf
       ! Tolerance for the Newton solver
       real(dp) :: tol
       
@@ -19,6 +19,7 @@ c-----------------------------------------------------------------------
 
          ! Load initial guess
          call load_fld('BF_1cyl.fld')
+	 allocate(bf); call bf%init()
          call nek2ext_vec(bf, vx, vy, vz, pr, t)
          ! Set initial guess for period
 	 bf%T = 5.158_dp

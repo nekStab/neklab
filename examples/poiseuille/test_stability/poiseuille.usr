@@ -1,0 +1,218 @@
+      subroutine userchk
+
+      use stdlib_io_npy
+      use neklab
+      use neklab_nek_setup, only: nek_log_message
+      implicit none
+      include "SIZE"
+      include "TOTAL"
+
+      ! input/output
+      integer, parameter :: ntotv = lx1*ly1*lz1*lelv
+      integer, parameter :: ntotp = lx2*ly2*lz2*lelv
+      type(nek_dvector), allocatable :: bf, test_in, test_out
+      type(exptA_proj_linop) :: exptA
+      integer, parameter :: kdim = 512, nev = 20
+      real(dp) :: alpha, beta
+      character(len=128) :: msg
+      real(dp), allocatable :: eig(:, :)
+      type(nek_dvector), allocatable :: eigvecs(:)
+      complex(dp), allocatable :: eigvals(:)
+      real(dp), allocatable :: residuals(:)
+      integer :: i, n, info
+      character(len=3) :: file_prefix
+      
+      real :: glsc3
+      
+      if (istep.eq.0) then
+            call outpost(vx, vy, vz, pr, t, 'bf_')
+	    allocate(bf); call bf%init()
+            call nek2vec(bf, vx, vy, vz, pr, t)
+            ! Exponential propagator.
+            exptA = exptA_proj_linop(1.0_dp, bf, 1.0_dp) ; call exptA%init()
+
+            ! Stability analysis.
+            call linear_stability_analysis_fixed_point(exptA, kdim, nev)
+
+	    ! load eigenvectors and check that they are normalized and outposted using correct scaling
+            ifield = 1
+            n = nx1*ny1*nz1*nelv
+            call load_fld("dirpoiseuille0.f00001")
+            call nek2vec(bf, vx, vy, vz, pr, t)
+            alpha = sqrt(glsc3(vx, vx, bm1, n) + glsc3(vy, vy, bm1, n))
+            write(msg,'(2(A,F16.12))') 'alpha: (nek) ', alpha, ' (LK) ',bf%norm()
+	    call nek_log_message(msg, procedure='userchk')
+	    call load_fld("dirpoiseuille0.f00002")
+            call nek2vec(bf, vx, vy, vz, pr, t)
+            beta = sqrt(glsc3(vx, vx, bm1, n) + glsc3(vy, vy, bm1, n))
+            write(msg,'(2(A,F16.12))') 'beta:  (nek) ', beta, ' (LK) ', bf%norm()
+	    call nek_log_message(msg, procedure='userchk')
+            write(msg,'(A,F16.12)') 'norm:        ', sqrt(alpha**2 + beta**2)
+	    call nek_log_message(msg, procedure='userchk')
+      end if
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'NEKUSE'          ! UDIFF, UTRANS
+
+      integer ix,iy,iz,ieg
+
+      UDIFF =0.
+      UTRANS=0.
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf  (ix,iy,iz,ieg)
+
+      use neklab, only: neklab_forcing
+      implicit none
+      include 'SIZE'
+      include 'SOLN'            ! jp
+      include 'NEKUSE'          ! FFX, FFY, FFZ
+      include 'PARALLEL'        ! GLLEL
+      integer ix,iy,iz,ieg
+!
+      FFX = 0.0 
+      FFY = 0.0 
+      FFZ = 0.0 
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq  (ix,iy,iz,ieg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'NEKUSE'          ! QVOL
+
+      integer ix,iy,iz,ieg
+
+      QVOL   = 0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,eg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'NEKUSE'          ! UX, UY, UZ, TEMP, X, Y
+      include 'SOLN'            ! jp
+
+      integer ix,iy,iz,iside,eg
+
+      if (jp.eq.0) then
+c     baseflow
+        if (cbu.eq.'v  ') then
+          UX = 0.0
+          UY = 0.0
+          UZ = 0.0
+        endif
+      else
+c     perturbations
+        UX = 0.0
+        UY = 0.0
+        UZ = 0.0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'
+      include 'NEKUSE'          ! UX, UY, UZ, TEMP, Z
+      include 'SOLN'            ! JP
+      include 'PARALLEL'        ! gllel
+
+      integer ix,iy,iz,ieg
+      integer ie, ijke
+      real pi, shape
+
+      real, parameter :: alpha = 1.0d0
+	real, parameter :: stdev = 0.1d0
+	real, parameter :: amplitude = 1.0d0
+
+      ie = gllel(ieg)
+
+      pi = 4.0*atan(1.0)
+
+c     velocity
+c     base flow
+      if (jp.eq.0) then
+        UX = (1.0-Y**2)
+        UY = 0.0
+        UZ = 0.0
+      else
+c     perturbation           
+        ux = 0.0d0
+        uy = 0.0d0
+        uz = 0.0d0
+        temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+c     This routine to modify element vertices
+      subroutine usrdat
+
+      implicit none
+
+      include 'SIZE'
+      include 'TOTAL'
+
+      real glmin,glmax
+           
+      real fact,x_min,x_max,y_max,y_min,z_min,z_max
+      integer n
+
+      n = 8*nelv
+      
+      fact = 4.*atan(1.)
+      call cmult(xc,fact,n)
+      if (if3d) then    
+        call cmult(zc,fact,n)
+      endif     
+
+      x_min=glmin(xc,n)
+      y_min=glmin(yc,n)
+      x_max=glmax(xc,n)
+      y_max=glmax(yc,n)
+      if (if3d) then
+        z_min=glmin(zc,n)
+        z_max=glmax(zc,n)
+      endif
+      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      use stdlib_logger, only: debug_level, information_level
+      use LightKrylov_Logger
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      if (istep.eq.0) then
+         ! Setup logger
+         call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
+      end if
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      implicit none
+
+      return
+      end

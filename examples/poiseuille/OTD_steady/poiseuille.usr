@@ -138,14 +138,15 @@ c-----------------------------------------------------------------------
       ! OTD opts
       type(otd_opts) :: opts
       ! State vectors
-      type(nek_dvector) :: bf
+      type(nek_dvector), allocate :: bf
       
       if (istep.eq.0) then
+         allocate(bf); call bf%init()
          call nek2vec(bf, vx, vy, vz, pr, t)
 
          ! define OTD structure
          OTD = nek_otd()
-         allocate(OTD%baseflow); call OTD%baseflow%zero()
+         allocate(OTD%baseflow); call OTD%baseflow%init()
          OTD%baseflow = bf
 
          opts = otd_opts(solve_baseflow = .false.,

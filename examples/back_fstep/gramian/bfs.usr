@@ -15,12 +15,13 @@ c-----------------------------------------------------------------------
     		if (istep.eq.0) then
       	   ! Load forcing.
       	   allocate(forcing, response)
-      	   call forcing%zero() ; call response%zero()
+      	   !call forcing%zero() ; call response%zero()
+	   call forcing%init(); call response%init()
       	   call make_actuator(forcing)
       	   call outpost_dnek(forcing%re, "for")
 
       	   ! Load baseflow.
-    			allocate(bf)
+    			allocate(bf); call bf%init()
     			call load_fld("BF_bfs0.f00001")
     			call nek2vec(bf, vx, vy, vz, pr, t)
 

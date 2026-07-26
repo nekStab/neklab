@@ -9,7 +9,7 @@ c-----------------------------------------------------------------------
       ! System for which we seek a fixed point
       type(nek_system), allocatable :: sys
       ! State vectors
-      type(nek_dvector) :: bf
+      type(nek_dvector), allocatable :: bf
       ! Tolerance for the Newton solver
       real(dp) :: tol
       
@@ -19,6 +19,7 @@ c-----------------------------------------------------------------------
             
          ! Load initial guess
          call load_fld('BF.fld')
+	 allocate(bf); call bf%init()
          call nek2vec(bf, vx, vy, vz, pr, t)
          
          ! Define system
