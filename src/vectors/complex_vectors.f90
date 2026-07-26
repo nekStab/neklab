@@ -70,13 +70,18 @@
          end procedure
       
          module procedure nek_zscal
-         integer :: i
-         type(nek_zvector) :: wrk
-      ! Scratch array.
-         wrk = self
-      ! Scale complex vector.
-         call nek_daxpby(alpha%re, wrk%im, -alpha%im, self%re)
-         call nek_daxpby(alpha%re, wrk%re,  alpha%im, self%im)
+         type(nek_dvector) :: re_old, im_old
+      ! Save components of complex vector before scaling.
+         re_old = self%re
+         im_old = self%im
+      ! re_new = ar*re_old - ai*im_old
+         call nek_dzero(self%re)
+         call nek_daxpby(alpha%re,  re_old, 1.0_dp, self%re)
+         call nek_daxpby(-alpha%im, im_old, 1.0_dp, self%re)
+      ! im_new = ar*im_old + ai*re_old
+         call nek_dzero(self%im)
+         call nek_daxpby(alpha%re, im_old, 1.0_dp, self%im)
+         call nek_daxpby(alpha%im, re_old, 1.0_dp, self%im)
          end procedure
       
          module procedure nek_zaxpby
@@ -85,7 +90,6 @@
       ! Scratch array.
          select type (vec)
          type is (nek_zvector)
-         
             wrk = vec
       ! Scale vectors before addition.
             call self%scal(beta); call wrk%scal(alpha)
