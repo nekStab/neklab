@@ -1,7 +1,6 @@
 
 c-----------------------------------------------------------------------
       subroutine userchk
-      use stdlib_logger, only: debug_level, information_level
       use LightKrylov, only: zero_basis
       use LightKrylov_Logger
       use neklab
@@ -9,8 +8,8 @@ c-----------------------------------------------------------------------
       include "TOTAL"
 
       ! System for which we seek a fixed point
-      type(nek_system_temp), allocatable :: sys
-      type(exptA_linop_temp), allocatable :: exptA_temp
+      type(nek_temp_system), allocatable :: sys
+      type(exptA_temp_linop), allocatable :: exptA_temp
 
       ! State vectors
       type(nek_dvector) :: bf
@@ -27,47 +26,47 @@ c-----------------------------------------------------------------------
       integer, parameter :: kdim = 128, nev = 10
 
       if (istep.eq.0) then
-      time = 0.0d0
-      !   ! Setup logger
-      !   call logger_setup(nio=0, log_level=information_level, log_stdout=.false., !log_timestamp=.true.)
-      !      
-      !   ! Load initial guess
-      !   !call load_fld('BF_rayBen0.f00001')
-      !   call nek2vec(bf, vx, vy, vz, pr, t)
-      !   
-      !   ! Define system
-      !   sys = nek_system_temp()
-      !   sys%jacobian = nek_jacobian_temp()
-      !   sys%jacobian%X = bf
-	!		
-      !   ! Set Newton tolerance
-      !   tol = 1.0e-8_dp
-      !   
-      !   ! Compute fixed point
-      !   call newton_fixed_point_iteration(sys, bf, tol, tol_mode=2)
-!
-      !   !Outpost solution
-      !   call outpost_dnek(bf, "BF_")
-!
-      !   ! Exponential propagator
-      !   exptA_temp = exptA_linop_temp(1.0_dp, bf) ; call exptA_temp%init()
-      !   allocate (eigvecs(nev)); call zero_basis(eigvecs)
-!
-      !   call eigs(exptA_temp, eigvecs, eigvals, residuals, info, kdim=kdim, !write_intermediate=.true.)
-!
-      !   ! Transform eigenspectrum to continuous-time representation.
-      !   eigvals = log(eigvals)/exptA_temp%tau
-      !
-      !   ! Determine the file prefix.
-      !   file_prefix = "dir"
-      !
-      !   ! Save eigenspectrum to disk.
-      !   call save_eigenspectrum(eigvals, residuals, trim(file_prefix)//!"_eigenspectrum.npy")
-      !
-      !   ! Export eigenfunctions to disk.
-      !   call outpost_dnek(eigvecs(:nev), file_prefix)
-!
-      !   call nek_end()
+         time = 0.0d0
+         ! Setup logger
+         call logger_setup(nio=0, log_level=information_level, log_stdout=.false.,log_timestamp=.true.)
+            
+         ! Load initial guess
+         call load_fld('BF_rayBen0.f00001')
+         call nek2vec(bf, vx, vy, vz, pr, t)
+         
+         ! Define system
+         sys = nek_temp_system()
+         sys%jacobian = nek_temp_jacobian()
+         sys%jacobian%X = bf
+			
+         ! Set Newton tolerance
+         tol = 1.0e-8_dp
+         
+         ! Compute fixed point
+         call newton_fixed_point_iteration(sys, bf, tol, tol_mode=2)
+
+         !Outpost solution
+         call outpost_dnek(bf, "BF_")
+
+         ! Exponential propagator
+         exptA_temp = exptA_temp_linop(1.0_dp, bf) ; call exptA_temp%init()
+         allocate (eigvecs(nev)); call zero_basis(eigvecs)
+
+         call eigs(exptA_temp, eigvecs, eigvals, residuals, info, kdim=kdim, write_intermediate=.true.)
+
+         ! Transform eigenspectrum to continuous-time representation.
+         eigvals = log(eigvals)/exptA_temp%tau
+      
+         ! Determine the file prefix.
+         file_prefix = "dir"
+      
+         ! Save eigenspectrum to disk.
+         call save_eigenspectrum(eigvals, residuals, trim(file_prefix)//"_eigenspectrum.npy")
+      
+         ! Export eigenfunctions to disk.
+         call outpost_dnek(eigvecs(:nev), file_prefix)
+
+         call nek_end()
       end if
 
       end

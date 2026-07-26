@@ -30,5 +30,8 @@ $(OBJDIR)/fixed_point_temp.o		:$(NEKLAB_SOURCE_ROOT)/src/systems/fixed_point_tem
 $(OBJDIR)/periodic_orbit.o		:$(NEKLAB_SOURCE_ROOT)/src/systems/periodic_orbit.f90 $(OBJDIR)/neklab_systems.o	;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/neklab_analysis.o		:$(NEKLAB_SOURCE_ROOT)/src/neklab_analysis.f90 $(OBJDIR)/neklab_systems.o	;$(FC) -c $(FL2) $< -o $@
 
+# Optional unit-test module (linked only when makeneklab sets NEKLAB_TESTS)
+$(OBJDIR)/neklab_test.o         :$(NEKLAB_SOURCE_ROOT)/src/neklab_test.f90 $(OBJDIR)/neklab_linops.o $(OBJDIR)/neklab_vectors.o   ;$(FC) -c $(FL2) $< -o $@
+
 # Final layer - main module
 $(OBJDIR)/neklab.o			:$(NEKLAB_SOURCE_ROOT)/src/neklab.f90 $(OBJDIR)/neklab_analysis.o $(OBJDIR)/neklab_otd.o $(OBJDIR)/neklab_systems.o $(OBJDIR)/neklab_linops.o	;$(FC) -c $(FL2) $< -o $@
