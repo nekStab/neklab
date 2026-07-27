@@ -1,7 +1,7 @@
       module neklab_nek_forcing
          use LightKrylov, only: dp
          use LightKrylov_Logger
-         use neklab_nek_setup, only: nek_log_message, nek_log_debug
+         use neklab_nek_setup, only: nek_log_message, nek_log_debug, nek_stop_error
          implicit none
          include "SIZE"
          include "TOTAL"
@@ -63,7 +63,7 @@
             character(len=128) :: msg
             if (ipert < 0 .or. ipert > lpert) then
                write (msg, '(A,I0)') 'Invalid value for ipert specified! ipert = ', ipert
-               call nek_log_error(msg, this_module, 'set_neklab_forcing')
+               call nek_stop_error(msg, this_module, 'set_neklab_forcing')
             else
                write (msg, '(A,I0)') 'Setting value of the neklab forcing. ipert = ', ipert
                call nek_log_debug(msg, this_module, 'get_neklab_forcing')
@@ -79,7 +79,7 @@
             character(len=128) :: msg
             if (ipert < 0 .or. ipert > lpert) then
                write (msg, '(A,I0)') 'Invalid value for ipert specified! ipert = ', ipert
-               call nek_log_error(msg, this_module, 'zero_neklab_forcing_ipert')
+               call nek_stop_error(msg, this_module, 'zero_neklab_forcing_ipert')
             else
                write (msg, '(A,I0)') 'Setting value of the neklab forcing to zero. ipert = ', ipert
                call nek_log_debug(msg, this_module, 'zero_neklab_forcing_ipert')

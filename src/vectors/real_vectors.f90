@@ -307,6 +307,10 @@
             call log_debug(msg, this_module, this_procedure)
          end procedure
 
+         module procedure nek_dis_initialized
+            ok = self%initialized
+         end procedure
+
          module procedure dsave_rst
             character(len=*), parameter :: this_procedure = 'dsave_rst'
             integer :: m, lvn, lpn, torder
