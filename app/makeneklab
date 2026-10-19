@@ -2,15 +2,68 @@
 set -a
 
 # Compiler and architecture settings
-#FC=""
-#CC=""
-#FFLAGS=""
-#USR_LFLAGS=""
-#ar=""
+FC=""
+CC=""
+FFLAGS=""
+USR_LFLAGS=""
+ar=""
+
+#-------------------------------------------------------------------------------
+# Sanity checks on the environment
+#-------------------------------------------------------------------------------
+: "${NEK_SOURCE_ROOT:?NEK_SOURCE_ROOT is not set}"
+: "${NEKLAB_SOURCE_ROOT:?NEKLAB_SOURCE_ROOT is not set}"
+
+#-------------------------------------------------------------------------------
+# Crash-safe handling of the user case file
+#
+# The case file has to be hidden from nekconfig while the dummy is built.
+# It is moved into a subdirectory (invisible to the *.usr glob) rather than
+# renamed in place, and an EXIT trap puts it back on every exit path:
+# success, "set -e" abort, or Ctrl-C.
+#-------------------------------------------------------------------------------
+STASH_DIR=".neklab_stash"
+DUMMY="nek_dummy.usr"
+
+restore_case() {
+   local rc=$?
+   local f base
+   rm -f "$DUMMY" 2>/dev/null || true
+   if [[ -d "$STASH_DIR" ]]; then
+      for f in "$STASH_DIR"/*.usr; do
+         [[ -e "$f" ]] || continue
+         base=$(basename "$f")
+         if [[ -e "./$base" ]]; then
+            # Someone recreated the case file while we were interrupted.
+            # Never clobber it -- park our copy next to it instead.
+            mv -f "$f" "./$base.recovered"
+            echo "  [recover] ./$base already exists, stashed copy saved as $base.recovered"
+         else
+            mv -f "$f" "./$base" && echo "  [recover] restored $base"
+         fi
+      done
+      rmdir "$STASH_DIR" 2>/dev/null || true
+   fi
+   # Leftovers from older revisions of this script.
+   for f in *.usr_tmp; do
+      [[ -e "$f" ]] || continue
+      base="${f%.usr_tmp}.usr"
+      if [[ ! -e "$base" ]]; then
+         mv -f "$f" "$base" && echo "  [recover] restored $base from $f"
+      fi
+   done
+   return $rc
+}
+
+# Heal a directory left broken by a previous run, then arm the trap.
+restore_case
+trap 'restore_case' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # Fetch version information for user reference
-N_VERSION=$(git -C $NEK_SOURCE_ROOT describe --tag --long --always)
-NS_VERSION=$(git -C $NEKLAB_SOURCE_ROOT describe --tag --long --always)
+N_VERSION=$(git -C "$NEK_SOURCE_ROOT" describe --tag --long --always)
+NS_VERSION=$(git -C "$NEKLAB_SOURCE_ROOT" describe --tag --long --always)
 
 #-------------------------------------------------------------------------------
 # Compiler Detection
@@ -22,7 +75,7 @@ if command -v mpiifort >/dev/null 2>&1; then
     CC="mpiicc"
     FFLAGS+=" -extend-source" # Enables long lines.
     FFLAGS+=" -fixed" # Enables fixed-form source code, necessary as we mix .f90 files.
-    
+
     if [[ $(mpiicx --version 2>&1) =~ "oneapi" ]]; then
         FFLAGS+=" -qmkl"
         CC="mpiicx"
@@ -51,14 +104,15 @@ else
     FFLAGS+=" -ffixed-form" # Enables fixed-form source code, necessary as we mix .f90 files.
     FFLAGS+=" -ffixed-line-length-none" # Allows for any line length in fixed-form source code.
     FFLAGS+=" -march=native" # Enables all instruction subsets supported by the local machine.
-    #FFLAGS+=" -mtune=native" # Enables all instruction subsets supported by the local machine.
+    FFLAGS+=" -mtune=native" # Enables all instruction subsets supported by the local machine.
     FFLAGS+=" -g" # Enables debugging information.
     FFLAGS+=" -fbacktrace" # Provides a backtrace in case of errors, useful for debugging.
     FFLAGS+=" -std=legacy -Wall" # Provides a backtrace in case of errors, useful for debugging.
-    
+
 fi
 
 CFLAGS+=" -w" # Disable warnings for C compiler
+
 #-------------------------------------------------------------------------------
 # Linking with LAPACK and BLAS
 #-------------------------------------------------------------------------------
@@ -73,6 +127,7 @@ if [[ $(uname -s) == "Darwin" ]]; then
 else
     USR_LFLAGS+=" -llapack -lblas"
 fi
+
 #export USR_LFLAGS+=" -L/usr/local/opt/openblas/lib"
 #export FFLAGS+=" -I/usr/local/opt/openblas/include"
 #export USR_LFLAGS+=" -lopenblas" # OpenBlas is a faster alternative to LAPACK and BLAS
@@ -87,15 +142,11 @@ export FFLAGS+=" -I$HOME/.local/include"
 #-------------------------------------------------------------------------------
 # Architecture Detection
 #-------------------------------------------------------------------------------
-LD="$FC" # Linker (default to Fortran compiler)
 case $(uname -s) in
     Darwin)
-        case $(uname -m) in
-        x86_64)
-            ;;
-        arm64)
-            FFLAGS+=" -mcmodel=small" # no support for large
-            ;;
+        case $(uname -p) in
+            x86_64) ar="x86_64" ;;
+            arm)    ar="arm" ;; # not compatile with mcmodel=large
         esac
         ;;
     Linux)
@@ -136,8 +187,28 @@ USR_NEKLAB+=" neklab_otd.o"
 USR_NEKLAB+=" neklab_analysis.o"
 USR_NEKLAB+=" neklab.o"
 
-# get casename from .usr file
-CASENAME=`find *.usr | sed 's/\.usr$//g'`
+#-------------------------------------------------------------------------------
+# Casename detection (strict: exactly one .usr, dummy excluded)
+#-------------------------------------------------------------------------------
+usr_files=()
+for f in *.usr; do
+   [[ -e "$f" ]] || continue
+   [[ "$f" == "$DUMMY" ]] && continue
+   usr_files+=("$f")
+done
+
+CASENAME=""
+if [[ ${#usr_files[@]} -eq 1 ]]; then
+   CASENAME="${usr_files[0]%.usr}"
+elif [[ "$1" == "clean" ]]; then
+   : # a casename is not needed to clean
+else
+   echo ""
+   echo "ERROR: expected exactly one case file (*.usr) in $PWD, found ${#usr_files[@]}."
+   [[ ${#usr_files[@]} -gt 0 ]] && echo "       candidates: ${usr_files[*]}"
+   echo "       Remove the extra files (or restore the missing one) and try again."
+   exit 1
+fi
 
 if [[ $1 == "clean" ]]; then
 
@@ -163,23 +234,32 @@ else
    echo "      flags:      $FFLAGS"
    echo "      link-flags: $USR_LFLAGS"
 
+   # Start a fresh log for this build
+   : > build.log
+
    # Compile dummy first
    echo ""
    echo "#############################################################"
    echo "#              Compiling base nek nek_dummy.usr             #"
    echo "#############################################################"
    echo ""
-   mv $CASENAME.usr $CASENAME.usr_tmp
-   cp $NEK_SOURCE_ROOT/short_tests/chan2d/chan2d.usr nek_dummy.usr
+
+   # Hide the real case file where the *.usr glob cannot reach it.
+   # From here on, the EXIT trap guarantees it comes back.
+   mkdir -p "$STASH_DIR" || { echo "ERROR: cannot create $STASH_DIR"; exit 1; }
+   mv "$CASENAME.usr" "$STASH_DIR/$CASENAME.usr" || {
+      echo "ERROR: cannot stash $CASENAME.usr"; exit 1; }
+   cp "$NEK_SOURCE_ROOT/short_tests/chan2d/chan2d.usr" "$DUMMY" || {
+      echo "ERROR: cannot install $DUMMY"; exit 1; }
 
    set +a -e
    set -o pipefail
    $NEK_SOURCE_ROOT/bin/nekconfig $@
    $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
-   
+
    # Compile dummy in parallel
    make -j4 2>&1 | tee -a build.log
-   
+
    # Compile full case in serial to avoid race condition
    echo "#############################################################"
    echo "#                  Compiling $CASENAME.usr"
@@ -191,16 +271,19 @@ else
    USR=$USR_NEKLAB
    export USR
    $NEK_SOURCE_ROOT/bin/nekconfig $@
-   rm -rf nek_dummy.usr
-   cp $CASENAME.usr_tmp $CASENAME.usr
+
+   # Swap the dummy back out for the real case file.
+   rm -f "$DUMMY"
+   mv -f "$STASH_DIR/$CASENAME.usr" "./$CASENAME.usr"
+   rmdir "$STASH_DIR" 2>/dev/null || true
 
    set +a -e
    $NEK_SOURCE_ROOT/bin/nekconfig $@
    $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
 
-   # Compile dummy in serial
+   # Compile the case in serial
    make -j1 2>&1 | tee -a build.log
-      
+
    set +o pipefail
    if [ $(ls *.mod 2>/dev/null | wc -l) -gt 0 ]; then
       mv *.mod obj

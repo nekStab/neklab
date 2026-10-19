@@ -130,6 +130,9 @@
                istep = itmp
                time  = rtmp
                call setup_linear_solver(endtime = time, silent = .true.)
+            class default
+               call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
+            end select
          end procedure
 
          module procedure exptA_temp_get_rst
