@@ -110,6 +110,7 @@
             character(len=*), parameter :: this_procedure = 'exptA_compute_rst'
             type(nek_dvector) :: vec_rst
             integer :: irst, itmp
+            character(len=128) :: msg
             real(dp) :: rtmp
             select type(vec_out)
             type is (nek_dvector)
@@ -129,6 +130,9 @@
                istep = itmp
                time  = rtmp
                call setup_linear_solver(endtime = time, silent = .true.)
+            class default
+               call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
+            end select
          end procedure
 
          module procedure exptA_get_rst
