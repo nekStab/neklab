@@ -57,3 +57,4 @@ examples/**/*.f
 **/SESSION.NAME
 **/__pycache__/*
 !tests/lib/
+!tests/lib/
