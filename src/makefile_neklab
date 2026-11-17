@@ -24,7 +24,6 @@ $(OBJDIR)/resolvent.o			:$(NEKLAB_SOURCE_ROOT)/src/linops/resolvent.f90 $(OBJDIR
 $(OBJDIR)/neklab_systems.o		:$(NEKLAB_SOURCE_ROOT)/src/systems/neklab_systems.f90 $(OBJDIR)/neklab_linops.o	;$(FC) -c $(FL2) $< -o $@
 
 # Sixth layer dependencies
-$(OBJDIR)/exponential_propagator_proj.o	:$(NEKLAB_SOURCE_ROOT)/src/linops/exponential_propagator_proj.f90 $(OBJDIR)/exponential_propagator.o	;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/fixed_point.o			:$(NEKLAB_SOURCE_ROOT)/src/systems/fixed_point.f90 $(OBJDIR)/neklab_systems.o	;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/fixed_point_temp.o		:$(NEKLAB_SOURCE_ROOT)/src/systems/fixed_point_temp.f90 $(OBJDIR)/neklab_systems.o	;$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/periodic_orbit.o		:$(NEKLAB_SOURCE_ROOT)/src/systems/periodic_orbit.f90 $(OBJDIR)/neklab_systems.o	;$(FC) -c $(FL2) $< -o $@
