@@ -190,7 +190,7 @@
                end do
             end if
 
-            self%T = beta*self%T + alpha*vec%T
+            self%T = self%T + alpha*vec%T
 
             do irst = 1, self%nrst
 
@@ -207,7 +207,7 @@
                   end do
                end if
 
-               self%Trst(irst) = beta*self%Trst(irst) + alpha*vec%Trst(irst)
+               self%Trst(irst) = self%Trst(irst) + alpha*vec%Trst(irst)
 
             end do
 
