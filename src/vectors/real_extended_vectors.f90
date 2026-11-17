@@ -70,25 +70,25 @@
             ijke = ix + lx1*((iy-1) + ly1*((iz-1) + lz1*(iel-1)))
             
             call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-            self%vx(ijke) = self%vx(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+            self%vx(ijke) = mth_rand(ix, iy, iz, ieg, xl, fcoeff)
             
             call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-            self%vy(ijke) = self%vy(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+            self%vy(ijke) = mth_rand(ix, iy, iz, ieg, xl, fcoeff)
             
             if (if3d) then
                call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-               self%vz(ijke) = self%vz(ijke) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+               self%vz(ijke) = mth_rand(ix, iy, iz, ieg, xl, fcoeff)
             end if
 
             if (ifto) then
                call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-               self%theta(ijke, 1) = self%theta(ijke, 1) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+               self%theta(ijke, 1) = mth_rand(ix, iy, iz, ieg, xl, fcoeff)
             end if
 
             if (ldimt > 1) then
                do m = 2, ldimt
                   call random_number(fcoeff); fcoeff = fcoeff*1.0e4_dp
-                  if (ifpsco(m - 1)) self%theta(ijke, m) = self%theta(ijke, m) + mth_rand(ix, iy, iz, ieg, xl, fcoeff)
+                  if (ifpsco(m - 1)) self%theta(ijke, m) = mth_rand(ix, iy, iz, ieg, xl, fcoeff)
                end do
             end if
 
