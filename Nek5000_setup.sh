@@ -84,6 +84,27 @@ else
     echo "Skipping modification."
 fi
 
+# Modify core/perturb.f
+read -p "Do you want to fix a bug in core/perturb.f? (y/n): " confirm
+if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
+    echo "Modifying core/perturb.f..."
+    FILE_PATH="core/perturb.f"
+    cp "$FILE_PATH" "${FILE_PATH}.original"
+    if [ "$OS" == "Linux" ]; then
+        sed -i 's/call opcolv3 (ta1,ta2,ta3,dTdx,dTdy,dTdz,tp)/call opcolv3 (ta1,ta2,ta3,dTdx,dTdy,dTdz,tp(1,1,jp))/g' "$FILE_PATH"
+    elif [ "$OS" == "Darwin" ]; then
+        sed -i '' 's/call opcolv3 (ta1,ta2,ta3,dTdx,dTdy,dTdz,tp)/call opcolv3 (ta1,ta2,ta3,dTdx,dTdy,dTdz,tp(1,1,jp))/g' "$FILE_PATH"
+    fi
+    if cmp -s "$FILE_PATH" "${FILE_PATH}.original"; then
+        echo "No match found in $FILE_PATH. No replacement made."
+    else
+        echo "Line in $FILE_PATH successfully replaced."
+    fi
+    rm "${FILE_PATH}.original"
+else
+    echo "Skipping modification."
+fi
+
 # Build genmap and genbox tools
 read -p "Do you want to build genmap and genbox tools? (y/n): " confirm
 if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
