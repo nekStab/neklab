@@ -233,7 +233,7 @@
                else
                   write (msg, '(A,A)') padl('Set timestep: ', 30), 'variable dt'
                   if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
-                  write (msg, '(A,E15.8)') padl('Set fintim: ', 30), fintim
+                  write (msg, '(A,ES15.8)') padl('Set fintim: ', 30), fintim
                   if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
                end if
             else
@@ -269,14 +269,14 @@
                   param(12) = dt
                end if
                if (nsteps < 1) then
-                  write (msg, '(A,E15.8,A,E15.8)') 'invalid step count: dt = ', dt, ', endtime = ', param(10)
+                  write (msg, '(A,ES15.8,A,ES15.8)') 'invalid step count: dt = ', dt, ', endtime = ', param(10)
                   call nek_stop_error(msg, this_module, 'setup_nek')
                end if
                fintim = nsteps*dt
                param(12) = -abs(param(12))
-               write (msg, '(A,E15.8)') padl('Force constant timestep: ', 30), -param(12)
+               write (msg, '(A,ES15.8)') padl('Force constant timestep: ', 30), -param(12)
                if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
-               write (msg, '(A,E15.8)') padl('Set fintim: ', 30), fintim
+               write (msg, '(A,ES15.8)') padl('Set fintim: ', 30), fintim
                if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
                write (msg, '(A,I15)') padl('Set nsteps: ', 30), nsteps
                if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
@@ -287,9 +287,9 @@
             param(22) = vtol_; TOLHDF = param(22); call bcast(TOLHDF,wdsize)
             restol(:) = param(22); call bcast(restol, (ldimt1+1)*wdsize)
             atol(:) = param(22); call bcast(atol, (ldimt1+1)*wdsize)
-            write (msg, '(A,E15.8)') padl('Set pressure tol: ', 30), param(21)
+            write (msg, '(A,ES15.8)') padl('Set pressure tol: ', 30), param(21)
             if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
-            write (msg, '(A,E15.8)') padl('Set velocity tol: ', 30), param(22)
+            write (msg, '(A,ES15.8)') padl('Set velocity tol: ', 30), param(22)
             if (nid == 0 .and. .not. silent_) print nekfmt, trim(msg)
  
       ! Broadcast parameters
@@ -393,7 +393,7 @@
                      write (msg, '(A,A)') padl('variable dt: ', pad), ' set at runtime'
                   end if
                else
-                  write (msg, '(A,E15.8)') padl('dt: ', pad), abs(param(12))
+                  write (msg, '(A,ES15.8)') padl('dt: ', pad), abs(param(12))
                end if
                call nek_log_message(msg, this_module, 'nek_status', nekfmt)
                if (nsteps > 0) then
@@ -402,9 +402,9 @@
                end if
                write (msg, '(A,F15.4)') padl('target CFL: ', pad), param(26)
                call nek_log_message(msg, this_module, 'nek_status', nekfmt)
-               write (msg, '(A,E15.4)') padl('pressure tol: ', pad), param(21)
+               write (msg, '(A,ES15.4)') padl('pressure tol: ', pad), param(21)
                call nek_log_message(msg, this_module, 'nek_status', nekfmt)
-               write (msg, '(A,E15.4)') padl('velocity tol: ', pad), param(22)
+               write (msg, '(A,ES15.4)') padl('velocity tol: ', pad), param(22)
                call nek_log_message(msg, this_module, 'nek_status', nekfmt)
                call nek_log_message('', this_module, 'nek_status', nekfmt)
             end if
