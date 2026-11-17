@@ -2,14 +2,60 @@
          implicit none
       contains
          module procedure init_exptA
+         logical :: silent_
+         character(len=128) :: msg
+         character(len=*), parameter :: this_procedure = 'exptA_init'
+         silent_ = optval(silent, .false.)
+         if (present(bf)) then
+            call vec2nek(vx, vy, vz, pr, t, bf)
+            call nek_log_message("Update baseflow", this_module, this_procedure)
+         end if
+         if (present(cfl_limit)) then
+            self%cfl_limit = cfl_limit
+            param(26) = cfl_limit
+            call nek_log_message("Set CFL limit", this_module, this_procedure)
+         else if (self%cfl_limit == 0.0_dp) then
+            self%cfl_limit = param(26)
+            write(msg,'(A,F15.8)') "Set CFL limit from .par: ", self%cfl_limit
+            call nek_log_message(msg, this_module, this_procedure)
+         end if
+         if (present(p2v_factor)) then
+            self%p2v_factor = p2v_factor
+            call nek_log_message("Set vtol/ptol", this_module, this_procedure)
+         else if (self%p2v_factor == 0.0_dp) then
+            self%p2v_factor = param(22) / param(21)
+            write(msg,'(A,ES15.8)') "Set vtol/ptol from .par: ", self%p2v_factor
+            call nek_log_message(msg, this_module, this_procedure)
+         end if
+         if (present(ptol)) then
+            self%ptol = ptol
+            param(21) = ptol
+            call nek_log_message("Set pressure tolerance", this_module, this_procedure)
+            self%vtol = self%ptol * self%p2v_factor
+            param(22) = self%ptol * self%p2v_factor
+            call nek_log_message("Set velocity tolerance", this_module, this_procedure)
+         else if (self%ptol == 0.0_dp) then
+            self%ptol = param(21)
+            write(msg,'(A,ES15.8)') "Set pressure tolerance from .par: ", self%ptol
+            self%vtol = self%ptol * self%p2v_factor
+            param(22) = self%ptol * self%p2v_factor
+            write(msg,'(A,ES15.8)') "Set pressure tolerance from .par: ", self%vtol
+            call nek_log_message(msg, this_module, this_procedure)
+         end if
+         
       ! For the baseflow field for dt/nsteps/cfl computation.
          call vec2nek(vx, vy, vz, pr, t, self%baseflow)
-         call nek_log_information("Set self%baseflow -> vx, vy, vz, pr, t", this_module, "init_exptA")
+         call nek_log_information("Set self%baseflow -> vx, vy, vz, pr, t", this_module, this_procedure)
       ! Setup Nek5000 for perturbation solver.
-         call setup_linear_solver(solve_baseflow = .false.,
-     &                            endtime        = self%tau,
-     &                            recompute_dt   = .true.,
-     &                            cfl_limit      = 0.5_dp)
+         call setup_linear_solver(solve_baseflow    = .false.,
+     &                            solve_temperature = .false.,
+     &                            silent            = .true.,
+     &                            endtime           = self%tau,
+     &                            recompute_dt      = .true.,
+     &                            cfl_limit         = self%cfl_limit,
+     &                            vtol              = self%vtol,
+     &                            ptol              = self%ptol)
+         if (.not. silent_) call nek_status(.true.)
          end procedure
 
          module procedure exptA_matvec
@@ -29,7 +75,7 @@
      &                                  silent       = .true.,
      &                                  endtime      = self%tau,
      &                                  recompute_dt = .true.,
-     &                                  cfl_limit    = 0.5_dp)
+     &                                  cfl_limit    = self%cfl_limit)
 
       ! Set initial condition for the linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
@@ -76,7 +122,7 @@
      &                                  silent       = .true.,  
      &                                  endtime      = self%tau,  
      &                                  recompute_dt = .true.,  
-     &                                  cfl_limit    = 0.5_dp)
+     &                                  cfl_limit    = self%cfl_limit)
 
       ! Set initial condition for the linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)

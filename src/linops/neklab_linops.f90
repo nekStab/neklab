@@ -7,7 +7,7 @@
          use LightKrylov_Logger
          use neklab_vectors
          use neklab_utils, only: nek2vec, vec2nek
-         use neklab_nek_setup, only: setup_nonlinear_solver, setup_linear_solver
+         use neklab_nek_setup, only: setup_nonlinear_solver, setup_linear_solver, nek_status
          use neklab_nek_setup, only: nek_log_debug, nek_log_message, nek_log_information, nek_stop_error
          use neklab_nek_forcing, only: set_neklab_forcing
          implicit none
@@ -34,6 +34,10 @@
       ! --> Type.
          type, extends(abstract_exptA_linop_rdp), public :: exptA_linop
             type(nek_dvector) :: baseflow
+            real(kind=dp), private :: cfl_limit  = 0.0_dp
+            real(kind=dp), private :: ptol       = 0.0_dp
+            real(kind=dp), private :: vtol       = 0.0_dp
+            real(kind=dp), private :: p2v_factor = 0.0_dp
          contains
             private
             procedure, pass(self), public :: init => init_exptA
@@ -45,8 +49,13 @@
       
       ! --> Type-bound procedures: exponential_propagator.f90
          interface
-            module subroutine init_exptA(self)
-               class(exptA_linop), intent(in) :: self
+            module subroutine init_exptA(self, bf, cfl_limit, ptol, p2v_factor, silent)
+               class(exptA_linop), intent(inout) :: self
+               type(nek_dvector), optional, intent(in) :: bf
+               real(kind=dp), optional, intent(in) :: cfl_limit
+               real(kind=dp), optional, intent(in) :: ptol
+               real(kind=dp), optional, intent(in) :: p2v_factor
+               logical, optional, intent(in) :: silent
             end subroutine
       
             module subroutine exptA_matvec(self, vec_in, vec_out)
@@ -81,6 +90,10 @@
       ! --> Type.
          type, extends(abstract_exptA_linop_rdp), public :: exptA_temp_linop
             type(nek_dvector) :: baseflow
+            real(kind=dp), private :: cfl_limit  = 0.0_dp
+            real(kind=dp), private :: ptol       = 0.0_dp
+            real(kind=dp), private :: vtol       = 0.0_dp
+            real(kind=dp), private :: p2v_factor = 0.0_dp
          contains
             private
             procedure, pass(self), public :: init => init_exptA_temp
@@ -92,8 +105,13 @@
       
       ! --> Type-bound procedures: exponential_propagator_temp.f90
          interface
-            module subroutine init_exptA_temp(self)
-               class(exptA_temp_linop), intent(in) :: self
+            module subroutine init_exptA_temp(self, bf, cfl_limit, ptol, p2v_factor, silent)
+               class(exptA_temp_linop), intent(inout) :: self
+               type(nek_dvector), optional, intent(in) :: bf
+               real(kind=dp), optional, intent(in) :: cfl_limit
+               real(kind=dp), optional, intent(in) :: ptol
+               real(kind=dp), optional, intent(in) :: p2v_factor
+               logical, optional, intent(in) :: silent
             end subroutine
       
             module subroutine exptA_temp_matvec(self, vec_in, vec_out)
@@ -120,75 +138,6 @@
                integer, intent(in) :: istep
             end subroutine
          end interface
-
-
-      !-----------------------------------------------------------------------
-      !-----     EXPONENTIAL PROPAGATOR with projection on wavenumber    -----
-      !-----------------------------------------------------------------------
-      
-      ! --> Type.
-         type, extends(abstract_exptA_linop_rdp), public :: exptA_proj_linop
-            type(nek_dvector) :: baseflow
-            ! streamwise wavenumber
-            real(kind=dp) :: alpha
-            ! projection basis
-            real(kind=dp), dimension(lx1*ly1*lz1*lelv) :: cv = 0.0_dp
-            real(kind=dp), dimension(lx1*ly1*lz1*lelv) :: sv = 0.0_dp
-            ! planar average
-            integer :: hndl = 0
-            integer :: nelx = 0
-            integer :: nely = 0
-            integer :: nelz = 0
-            integer :: idir = 1 ! streamwise direction
-         contains
-            private
-            procedure, pass(self), public :: init => init_exptA_proj
-            procedure, pass(self), public :: proj => proj_alpha
-            procedure, pass(self), public :: matvec => exptA_proj_matvec
-            procedure, pass(self), public :: rmatvec => exptA_proj_rmatvec
-            procedure, pass(self), public :: compute_rst => exptA_proj_compute_rst
-            procedure, pass(self), public :: get_rst => exptA_proj_get_rst
-
-         end type exptA_proj_linop
-      
-      ! --> Type-bound procedures: exponential_propagator.f90
-         interface
-            module subroutine init_exptA_proj(self, nelx, nely, nelz, idir)
-               class(exptA_proj_linop), intent(inout) :: self
-            integer, intent(in) :: nelx
-            integer, intent(in) :: nely
-            integer, intent(in) :: nelz
-            integer, intent(in) :: idir
-            end subroutine
-
-            module subroutine proj_alpha(self)
-               class(exptA_proj_linop), intent(in) :: self
-            end subroutine
-      
-            module subroutine exptA_proj_matvec(self, vec_in, vec_out)
-               class(exptA_proj_linop), intent(inout) :: self
-               class(abstract_vector_rdp), intent(in) :: vec_in
-               class(abstract_vector_rdp), intent(out) :: vec_out
-            end subroutine
-      
-            module subroutine exptA_proj_rmatvec(self, vec_in, vec_out)
-               class(exptA_proj_linop), intent(inout) :: self
-               class(abstract_vector_rdp), intent(in) :: vec_in
-               class(abstract_vector_rdp), intent(out) :: vec_out
-            end subroutine
-            
-            module subroutine exptA_proj_compute_rst(self, vec_out, nrst)
-               class(exptA_proj_linop), intent(inout) :: self
-               class(abstract_vector_rdp), intent(out) :: vec_out
-               integer, intent(in) :: nrst
-            end subroutine
-
-            module subroutine exptA_proj_get_rst(self, vec_in, istep)
-               class(exptA_proj_linop), intent(inout) :: self
-               class(abstract_vector_rdp), intent(in) :: vec_in
-               integer, intent(in) :: istep
-            end subroutine
-         end interface
       
       !--------------------------------------
       !-----     RESOLVENT OPERATOR     -----
@@ -196,8 +145,13 @@
       
       ! --> Type.
          type, extends(abstract_linop_cdp), public :: resolvent_linop
-            real(kind=dp) :: omega
             type(nek_dvector) :: baseflow
+            real(kind=dp) :: tau
+            real(kind=dp) :: omega
+            real(kind=dp), private :: cfl_limit  = 0.0_dp
+            real(kind=dp), private :: ptol       = 0.0_dp
+            real(kind=dp), private :: vtol       = 0.0_dp
+            real(kind=dp), private :: p2v_factor = 0.0_dp
          contains
             private
             procedure, pass(self), public :: matvec => resolvent_matvec
@@ -206,6 +160,16 @@
       
       ! --> Type-bound procedures: resolvent.f90
          interface
+            module subroutine init_resolvent(self, bf, omega, cfl_limit, ptol, p2v_factor, silent)
+               class(resolvent_linop), intent(inout) :: self
+               type(nek_dvector), optional, intent(in) :: bf
+               real(kind=dp), optional, intent(in) :: omega
+               real(kind=dp), optional, intent(in) :: cfl_limit
+               real(kind=dp), optional, intent(in) :: ptol
+               real(kind=dp), optional, intent(in) :: p2v_factor
+               logical, optional, intent(in) :: silent
+            end subroutine
+
             module subroutine resolvent_matvec(self, vec_in, vec_out)
                class(resolvent_linop), intent(inout) :: self
                class(abstract_vector_cdp), intent(in) :: vec_in
