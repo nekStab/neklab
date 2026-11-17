@@ -426,7 +426,7 @@
                fmt_ = default_fmt('', module, procedure)
             end if
             call log_message(msg, module, procedure)          ! LK: I/O rank only
-            if (nid == 0) print fmt_, trim(msg)
+            if (nid == 0 .and. .not. logger_writes_to_stdout()) print fmt_, trim(msg)
          end subroutine nek_log_message
  
          subroutine nek_log_warning(msg, module, procedure, fmt)
@@ -440,7 +440,7 @@
                fmt_ = default_fmt('WARNING:', module, procedure)
             end if
             call log_warning(msg, module, procedure)
-            if (nid == 0 .and. get_log_level() <= warning_level) print fmt_, trim(msg)
+            if (nid == 0 .and. .not. logger_writes_to_stdout()) print fmt_, trim(msg)
          end subroutine nek_log_warning
  
          subroutine nek_log_debug(msg, module, procedure, fmt)
@@ -456,7 +456,7 @@
                fmt_ = default_fmt('DEBUG:', module, procedure)
             end if
             call log_debug(msg, module, procedure)
-            if (nid == 0 .and. get_log_level() <= debug_level) print fmt_, trim(msg)
+            if (nid == 0 .and. .not. logger_writes_to_stdout()) print fmt_, trim(msg)
          end subroutine nek_log_debug
  
          subroutine nek_log_information(msg, module, procedure, fmt)
@@ -472,7 +472,7 @@
                fmt_ = default_fmt('INFO:', module, procedure)
             end if
             call log_debug(msg, module, procedure)
-            if (nid == 0 .and. get_log_level() <= information_level) print fmt_, trim(msg)
+            if (nid == 0 .and. .not. logger_writes_to_stdout()) print fmt_, trim(msg)
          end subroutine nek_log_information
  
          subroutine nek_stop_error(msg, module, procedure, fmt)
