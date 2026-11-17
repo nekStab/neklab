@@ -75,8 +75,13 @@
       ! Scratch array.
          wrk = self
       ! Scale complex vector.
-         call nek_daxpby(alpha%re, wrk%im, -alpha%im, self%re)
-         call nek_daxpby(alpha%re, wrk%re,  alpha%im, self%im)
+         ! real part = alpha.re * wrk.re - alpha.im * wrk.im
+         call nek_daxpby(alpha%re,  wrk%re, 0.0_dp, self%re)
+         call nek_daxpby(-alpha%im, wrk%im, 1.0_dp, self%re)
+
+         ! imaginary part = alpha.re * wrk.im + alpha.im * wrk.re
+         call nek_daxpby(alpha%re, wrk%im, 0.0_dp, self%im)
+         call nek_daxpby(alpha%im, wrk%re, 1.0_dp, self%im)
          end procedure
       
          module procedure nek_zaxpby
@@ -188,6 +193,7 @@
          else if (irst > self%nrst) then
             write(msg,'(A,I0)') 'No rst field to retrieve: ', irst
             call log_warning(msg, this_module, this_procedure)
+            return
          else
             write(msg,'(A,I0)') 'Retrieving rst fields: ', irst
             call log_information(msg, this_module, this_procedure)
