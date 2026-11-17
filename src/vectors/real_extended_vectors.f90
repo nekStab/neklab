@@ -123,6 +123,8 @@
          
       ! clear restart fields if present
          self%nrst = 0
+      ! clear pressure
+         self%pr   = 0.0_dp     ! pressure is not a dynamic variable
          end procedure
       
          module procedure nek_ext_dscal
