@@ -102,6 +102,6 @@
          public :: outpost_dnek, outpost_ext_dnek, outpost_nek
 
       ! Logging
-         public :: nek_log_information, nek_log_warning, nek_log_error
+         public :: nek_log_information, nek_log_warning, nek_log_error, nek_log_message
          public :: type_error, nek_stop_error
       end module neklab
