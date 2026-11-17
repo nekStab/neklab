@@ -281,6 +281,8 @@ else
    mv -f "$STASH_DIR/$CASENAME.usr" "./$CASENAME.usr"
    rmdir "$STASH_DIR" 2>/dev/null || true
 
+   touch $CASENAME.usr
+
    set +a -e
    $NEK_SOURCE_ROOT/bin/nekconfig $@
    $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
