@@ -53,7 +53,6 @@
          public :: nek_zvector
          public :: nek_pr_dvector
          public :: nek_ext_dvector
-         public :: nek_zvector
       
       ! Implementation of the standard linear operators.
          public :: exptA_linop
