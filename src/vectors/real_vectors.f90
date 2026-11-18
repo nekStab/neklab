@@ -185,22 +185,44 @@
                end do
             end if
 
-            do irst = 1, self%nrst
-
-               call           add2s2(self%vxrst(:, irst),       vec%vxrst(:, irst),       alpha, lvn)
-               call           add2s2(self%vyrst(:, irst),       vec%vyrst(:, irst),       alpha, lvn)
-               if (if3d) call add2s2(self%vzrst(:, irst),       vec%vzrst(:, irst),       alpha, lvn)
-               call           add2s2(self%prrst(:, irst),       vec%prrst(:, irst),       alpha, lpn)
-               if (ifto) call add2s2(self%thetarst(:, irst, 1), vec%thetarst(:, irst, 1), alpha, lvn)
-               if (ldimt > 1) then
-                  do m = 2, ldimt
-                     if (ifpsco(m - 1)) then
-                        call  add2s2(self%thetarst(:, irst, m), vec%thetarst(:, irst, m), alpha, lvn)
-                     end if
-                  end do
-               end if
-            end do
-
+            ! restart fields
+            if (beta == 0.0_dp) then
+               ! copy over history
+               self%nrst = vec%nrst
+               do irst = 1, self%nrst
+                  self%vxrst             (:, irst)    = alpha*vec%vxrst(:, irst)
+                  self%vyrst             (:, irst)    = alpha*vec%vyrst(:, irst)
+                  if (if3d) self%vzrst   (:, irst)    = alpha*vec%vzrst(:, irst)
+                  self%prrst             (:, irst)    = alpha*vec%prrst(:, irst)
+                  if (ifto) self%thetarst(:, irst, 1) = alpha*vec%thetarst(:, irst, 1)
+                  if (ldimt > 1) then
+                     do m = 2, ldimt
+                        if (ifpsco(m - 1)) then
+                           self%thetarst(:, irst, m) = alpha*vec%thetarst(:, irst, m)
+                        end if
+                     end do
+                  end if
+               end do
+            else if (self%nrst > 0 .and. vec%nrst == self%nrst) then
+               ! combine histories
+               do irst = 1, self%nrst
+                  call           add2s2(self%vxrst(:, irst),       vec%vxrst(:, irst),       alpha, lvn)
+                  call           add2s2(self%vyrst(:, irst),       vec%vyrst(:, irst),       alpha, lvn)
+                  if (if3d) call add2s2(self%vzrst(:, irst),       vec%vzrst(:, irst),       alpha, lvn)
+                  call           add2s2(self%prrst(:, irst),       vec%prrst(:, irst),       alpha, lpn)
+                  if (ifto) call add2s2(self%thetarst(:, irst, 1), vec%thetarst(:, irst, 1), alpha, lvn)
+                  if (ldimt > 1) then
+                     do m = 2, ldimt
+                        if (ifpsco(m - 1)) then
+                           call  add2s2(self%thetarst(:, irst, m), vec%thetarst(:, irst, m), alpha, lvn)
+                        end if
+                     end do
+                  end if
+               end do
+            else
+               self%nrst = 0      ! history of a combination is only known if all terms have it
+            end if
+            
          class default
             call type_error('vec','nek_dvector','IN',this_module,'nek_daxpby')
          end select
