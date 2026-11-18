@@ -34,14 +34,14 @@
          public :: nek_constant_tol
          public :: nek_dynamic_tol
 
-         type, public :: nek_solver_settings
+         type, public :: nek_system_settings
             real(kind=dp) :: cfl_limit         = 0.0_dp
             real(kind=dp) :: p2v_factor        = 0.0_dp
             real(kind=dp) :: newton_tol_factor = 0.0_dp
             real(kind=dp) :: ptol_min_par      = 0.0_dp
             real(kind=dp) :: vtol_min_par      = 0.0_dp
             logical       :: is_set            = .false.
-         end type nek_solver_settings
+         end type nek_system_settings
       
       !--------------------------------------------------
       !-----     NEKLAB SYSTEM FOR FIXED-POINTS   -------
@@ -49,7 +49,7 @@
       
       ! --> Type: nek_system
          type, extends(abstract_system_rdp), public :: nek_system
-            type(nek_solver_settings), private :: opts
+            type(nek_system_settings), private :: opts
          contains
             private
             procedure, pass(self), public :: init => init_nek_system
@@ -59,7 +59,7 @@
       
       ! --> Type: nek_jacobian
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian
-            type(nek_solver_settings), private :: opts
+            type(nek_system_settings), private :: opts
          contains
             private
             procedure, pass(self), public :: matvec => jac_exptA_matvec
@@ -119,7 +119,7 @@
       
       ! --> Type: nek_system
          type, extends(abstract_system_rdp), public :: nek_temp_system
-            type(nek_solver_settings), private :: opts
+            type(nek_system_settings), private :: opts
          contains
             private
             procedure, pass(self), public :: init => init_nek_temp_system
@@ -129,7 +129,7 @@
       
       ! --> Type: nek_jacobian
          type, extends(abstract_jacobian_linop_rdp), public :: nek_temp_jacobian
-            type(nek_solver_settings), private :: opts
+            type(nek_system_settings), private :: opts
          contains
             private
             procedure, pass(self), public :: matvec => jac_exptA_temp_matvec
@@ -188,7 +188,7 @@
       !-----------------------------------------------------
       
          type, extends(abstract_system_rdp), public :: nek_upo_system
-            type(nek_solver_settings), private :: opts
+            type(nek_system_settings), private :: opts
          contains
             private
             procedure, pass(self), public :: init => init_nek_upo_system
@@ -197,7 +197,7 @@
          end type nek_upo_system
       
          type, extends(abstract_jacobian_linop_rdp), public :: nek_upo_jacobian
-            type(nek_solver_settings), private :: opts
+            type(nek_system_settings), private :: opts
          contains
             private
             procedure, pass(self), public :: matvec => jac_direct_map

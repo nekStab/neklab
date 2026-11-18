@@ -2,11 +2,10 @@
          implicit none
       contains
          module procedure init_nek_system
-         logical :: silent_
          character(len=128) :: msg
          character(len=*), parameter :: this_procedure = 'init_nek_system'
-         ! save minimal tolerances from .par file
          associate (opts => self%opts)
+            ! save minimal tolerances from .par file
             opts%ptol_min_par = param(21)
             opts%vtol_min_par = param(22)
             write(msg,'(A,2(1X,ES15.8))') "Record minimal values for ptol/vtol from .par: ", opts%ptol_min_par, opts%vtol_min_par
