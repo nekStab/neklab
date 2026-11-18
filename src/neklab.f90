@@ -17,9 +17,6 @@
       !! --> OTD definition
          use neklab_analysis
       !! --> Stability analysis routines
-#ifdef NEKLAB_TESTS
-         use neklab_test
-#endif
       
          private
       
@@ -59,12 +56,6 @@
          public :: exptA_temp_linop
          public :: exptA_proj_linop
          public :: resolvent_linop
-
-#ifdef NEKLAB_TESTS
-      ! Unit-test entry points (compiled only when NEKLAB_TESTS is set).
-         public :: test_vector
-         public :: test_operator
-#endif
       
       ! Implementation of the abstract systems and Jacobians
          public :: nek_system, nek_jacobian
