@@ -25,12 +25,13 @@ c-----------------------------------------------------------------------
          sys = nek_system()
          sys%jacobian = nek_jacobian()
          sys%jacobian%X = bf
+         call sys%init(cfl_limit = 0.4_dp)
 			
          ! Set Newton tolerance
          tol = 1.0e-6_dp
          
          ! Compute fixed point
-         call newton_fixed_point_iteration(sys, bf, tol)
+         call newton_fixed_point_iteration(sys, bf, tol, tol_mode = 2)
 
          !Outpost solution
          call outpost_dnek(bf, "BF_")
