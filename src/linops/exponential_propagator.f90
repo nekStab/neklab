@@ -6,63 +6,75 @@
          character(len=128) :: msg
          character(len=*), parameter :: this_procedure = 'exptA_init'
          silent_ = optval(silent, .false.)
-         if (present(bf)) then
-            self%baseflow = bf
-            call nek_log_message("Update baseflow", this_module, this_procedure)
-         end if
-         if (present(cfl_limit)) then
-            self%cfl_limit = cfl_limit
-            param(26) = cfl_limit
-            call nek_log_message("Set CFL limit", this_module, this_procedure)
-         else if (self%cfl_limit == 0.0_dp) then
-            self%cfl_limit = param(26)
-            write(msg,'(A,F15.8)') "Set CFL limit from .par: ", self%cfl_limit
+         associate (opts => self%opts)
+            ! save minimal tolerances from .par file
+            opts%ptol_min_par = param(21)
+            opts%vtol_min_par = param(22)
+            write(msg,'(A,2(1X,ES15.8))') "Record minimal values for ptol/vtol from .par: ", opts%ptol_min_par, opts%vtol_min_par
             call nek_log_message(msg, this_module, this_procedure)
-         end if
-         if (present(p2v_factor)) then
-            self%p2v_factor = p2v_factor
-            call nek_log_message("Set vtol/ptol", this_module, this_procedure)
-         else if (self%p2v_factor == 0.0_dp) then
-            self%p2v_factor = param(22) / param(21)
-            write(msg,'(A,ES15.8)') "Set vtol/ptol from .par: ", self%p2v_factor
-            call nek_log_message(msg, this_module, this_procedure)
-         end if
-         if (present(ptol)) then
-            self%ptol = ptol
-            param(21) = ptol
-            call nek_log_message("Set pressure tolerance", this_module, this_procedure)
-            self%vtol = self%ptol * self%p2v_factor
-            param(22) = self%ptol * self%p2v_factor
-            call nek_log_message("Set velocity tolerance", this_module, this_procedure)
-         else if (self%ptol == 0.0_dp) then
-            self%ptol = param(21)
-            write(msg,'(A,ES15.8)') "Set pressure tolerance from .par: ", self%ptol
-            self%vtol = self%ptol * self%p2v_factor
-            param(22) = self%ptol * self%p2v_factor
-            write(msg,'(A,ES15.8)') "Set pressure tolerance from .par: ", self%vtol
-            call nek_log_message(msg, this_module, this_procedure)
-         end if
-         
-      ! For the baseflow field for dt/nsteps/cfl computation.
-         call vec2nek(vx, vy, vz, pr, t, self%baseflow)
-         call nek_log_information("Set self%baseflow -> vx, vy, vz, pr, t", this_module, this_procedure)
-      ! Setup Nek5000 for perturbation solver.
-         call setup_linear_solver(solve_baseflow    = .false.,
-     &                            solve_temperature = .false.,
-     &                            silent            = .true.,
-     &                            endtime           = self%tau,
-     &                            recompute_dt      = .true.,
-     &                            cfl_limit         = self%cfl_limit,
-     &                            vtol              = self%vtol,
-     &                            ptol              = self%ptol)
-         if (.not. silent_) call nek_status(.true.)
-         self%is_initialized = .true.
+            
+            if (present(bf)) then
+               self%baseflow = bf
+               call nek_log_message("Update baseflow", this_module, this_procedure)
+            end if
+
+            if (present(cfl_limit)) then
+               opts%cfl_limit = cfl_limit
+               param(26) = cfl_limit
+               call nek_log_message("Set CFL limit", this_module, this_procedure)
+            else if (opts%cfl_limit == 0.0_dp) then
+               opts%cfl_limit = param(26)
+               write(msg,'(A,F15.8)') "Set CFL limit from .par: ", opts%cfl_limit
+               call nek_log_message(msg, this_module, this_procedure)
+            end if
+
+            if (present(p2v_factor)) then
+               opts%p2v_factor = p2v_factor
+               call nek_log_message("Set vtol/ptol", this_module, this_procedure)
+            else if (opts%p2v_factor == 0.0_dp) then
+               opts%p2v_factor = param(22) / param(21)
+               write(msg,'(A,ES15.8)') "Set vtol/ptol from .par: ", opts%p2v_factor
+               call nek_log_message(msg, this_module, this_procedure)
+            end if
+
+            if (present(ptol)) then
+               opts%ptol = ptol
+               param(21) = ptol
+               call nek_log_message("Set pressure tolerance", this_module, this_procedure)
+               opts%vtol = opts%ptol * opts%p2v_factor
+               param(22) = opts%ptol * opts%p2v_factor
+               call nek_log_message("Set velocity tolerance", this_module, this_procedure)
+            else if (opts%ptol == 0.0_dp) then
+               opts%ptol = param(21)
+               write(msg,'(A,ES15.8)') "Set pressure tolerance from .par: ", opts%ptol
+               opts%vtol = opts%ptol * opts%p2v_factor
+               param(22) = opts%ptol * opts%p2v_factor
+               write(msg,'(A,ES15.8)') "Set pressure tolerance from .par: ", opts%vtol
+               call nek_log_message(msg, this_module, this_procedure)
+            end if
+            
+         ! For the baseflow field for dt/nsteps/cfl computation.
+            call vec2nek(vx, vy, vz, pr, t, self%baseflow)
+            call nek_log_information("Set self%baseflow -> vx, vy, vz, pr, t", this_module, this_procedure)
+         ! Setup Nek5000 for perturbation solver.
+            call setup_linear_solver(solve_baseflow    = .false.,
+     &                               solve_temperature = .false.,
+     &                               silent            = .true.,
+     &                               endtime           = self%tau,
+     &                               recompute_dt      = .true.,
+     &                               cfl_limit         = opts%cfl_limit,
+     &                               vtol              = opts%vtol,
+     &                               ptol              = opts%ptol)
+            if (.not. silent_) call nek_status(.true.)
+
+            opts%is_set = .true.
+         end associate
          end procedure
 
          module procedure exptA_matvec
          character(len=*), parameter :: this_procedure = 'exptA_matvec'
          integer :: nrst
-         if (.not. self%is_initialized) call nek_stop_error('Operator used uninitialized.', this_module, this_procedure)
+         if (.not. self%opts%is_set) call nek_stop_error('Operator used uninitialized.', this_module, this_procedure)
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
@@ -77,7 +89,7 @@
      &                                  silent       = .true.,
      &                                  endtime      = self%tau,
      &                                  recompute_dt = .true.,
-     &                                  cfl_limit    = self%cfl_limit)
+     &                                  cfl_limit    = self%opts%cfl_limit)
 
       ! Set initial condition for the linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
@@ -110,7 +122,7 @@
          module procedure exptA_rmatvec
          character(len=*), parameter :: this_procedure = 'exptA_rmatvec'
          integer :: nrst
-         if (.not. self%is_initialized) call nek_stop_error('Operator used uninitialized.', this_module, this_procedure)
+         if (.not. self%opts%is_set) call nek_stop_error('Operator used uninitialized.', this_module, this_procedure)
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
@@ -125,7 +137,7 @@
      &                                  silent       = .true.,  
      &                                  endtime      = self%tau,  
      &                                  recompute_dt = .true.,  
-     &                                  cfl_limit    = self%cfl_limit)
+     &                                  cfl_limit    = self%opts%cfl_limit)
 
       ! Set initial condition for the linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)

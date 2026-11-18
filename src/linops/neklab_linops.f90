@@ -26,6 +26,16 @@
          public :: compute_LNS_gradp
          public :: compute_LNS_laplacian
          public :: apply_Lv, apply_L
+
+         type, public :: nek_linop_settings
+            real(kind=dp) :: cfl_limit         = 0.0_dp
+            real(kind=dp) :: ptol              = 0.0_dp
+            real(kind=dp) :: vtol              = 0.0_dp
+            real(kind=dp) :: p2v_factor        = 0.0_dp
+            real(kind=dp) :: ptol_min_par      = 0.0_dp
+            real(kind=dp) :: vtol_min_par      = 0.0_dp
+            logical       :: is_set            = .false.
+         end type nek_linop_settings
       
       !------------------------------------------
       !-----     EXPONENTIAL PROPAGATOR     -----
@@ -34,11 +44,7 @@
       ! --> Type.
          type, extends(abstract_exptA_linop_rdp), public :: exptA_linop
             type(nek_dvector) :: baseflow
-            real(kind=dp), private :: cfl_limit  = 0.0_dp
-            real(kind=dp), private :: ptol       = 0.0_dp
-            real(kind=dp), private :: vtol       = 0.0_dp
-            real(kind=dp), private :: p2v_factor = 0.0_dp
-            logical, private :: is_initialized = .false.
+            type(nek_linop_settings), private :: opts
          contains
             private
             procedure, pass(self), public :: init => init_exptA
@@ -91,11 +97,7 @@
       ! --> Type.
          type, extends(abstract_exptA_linop_rdp), public :: exptA_temp_linop
             type(nek_dvector) :: baseflow
-            real(kind=dp), private :: cfl_limit  = 0.0_dp
-            real(kind=dp), private :: ptol       = 0.0_dp
-            real(kind=dp), private :: vtol       = 0.0_dp
-            real(kind=dp), private :: p2v_factor = 0.0_dp
-            logical, private :: is_initialized = .false.
+            type(nek_linop_settings), private :: opts
          contains
             private
             procedure, pass(self), public :: init => init_exptA_temp
@@ -150,13 +152,10 @@
             type(nek_dvector) :: baseflow
             real(kind=dp) :: tau
             real(kind=dp) :: omega
-            real(kind=dp), private :: cfl_limit  = 0.0_dp
-            real(kind=dp), private :: ptol       = 0.0_dp
-            real(kind=dp), private :: vtol       = 0.0_dp
-            real(kind=dp), private :: p2v_factor = 0.0_dp
-            logical, private :: is_initialized = .false.
+            type(nek_linop_settings), private :: opts
          contains
             private
+            procedure, pass(self), public :: init => init_resolvent
             procedure, pass(self), public :: matvec => resolvent_matvec
             procedure, pass(self), public :: rmatvec => resolvent_rmatvec
          end type
