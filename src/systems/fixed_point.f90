@@ -5,7 +5,6 @@
          logical :: silent_
          character(len=128) :: msg
          character(len=*), parameter :: this_procedure = 'init_nek_system'
-         silent_ = optval(silent, .false.)
          if (present(cfl_limit)) then
             self%opts%cfl_limit = cfl_limit
             param(26) = cfl_limit
@@ -48,12 +47,13 @@
          character(len=*), parameter :: this_procedure = 'nonlinear_map'
          real(dp) :: vtol, ptol, vtol
          if (.not. self%opts%is_set) call nek_stop_error('System used uninitialized.', this_module, this_procedure)
-         ptol = atol * self%opts%newton_tol_factor
-         vtol = atol * self%opts%newton_tol_factor * self%opts%p2v_factor
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
+            
+               ptol = atol * self%opts%newton_tol_factor
+               vtol = atol * self%opts%newton_tol_factor * self%opts%p2v_factor
 
       ! Set the initial condition for the nonlinear solver.
                call vec2nek(vx, vy, vz, pr, t, vec_in)

@@ -68,12 +68,11 @@
       
       ! --> Type-bound procedures for nek_system & nek_jacobian
          interface
-            module subroutine init_nek_system(self, cfl_limit, p2v_factor, newton_tol_factor, silent)
+            module subroutine init_nek_system(self, cfl_limit, p2v_factor, newton_tol_factor)
                class(nek_system), intent(inout) :: self
                real(kind=dp), optional, intent(in) :: cfl_limit
                real(kind=dp), optional, intent(in) :: p2v_factor
                real(kind=dp), optional, intent(in) :: newton_tol_factor
-               logical, optional, intent(in) :: silent
             end subroutine
 
             module subroutine sync_nek_jacobian(self)
@@ -139,12 +138,11 @@
       
       ! --> Type-bound procedures for nek_system & nek_jacobian
          interface
-            module subroutine init_nek_temp_system(self, cfl_limit, p2v_factor, newton_tol_factor, silent)
+            module subroutine init_nek_temp_system(self, cfl_limit, p2v_factor, newton_tol_factor)
                class(nek_temp_system), intent(inout) :: self
                real(kind=dp), optional, intent(in) :: cfl_limit
                real(kind=dp), optional, intent(in) :: p2v_factor
                real(kind=dp), optional, intent(in) :: newton_tol_factor
-               logical, optional, intent(in) :: silent
             end subroutine
 
             module subroutine sync_nek_temp_jacobian(self)
@@ -208,12 +206,11 @@
       
       ! --> Type-bound procedures for nek_upo_system & nek_upo_jacobian
          interface
-            module subroutine init_nek_upo_system(self, cfl_limit, p2v_factor, newton_tol_factor, silent)
+            module subroutine init_nek_upo_system(self, cfl_limit, p2v_factor, newton_tol_factor)
                class(nek_upo_system), intent(inout) :: self
                real(kind=dp), optional, intent(in) :: cfl_limit
                real(kind=dp), optional, intent(in) :: p2v_factor
                real(kind=dp), optional, intent(in) :: newton_tol_factor
-               logical, optional, intent(in) :: silent
             end subroutine
 
             module subroutine sync_nek_upo_jacobian(self)
