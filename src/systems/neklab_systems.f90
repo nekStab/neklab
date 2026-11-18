@@ -33,6 +33,13 @@
          public :: compute_fdot
          public :: nek_constant_tol
          public :: nek_dynamic_tol
+
+         type, public :: nek_solver_settings
+            real(kind=dp) :: cfl_limit         = 0.0_dp
+            real(kind=dp) :: p2v_factor        = 0.0_dp
+            real(kind=dp) :: newton_tol_factor = 0.0_dp
+            logical       :: is_set            = .false.
+         end type nek_solver_settings
       
       !--------------------------------------------------
       !-----     NEKLAB SYSTEM FOR FIXED-POINTS   -------
@@ -40,13 +47,17 @@
       
       ! --> Type: nek_system
          type, extends(abstract_system_rdp), public :: nek_system
+            type(nek_solver_settings), private :: opts
          contains
             private
+            procedure, pass(self), public :: init => init_nek_system
             procedure, pass(self), public :: response => nonlinear_map
+            procedure, pass(self), public :: sync_jacobian => sync_nek_jacobian
          end type nek_system
       
       ! --> Type: nek_jacobian
          type, extends(abstract_jacobian_linop_rdp), public :: nek_jacobian
+            type(nek_solver_settings), private :: opts
          contains
             private
             procedure, pass(self), public :: matvec => jac_exptA_matvec
@@ -57,6 +68,18 @@
       
       ! --> Type-bound procedures for nek_system & nek_jacobian
          interface
+            module subroutine init_nek_system(self, cfl_limit, p2v_factor, newton_tol_factor, silent)
+               class(nek_system), intent(inout) :: self
+               real(kind=dp), optional, intent(in) :: cfl_limit
+               real(kind=dp), optional, intent(in) :: p2v_factor
+               real(kind=dp), optional, intent(in) :: newton_tol_factor
+               logical, optional, intent(in) :: silent
+            end subroutine
+
+            module subroutine sync_nek_jacobian(self)
+               class(nek_system), intent(inout) :: self
+            end subroutine sync_nek_jacobian
+            
             module subroutine nonlinear_map(self, vec_in, vec_out, atol)
                class(nek_system), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
@@ -95,13 +118,17 @@
       
       ! --> Type: nek_system
          type, extends(abstract_system_rdp), public :: nek_temp_system
+            type(nek_solver_settings), private :: opts
          contains
             private
+            procedure, pass(self), public :: init => init_nek_temp_system
             procedure, pass(self), public :: response => nonlinear_map_temp
+            procedure, pass(self), public :: sync_jacobian => sync_nek_temp_jacobian
          end type nek_temp_system
       
       ! --> Type: nek_jacobian
          type, extends(abstract_jacobian_linop_rdp), public :: nek_temp_jacobian
+            type(nek_solver_settings), private :: opts
          contains
             private
             procedure, pass(self), public :: matvec => jac_exptA_temp_matvec
@@ -112,6 +139,18 @@
       
       ! --> Type-bound procedures for nek_system & nek_jacobian
          interface
+            module subroutine init_nek_temp_system(self, cfl_limit, p2v_factor, newton_tol_factor, silent)
+               class(nek_temp_system), intent(inout) :: self
+               real(kind=dp), optional, intent(in) :: cfl_limit
+               real(kind=dp), optional, intent(in) :: p2v_factor
+               real(kind=dp), optional, intent(in) :: newton_tol_factor
+               logical, optional, intent(in) :: silent
+            end subroutine
+
+            module subroutine sync_nek_temp_jacobian(self)
+               class(nek_temp_system), intent(inout) :: self
+            end subroutine sync_nek_temp_jacobian
+
             module subroutine nonlinear_map_temp(self, vec_in, vec_out, atol)
                class(nek_temp_system), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
@@ -149,12 +188,16 @@
       !-----------------------------------------------------
       
          type, extends(abstract_system_rdp), public :: nek_upo_system
+            type(nek_solver_settings), private :: opts
          contains
             private
+            procedure, pass(self), public :: init => init_nek_upo_system
             procedure, pass(self), public :: response => nonlinear_map_upo
+            procedure, pass(self), public :: sync_jacobian => sync_nek_upo_jacobian
          end type nek_upo_system
       
          type, extends(abstract_jacobian_linop_rdp), public :: nek_upo_jacobian
+            type(nek_solver_settings), private :: opts
          contains
             private
             procedure, pass(self), public :: matvec => jac_direct_map
@@ -165,13 +208,25 @@
       
       ! --> Type-bound procedures for nek_upo_system & nek_upo_jacobian
          interface
+            module subroutine init_nek_upo_system(self, cfl_limit, p2v_factor, newton_tol_factor, silent)
+               class(nek_upo_system), intent(inout) :: self
+               real(kind=dp), optional, intent(in) :: cfl_limit
+               real(kind=dp), optional, intent(in) :: p2v_factor
+               real(kind=dp), optional, intent(in) :: newton_tol_factor
+               logical, optional, intent(in) :: silent
+            end subroutine
+
+            module subroutine sync_nek_upo_jacobian(self)
+               class(nek_upo_system), intent(inout) :: self
+            end subroutine sync_nek_upo_jacobian
+
             module subroutine nonlinear_map_upo(self, vec_in, vec_out, atol)
                class(nek_upo_system), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in
                class(abstract_vector_rdp), intent(out) :: vec_out
                real(dp), intent(in) :: atol
             end subroutine nonlinear_map_upo
-      
+
             module subroutine jac_direct_map(self, vec_in, vec_out)
                class(nek_upo_jacobian), intent(inout) :: self
                class(abstract_vector_rdp), intent(in) :: vec_in

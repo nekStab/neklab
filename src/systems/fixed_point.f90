@@ -1,8 +1,55 @@
       submodule(neklab_systems) fixed_point
          implicit none
       contains
+         module procedure init_nek_system
+         logical :: silent_
+         character(len=128) :: msg
+         character(len=*), parameter :: this_procedure = 'init_nek_system'
+         silent_ = optval(silent, .false.)
+         if (present(cfl_limit)) then
+            self%opts%cfl_limit = cfl_limit
+            param(26) = cfl_limit
+            call nek_log_message("Set CFL limit", this_module, this_procedure)
+         else if (self%opts%cfl_limit == 0.0_dp) then
+            self%opts%cfl_limit = param(26)
+            write(msg,'(A,F15.8)') "Set CFL limit from .par: ", self%opts%cfl_limit
+            call nek_log_message(msg, this_module, this_procedure)
+         end if
+         if (present(p2v_factor)) then
+            self%opts%p2v_factor = p2v_factor
+            call nek_log_message("Set vtol/ptol", this_module, this_procedure)
+         else if (self%opts%p2v_factor == 0.0_dp) then
+            self%opts%p2v_factor = param(22) / param(21)
+            write(msg,'(A,ES15.8)') "Set vtol/ptol from .par: ", self%opts%p2v_factor
+            call nek_log_message(msg, this_module, this_procedure)
+         end if
+         if (present(newton_tol_factor)) then
+            self%opts%newton_tol_factor = newton_tol_factor
+            call nek_log_message("Set newton_tol_factor", this_module, this_procedure)
+         else if (self%opts%newton_tol_factor == 0.0_dp) then
+            self%opts%newton_tol_factor = 0.1_dp
+            write(msg,'(A,ES15.8)') "Set newton_tol_factor to default: ", self%opts%newton_tol_factor
+            call nek_log_message(msg, this_module, this_procedure)
+         end if
+         self%opts%is_set = .true.
+         end procedure
+
+         module procedure sync_nek_jacobian
+            character(len=*), parameter :: this_procedure = 'sync_nek_jacobian'
+            select type (jac => self%jacobian)
+            type is (nek_jacobian)
+               jac%opts = self%opts
+            class default
+               call nek_stop_error('nek_system expects a nek_jacobian.', this_module, this_procedure)
+            end select
+         end procedure
+
          module procedure nonlinear_map
          character(len=*), parameter :: this_procedure = 'nonlinear_map'
+         real(dp) :: vtol, ptol, vtol
+         if (.not. self%opts%is_set) call nek_stop_error('System used uninitialized.', this_module, this_procedure)
+         ptol = atol * self%opts%newton_tol_factor
+         vtol = atol * self%opts%newton_tol_factor * self%opts%p2v_factor
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
@@ -13,9 +60,9 @@
 
       ! Set appropriate tolerances.
                call setup_nonlinear_solver(recompute_dt = .true., 
-     &                                     cfl_limit    = 0.4_dp,
-     &                                     vtol         = atol*0.1,
-     &                                     ptol         = atol*0.1)      
+     &                                     cfl_limit    = self%opts%cfl_limit,
+     &                                     ptol         = ptol,
+     &                                     vtol         = vtol)
       
       ! Integrate the nonlinear equations forward
                time = 0.0_dp
@@ -37,12 +84,15 @@
          class default
             call type_error('vec_in','nek_dvector','IN',this_module, this_procedure)
          end select
+      ! sync options with jacobian
+         call self%sync_jacobian()
          end procedure nonlinear_map
-      
+
          module procedure jac_exptA_matvec
          character(len=*), parameter :: this_procedure = 'jac_exptA_matvec'
          integer :: nrst
-         real(dp) :: atol
+         real(dp) :: atol, ptol, vtol
+         if (.not. self%opts%is_set) call nek_stop_error('Jacobian used uninitialized.', this_module, this_procedure)
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
@@ -50,6 +100,8 @@
 
                nrst = abs(param(27)) - 1
                atol = param(22)
+               ptol = atol * self%opts%newton_tol_factor
+               vtol = atol * self%opts%newton_tol_factor * self%opts%p2v_factor
 
       ! Set baseflow.
                call abs_vec2nek(vx, vy, vz, pr, t, self%X)
@@ -57,9 +109,9 @@
       ! Ensure correct nek status.
                call setup_linear_solver(solve_baseflow = .false.,
      &                                  recompute_dt   = .true.,
-     &                                  cfl_limit      = 0.5_dp, 
-     &                                  vtol           = atol*0.5,
-     &                                  ptol           = atol*0.5)
+     &                                  cfl_limit      = self%opts%cfl_limit,
+     &                                  ptol           = ptol,
+     &                                  vtol           = vtol)
 
       ! Set the initial condition for the linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
@@ -98,7 +150,8 @@
          module procedure jac_exptA_rmatvec
          character(len=*), parameter :: this_procedure = 'jac_exptA_rmatvec'
          integer :: nrst
-         real(dp) :: atol
+         real(dp) :: atol, ptol, vtol
+         if (.not. self%opts%is_set) call nek_stop_error('Jacobian used uninitialized.', this_module, this_procedure)
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
@@ -106,6 +159,8 @@
 
                nrst = abs(param(27)) - 1
                atol = param(22)
+               ptol = atol * self%opts%newton_tol_factor
+               vtol = atol * self%opts%newton_tol_factor * self%opts%p2v_factor
             
       ! Set baseflow.
                call abs_vec2nek(vx, vy, vz, pr, t, self%X)
@@ -114,9 +169,9 @@
                call setup_linear_solver(transpose      = .true., 
      &                                  solve_baseflow = .false.,
      &                                  recompute_dt   = .true.,
-     &                                  cfl_limit      = 0.5_dp, 
-     &                                  vtol           = atol*0.5,
-     &                                  ptol           = atol*0.5)
+     &                                  cfl_limit      = self%opts%cfl_limit,
+     &                                  ptol           = ptol,
+     &                                  vtol           = vtol)
 
       ! Set the initial condition for the linearized solver.
                call vec2nek(vxp, vyp, vzp, prp, tp, vec_in)
