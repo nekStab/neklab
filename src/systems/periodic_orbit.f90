@@ -1,5 +1,8 @@
       submodule(neklab_systems) periodic_orbit
          implicit none
+         ! Phase condition F_T = < f(x_ref), u - u_ref >: x_ref defines a fixed Poincare section.
+         type(nek_ext_dvector) :: xref_phase, fref_phase
+         logical :: has_phase_ref = .false.
       contains
          module procedure init_nek_upo_system
          character(len=128) :: msg
@@ -40,6 +43,8 @@
             end if
             opts%is_set = .true.
          end associate
+         has_phase_ref = .false.
+         call nek_log_message("Phase reference cleared (set at next call of eval)", this_module, this_procedure)
          end procedure 
 
          module procedure sync_nek_upo_jacobian
@@ -56,6 +61,7 @@
          character(len=*), parameter :: this_procedure = 'nonlinear_map_UPO'
          character(len=128) :: msg
          real(dp) :: ptol, vtol
+         type(nek_ext_dvector) :: du
          if (.not. self%opts%is_set) call nek_stop_error('System used uninitialized.', this_module, this_procedure)
          select type (vec_in)
          type is (nek_ext_dvector)
@@ -87,10 +93,15 @@
 
       ! Copy the final solution to vector.
                call nek2ext_vec(vec_out, vx, vy, vz, pr, t)
-               vec_out%T = vec_in%T
 
       ! Evaluate residual F(X) - X.
                call vec_out%sub(vec_in)
+
+      ! Phase condition: F_T = < f(x_ref), u - u_ref >
+               if (.not. has_phase_ref) call set_phase_reference(vec_in)
+               du = vec_in
+               call du%sub(xref_phase)
+               vec_out%T = du%dot(fref_phase)
 
             class default
                call type_error('vec_out','nek_ext_dvector','OUT',this_module,this_procedure)
@@ -162,7 +173,9 @@
       ! Set the initial point of the nonlinear trajectory
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
                call compute_fdot(vec)
-               vec_out%T = vec_in%dot(vec)
+      ! Phase row: < f(x_ref), du >  (derivative of F_T)
+               if (.not. has_phase_ref) call set_phase_reference(self%X)
+               vec_out%T = vec_in%dot(fref_phase)
 
       ! Reset tolerances
                param(22) = atol
@@ -235,6 +248,13 @@
       ! Set the initial point of the orbit
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
                call compute_fdot(vec)
+      
+      ! Transpose of the border:
+      !   column: f(x_ref) * s        (s = vec_in%T)
+      !   row:    < f(X(T)), v >      (vx, vy, vz contain the end point X(T))
+               call compute_fdot(vec)
+               if (.not. has_phase_ref) call set_phase_reference(self%X)
+               call vec_out%axpby(vec_in%T, fref_phase, 1.0_dp)
                vec_out%T = vec_in%dot(vec)
 
       ! Reset tolerances
@@ -294,4 +314,21 @@
                call type_error('vec_in','nek_ext_dvector','IN',this_module, this_procedure)
             end select
          end procedure
+
+         subroutine set_phase_reference(x)
+         ! Store x_ref and f(x_ref) for the phase condition.
+         ! Overwrites vx, vy, vz, pr, t (compute_fdot advances one step).
+            class(abstract_vector_rdp), intent(in) :: x
+            character(len=*), parameter :: this_procedure = 'set_phase_reference'
+            select type (x)
+            type is (nek_ext_dvector)
+               xref_phase = x
+               call abs_ext_vec2nek(vx, vy, vz, pr, t, x)
+               call compute_fdot(fref_phase)          ! sets fref_phase%T = 0
+               has_phase_ref = .true.
+               call nek_log_message("Phase reference set", this_module, this_procedure)
+            class default
+               call type_error('x','nek_ext_dvector','IN',this_module, this_procedure)
+            end select
+         end subroutine set_phase_reference
       end submodule
