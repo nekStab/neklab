@@ -38,6 +38,8 @@
             real(kind=dp) :: cfl_limit         = 0.0_dp
             real(kind=dp) :: p2v_factor        = 0.0_dp
             real(kind=dp) :: newton_tol_factor = 0.0_dp
+            real(kind=dp) :: ptol_min_par      = 0.0_dp
+            real(kind=dp) :: vtol_min_par      = 0.0_dp
             logical       :: is_set            = .false.
          end type nek_solver_settings
       

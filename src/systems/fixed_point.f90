@@ -5,32 +5,43 @@
          logical :: silent_
          character(len=128) :: msg
          character(len=*), parameter :: this_procedure = 'init_nek_system'
-         if (present(cfl_limit)) then
-            self%opts%cfl_limit = cfl_limit
-            param(26) = cfl_limit
-            call nek_log_message("Set CFL limit", this_module, this_procedure)
-         else if (self%opts%cfl_limit == 0.0_dp) then
-            self%opts%cfl_limit = param(26)
-            write(msg,'(A,F15.8)') "Set CFL limit from .par: ", self%opts%cfl_limit
+         ! save minimal tolerances from .par file
+         associate (opts => self%opts)
+            opts%ptol_min_par = param(21)
+            opts%vtol_min_par = param(22)
+            write(msg,'(A,2(1X,ES15.8))') "Record minimal values for ptol/vtol from .par: ", opts%ptol_min_par, opts%vtol_min_par
             call nek_log_message(msg, this_module, this_procedure)
-         end if
-         if (present(p2v_factor)) then
-            self%opts%p2v_factor = p2v_factor
-            call nek_log_message("Set vtol/ptol", this_module, this_procedure)
-         else if (self%opts%p2v_factor == 0.0_dp) then
-            self%opts%p2v_factor = param(22) / param(21)
-            write(msg,'(A,ES15.8)') "Set vtol/ptol from .par: ", self%opts%p2v_factor
-            call nek_log_message(msg, this_module, this_procedure)
-         end if
-         if (present(newton_tol_factor)) then
-            self%opts%newton_tol_factor = newton_tol_factor
-            call nek_log_message("Set newton_tol_factor", this_module, this_procedure)
-         else if (self%opts%newton_tol_factor == 0.0_dp) then
-            self%opts%newton_tol_factor = 0.1_dp
-            write(msg,'(A,ES15.8)') "Set newton_tol_factor to default: ", self%opts%newton_tol_factor
-            call nek_log_message(msg, this_module, this_procedure)
-         end if
-         self%opts%is_set = .true.
+
+            if (present(cfl_limit)) then
+               opts%cfl_limit = cfl_limit
+               param(26) = cfl_limit
+               call nek_log_message("Set CFL limit", this_module, this_procedure)
+            else if (opts%cfl_limit == 0.0_dp) then
+               opts%cfl_limit = param(26)
+               write(msg,'(A,F15.8)') "Set CFL limit from .par: ", opts%cfl_limit
+               call nek_log_message(msg, this_module, this_procedure)
+            end if
+
+            if (present(p2v_factor)) then
+               opts%p2v_factor = p2v_factor
+               call nek_log_message("Set vtol/ptol", this_module, this_procedure)
+            else if (opts%p2v_factor == 0.0_dp) then
+               opts%p2v_factor = param(22) / param(21)
+               write(msg,'(A,ES15.8)') "Set vtol/ptol from .par: ", opts%p2v_factor
+               call nek_log_message(msg, this_module, this_procedure)
+            end if
+
+            if (present(newton_tol_factor)) then
+               opts%newton_tol_factor = newton_tol_factor
+               call nek_log_message("Set newton_tol_factor", this_module, this_procedure)
+            else if (opts%newton_tol_factor == 0.0_dp) then
+               opts%newton_tol_factor = 0.1_dp
+               write(msg,'(A,ES15.8)') "Set newton_tol_factor to default: ", opts%newton_tol_factor
+               call nek_log_message(msg, this_module, this_procedure)
+            end if
+
+            opts%is_set = .true.
+         end associate
          end procedure
 
          module procedure sync_nek_jacobian
@@ -45,15 +56,15 @@
 
          module procedure nonlinear_map
          character(len=*), parameter :: this_procedure = 'nonlinear_map'
-         real(dp) :: vtol, ptol, vtol
+         real(dp) :: ptol, vtol
          if (.not. self%opts%is_set) call nek_stop_error('System used uninitialized.', this_module, this_procedure)
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
             type is (nek_dvector)
-            
-               ptol = atol * self%opts%newton_tol_factor
-               vtol = atol * self%opts%newton_tol_factor * self%opts%p2v_factor
+
+               ptol = max(self%opts%ptol_min_par, atol * self%opts%newton_tol_factor)
+               vtol = max(self%opts%vtol_min_par, atol * self%opts%newton_tol_factor * self%opts%p2v_factor)
 
       ! Set the initial condition for the nonlinear solver.
                call vec2nek(vx, vy, vz, pr, t, vec_in)
@@ -100,8 +111,8 @@
 
                nrst = abs(param(27)) - 1
                atol = param(22)
-               ptol = atol * self%opts%newton_tol_factor
-               vtol = atol * self%opts%newton_tol_factor * self%opts%p2v_factor
+               ptol = max(self%opts%ptol_min_par, atol * self%opts%newton_tol_factor)
+               vtol = max(self%opts%vtol_min_par, atol * self%opts%newton_tol_factor * self%opts%p2v_factor)
 
       ! Set baseflow.
                call abs_vec2nek(vx, vy, vz, pr, t, self%X)
@@ -159,8 +170,8 @@
 
                nrst = abs(param(27)) - 1
                atol = param(22)
-               ptol = atol * self%opts%newton_tol_factor
-               vtol = atol * self%opts%newton_tol_factor * self%opts%p2v_factor
+               ptol = max(self%opts%ptol_min_par, atol * self%opts%newton_tol_factor)
+               vtol = max(self%opts%vtol_min_par, atol * self%opts%newton_tol_factor * self%opts%p2v_factor)
             
       ! Set baseflow.
                call abs_vec2nek(vx, vy, vz, pr, t, self%X)
