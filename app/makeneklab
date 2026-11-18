@@ -170,8 +170,8 @@ USR_NEKLAB="neklab_vectors.o"
 USR_NEKLAB+=" real_vectors.o"
 USR_NEKLAB+=" real_extended_vectors.o"
 USR_NEKLAB+=" complex_vectors.o"
-USR_NEKLAB+=" neklab_utils.o"
 USR_NEKLAB+=" neklab_nek_setup.o"
+USR_NEKLAB+=" neklab_utils.o"
 USR_NEKLAB+=" neklab_nek_forcing.o"
 USR_NEKLAB+=" neklab_linops.o"
 USR_NEKLAB+=" exponential_propagator.o"
@@ -183,11 +183,6 @@ USR_NEKLAB+=" fixed_point_temp.o"
 USR_NEKLAB+=" periodic_orbit.o"
 USR_NEKLAB+=" neklab_otd.o"
 USR_NEKLAB+=" neklab_analysis.o"
-if [[ -n "$NEKLAB_TESTS" ]]; then
-   USR_NEKLAB+=" neklab_test.o"
-   PPLIST+=" NEKLAB_TESTS"
-   echo "  neklab unit tests: ENABLED (NEKLAB_TESTS set)"
-fi
 USR_NEKLAB+=" neklab.o"
 
 #-------------------------------------------------------------------------------
