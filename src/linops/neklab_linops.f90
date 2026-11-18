@@ -38,6 +38,7 @@
             real(kind=dp), private :: ptol       = 0.0_dp
             real(kind=dp), private :: vtol       = 0.0_dp
             real(kind=dp), private :: p2v_factor = 0.0_dp
+            logical, private :: is_initialized = .false.
          contains
             private
             procedure, pass(self), public :: init => init_exptA
@@ -94,6 +95,7 @@
             real(kind=dp), private :: ptol       = 0.0_dp
             real(kind=dp), private :: vtol       = 0.0_dp
             real(kind=dp), private :: p2v_factor = 0.0_dp
+            logical, private :: is_initialized = .false.
          contains
             private
             procedure, pass(self), public :: init => init_exptA_temp
@@ -152,6 +154,7 @@
             real(kind=dp), private :: ptol       = 0.0_dp
             real(kind=dp), private :: vtol       = 0.0_dp
             real(kind=dp), private :: p2v_factor = 0.0_dp
+            logical, private :: is_initialized = .false.
          contains
             private
             procedure, pass(self), public :: matvec => resolvent_matvec

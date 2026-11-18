@@ -7,7 +7,7 @@
          character(len=*), parameter :: this_procedure = 'exptA_temp_init'
          silent_ = optval(silent, .false.)
          if (present(bf)) then
-            call vec2nek(vx, vy, vz, pr, t, bf)
+            self%baseflow = bf
             call nek_log_message("Update baseflow", this_module, this_procedure)
          end if
          if (present(cfl_limit)) then
@@ -56,11 +56,13 @@
      &                            vtol              = self%vtol,
      &                            ptol              = self%ptol)
          if (.not. silent_) call nek_status(.true.)
+         self%is_initialized = .true.
          end procedure
 
          module procedure exptA_temp_matvec
          character(len=*), parameter :: this_procedure = 'exptA_temp_matvec'
          integer :: nrst
+         if (.not. self%is_initialized) call nek_stop_error('Operator used uninitialized.', this_module, this_procedure)
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)
@@ -108,6 +110,7 @@
          module procedure exptA_temp_rmatvec
          character(len=*), parameter :: this_procedure = 'exptA_temp_rmatvec'
          integer :: nrst
+         if (.not. self%is_initialized) call nek_stop_error('Operator used uninitialized.', this_module, this_procedure)
          select type (vec_in)
          type is (nek_dvector)
             select type (vec_out)

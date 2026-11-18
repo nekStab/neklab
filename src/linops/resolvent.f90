@@ -19,7 +19,7 @@
          character(len=*), parameter :: this_procedure = 'exptA_init'
          silent_ = optval(silent, .false.)
          if (present(bf)) then
-            call vec2nek(vx, vy, vz, pr, t, bf)
+            self%baseflow = bf
             call nek_log_message("Update baseflow", this_module, this_procedure)
          end if
          if (present(omega)) then
@@ -72,6 +72,7 @@
      &                            vtol              = self%vtol,
      &                            ptol              = self%ptol)
          if (.not. silent_) call nek_status(.true.)
+         self%is_initialized = .true.
          end procedure
       
          module procedure resolvent_matvec
@@ -79,6 +80,7 @@
          type(nek_dvector) :: b
          real(kind=dp) :: tau
          character(len=*), parameter :: this_procedure = 'resolvent_matvec'
+         if (.not. self%is_initialized) call nek_stop_error('Operator used uninitialized.', this_module, this_procedure)
       ! Integration time.
          tau = merge(1.0_dp, 2*pi_dp/abs(self%omega), self%omega == 0.0_dp)
       ! Initialize exponential propagator.
@@ -108,6 +110,7 @@
          type(nek_dvector) :: b
          real(kind=dp) :: tau
          character(len=*), parameter :: this_procedure = 'resolvent_rmatvec'
+         if (.not. self%is_initialized) call nek_stop_error('Operator used uninitialized.', this_module, this_procedure)
       ! Force adjoint mode.
       ! Integration time.
          tau = merge(1.0_dp, 2*pi_dp/abs(self%omega), self%omega == 0.0_dp)
