@@ -307,7 +307,7 @@ c     verify_linop_axioms result + the largest error of each axiom
          call nek_log_message(msg, procedure='main')
          call check(trim(name)//'.adjoint', maxerr(4) <= a_tol, tol=a_tol, info=msg)
       end if
-      call check('GLOBALLY:'//name, ok, tol=lin_tol)
+      call check('GLOBAL : '//name, ok)
       call nek_log_message('')
       end subroutine check_linop
 
