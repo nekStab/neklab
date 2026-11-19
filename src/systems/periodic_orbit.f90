@@ -173,13 +173,14 @@
       ! Set the initial point of the nonlinear trajectory
                call abs_ext_vec2nek(vx, vy, vz, pr, t, self%X)
                call compute_fdot(vec)
+
       ! Phase row: < f(x_ref), du >  (derivative of F_T)
                if (.not. has_phase_ref) call set_phase_reference(self%X)
                vec_out%T = vec_in%dot(fref_phase)
 
       ! Reset tolerances
                param(22) = atol
-               param(21) = atol
+               param(21) = atol * self%opts%p2v_factor
 
             class default
                call type_error('vec_out','nek_ext_dvector','OUT',this_module, this_procedure)
@@ -252,7 +253,6 @@
       ! Transpose of the border:
       !   column: f(x_ref) * s        (s = vec_in%T)
       !   row:    < f(X(T)), v >      (vx, vy, vz contain the end point X(T))
-               call compute_fdot(vec)
                if (.not. has_phase_ref) call set_phase_reference(self%X)
                call vec_out%axpby(vec_in%T, fref_phase, 1.0_dp)
                vec_out%T = vec_in%dot(vec)
@@ -273,6 +273,7 @@
             ! internal
             character(len=*), parameter :: this_procedure = 'jac_compute_rst'
             type(nek_ext_dvector) :: vec_rst
+            type(nek_dvector), allocatable :: bf
             character(len=128) :: msg
             integer :: irst, itmp
             real(dp) :: rtmp
@@ -283,18 +284,26 @@
                ! We don't need to reset the end time but we do it to get a clean logfile
                itmp = nsteps
                rtmp = time
-               call setup_linear_solver(endtime = time + nrst*dt, silent = .true.)
+               call setup_linear_solver(solve_baseflow = .true.,
+     &                                  endtime        = time + nrst*dt, 
+     &                                  silent         = .true.)
                nsteps = itmp
+               allocate(bf)
+               call nek2vec(bf, vx, vy, vz, pr, t)
                do istep = nsteps + 1, nsteps + nrst
                   call nek_advance()
                   irst = istep - nsteps
                   call nek2ext_vec(vec_rst, vxp, vyp, vzp, prp, tp)
                   call vec_out%save_rst(vec_rst, irst)
                end do
+               call vec2nek(vx, vy, vz, pr, t, bf)
+               deallocate(bf)
                ! Reset iteration count and time
                istep = itmp
                time  = rtmp
-               call setup_linear_solver(endtime = time, silent = .true.)
+               call setup_linear_solver(solve_baseflow = .true.,
+     &                                  endtime        = time,
+     &                                  silent         = .true.)
             class default
                call type_error('vec_out','nek_ext_dvector','OUT',this_module, this_procedure)
             end select
