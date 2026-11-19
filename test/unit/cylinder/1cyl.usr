@@ -25,7 +25,7 @@ c     ---- Settings -----------------------------------------------------
       real(dp), parameter :: omega             = 8.0_dp*atan(1.0_dp)/0.1_dp     ! frequency
       real(dp), parameter :: period            = 0.1_dp     ! guessed period
       real(dp), parameter :: cfl_limit         = 0.4_dp
-      real(dp), parameter :: ptol              = 1.0e-10_dp ! pressure tolerance
+      real(dp), parameter :: ptol              = 1.0e-08_dp ! pressure tolerance
       real(dp), parameter :: p2v_factor        = 0.01_dp    ! vtol = ptol*p2v_factor
       integer,  parameter :: ntrials_vec       = 10         ! vector axioms (cheap)
       integer,  parameter :: ntrials_lin       = 2          ! operator axioms (time integrations)
@@ -35,7 +35,7 @@ c     ---- Settings -----------------------------------------------------
       real(dp), parameter :: adj_tol           = 1.0e-2_dp  ! operator axioms
       real(dp), parameter :: eps0              = 1.0_dp     ! initial perturbation for Taylor test
       real(dp), parameter :: taylor_min_order  = 1.8_dp
-      logical,  parameter :: verb              = .false.     ! verbose output for vector axioms
+      logical,  parameter :: verb              = .true.     ! verbose output for vector axioms
 c     -------------------------------------------------------------------
 
       ! vector types
@@ -101,7 +101,7 @@ c     -------------------------------------------------------------------
      &                         verbose          = verb,
      &                         stop_on_failure  = .false., 
      &                         max_errors       = maxerr)
-         call check_linop(this_test, ok, maxerr, .true.)
+         call check_linop(this_test, ok, maxerr, .true.,  lin_tol, adj_tol)
 
          !----------------------------
          !
@@ -133,7 +133,7 @@ c     -------------------------------------------------------------------
      &                         verbose          = verb,
      &                         stop_on_failure  = .false., 
      &                         max_errors       = maxerr)
-         call check_linop(this_test, ok, maxerr, .true.)
+         call check_linop(this_test, ok, maxerr, .true.,  lin_tol, adj_tol)
 
       case (2)                         ! resolvent
 
@@ -158,7 +158,7 @@ c     -------------------------------------------------------------------
          ! RESOLVENT OPERATOR
          !
          !----------------------------
-         resolvent = resolvent_linop(baseflow=bf, tau=1.0_dp, omega=omega)
+         resolvent = resolvent_linop(omega=omega, baseflow=bf)
          call resolvent%init(bf=bf, omega=omega, cfl_limit=cfl_limit, ptol=ptol, p2v_factor=p2v_factor)
 
          this_test = 'resolvent_linop.axioms'
@@ -171,7 +171,7 @@ c     -------------------------------------------------------------------
      &                         verbose          = verb,
      &                         stop_on_failure  = .false., 
      &                         max_errors       = maxerr)
-         call check_linop(this_test, ok, maxerr, .true.)
+         call check_linop(this_test, ok, maxerr, .true., lin_tol_res, adj_tol)
 
 
       case (3)                         ! periodic orbit
@@ -218,7 +218,7 @@ c     -------------------------------------------------------------------
      &                         verbose          = verb,
      &                         stop_on_failure  = .false., 
      &                         max_errors       = maxerr)
-         call check_linop(this_test, ok, maxerr, .true.)
+         call check_linop(this_test, ok, maxerr, .true., lin_tol, adj_tol)
 
       case default
          call check('setup.group', .false., info='set userParam2 = 1, 2 or 3 in the .par')
@@ -248,30 +248,30 @@ c     -------------------------------------------------------------------
       character(len=*), parameter :: p   = green//'PASSED'//reset
       character(len=*), parameter :: f   = red//'FAILED'//reset
       character(len=512) :: msg
-      character(len=40) :: n40
-      n40 = padr(trim(name),40)
+      character(len=50) :: ntr
+      ntr = padr(trim(name),50)
       call nek_log_message('')
-      call nek_log_message('#############################################', procedure='main')
-      call nek_log_message('#     test '//trim(name),                       procedure='main')
-      call nek_log_message('#############################################', procedure='main')
+      call nek_log_message('#####################################################', procedure='main')
+      call nek_log_message('#     test '//trim(name),                               procedure='main')
+      call nek_log_message('#####################################################', procedure='main')
       call nek_log_message('')
       if (ok) then
          if (present(tol)) then
-            write(msg, '(A,A40,A,4X,A,ES9.2)')      pfx, n40, p, 'tol = ', tol
+            write(msg, '(A,A50,A,4X,A,ES9.2)')      pfx, ntr, p, 'tol = ', tol
          else
-            write(msg, '(A,A40,A)')                 pfx, n40, p
+            write(msg, '(A,A50,A)')                 pfx, ntr, p
          end if
       else if (present(info)) then
          if (present(tol)) then
-            write(msg, '(A,A40,A,4X,A,ES9.2,1X,A)') pfx, n40, f, 'tol = ', tol, trim(info)
+            write(msg, '(A,A50,A,4X,A,ES9.2,1X,A)') pfx, ntr, f, 'tol = ', tol, trim(info)
          else
-            write(msg, '(A,A40,2A)')                pfx, n40, f, trim(info)
+            write(msg, '(A,A50,A,4X,A)')            pfx, ntr, f, trim(info)
          end if
       else
          if (present(tol)) then
-            write(msg, '(A,A40,A,4X,A,ES9.2)')      pfx, n40, f, 'tol = ', tol
+            write(msg, '(A,A50,A,4X,A,ES9.2)')      pfx, ntr, f, 'tol = ', tol
          else
-            write(msg, '(A,A40,A)')                 pfx, n40, f
+            write(msg, '(A,A50,A)')                 pfx, ntr, f
          end if
       end if
       call nek_log_message(msg, procedure='main')
@@ -287,23 +287,25 @@ c     -------------------------------------------------------------------
       call nek_log_message(msg, procedure='main')
       end subroutine report
 
-      subroutine check_linop(name, ok, maxerr, with_adjoint)
+      subroutine check_linop(name, ok, maxerr, with_adjoint, tol, a_tol)
 c     verify_linop_axioms result + the largest error of each axiom
       character(len=*), intent(in) :: name
       logical, intent(in) :: ok
       real(dp), intent(in) :: maxerr(4)
       logical, intent(in) :: with_adjoint
+      real(dp), intent(in) :: tol
+      real(dp), intent(in) :: a_tol
       character(len=128) :: msg
       call report(trim(name)//'.max_err_additivity ', maxerr(1))
       call report(trim(name)//'.max_err_homogeneity', maxerr(2))
       call report(trim(name)//'.max_err_zero_map   ', maxerr(3))
-      write(msg, '(A,ES9.2,A,ES9.2)') 'max error ', maxval(maxerr(1:3)),' > lin_tol ', lin_tol
-      call check(trim(name)//'.linearity', all(maxerr(1:3) <= lin_tol), tol=lin_tol, info=msg)
+      write(msg, '(A,ES9.2,A,ES9.2)') 'max error ', maxval(maxerr(1:3)),' > lin_tol ', tol
+      call check(trim(name)//'.linearity', all(maxerr(1:3) <= lin_tol), tol=tol, info=msg)
       if (with_adjoint) then
          call report(trim(name)//'.max_err_adjoint',     maxerr(4))
-         write(msg, '(A,ES9.2,A,ES9.2)') 'error ', maxerr(4), ' > adj_tol ', adj_tol
+         write(msg, '(A,ES9.2,A,ES9.2)') 'error ', maxerr(4), ' > adj_tol ', a_tol
          call nek_log_message(msg, procedure='main')
-         call check(trim(name)//'.adjoint', maxerr(4) <= adj_tol, tol=adj_tol, info=msg)
+         call check(trim(name)//'.adjoint', maxerr(4) <= a_tol, tol=a_tol, info=msg)
       end if
       call check('GLOBALLY:'//name, ok, tol=lin_tol)
       call nek_log_message('')
