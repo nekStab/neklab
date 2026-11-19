@@ -300,7 +300,7 @@
          else
             write(msg,'(A,I0)') 'Saving rst fields: ', irst
             if (nid == 0) print "('INFO: ',A)", msg
-            call log_information(msg, this_module, this_procedure)
+            call log_debug(msg, this_module, this_procedure)
          end if
 
          select type (vec_rst)
