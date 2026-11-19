@@ -150,7 +150,6 @@
       ! --> Type.
          type, extends(abstract_linop_cdp), public :: resolvent_linop
             type(nek_dvector) :: baseflow
-            real(kind=dp) :: tau
             real(kind=dp) :: omega
             type(nek_linop_settings), private :: opts
          contains

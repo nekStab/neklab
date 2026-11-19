@@ -77,7 +77,6 @@
             call setup_linear_solver(solve_baseflow    = .false.,
      &                               solve_temperature = .false.,
      &                               silent            = .true.,
-     &                               endtime           = self%tau,
      &                               recompute_dt      = .true.,
      &                               cfl_limit         = opts%cfl_limit,
      &                               vtol              = opts%vtol,
