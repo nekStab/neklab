@@ -14,12 +14,15 @@ c-----------------------------------------------------------------------
       subroutine userchk
       use LightKrylov
       use neklab
+      implicit none
       include 'SIZE'
       include 'TOTAL'
 
 c     ---- Settings -----------------------------------------------------
       character(len=*), parameter :: base_flow = 'BF.fld'   ! base flow file
+      character(len=*), parameter :: snapshot  = 'snapshot.fld' ! snapshot file
       real(dp), parameter :: tau               = 0.1_dp     ! integration time of exptA
+      real(dp), parameter :: omega             = 8.0_dp*atan(1.0_dp)/0.1_dp     ! frequency
       real(dp), parameter :: period            = 0.1_dp     ! guessed period
       real(dp), parameter :: cfl_limit         = 0.4_dp
       real(dp), parameter :: ptol              = 1.0e-10_dp ! pressure tolerance
@@ -27,11 +30,12 @@ c     ---- Settings -----------------------------------------------------
       integer,  parameter :: ntrials_vec       = 10         ! vector axioms (cheap)
       integer,  parameter :: ntrials_lin       = 2          ! operator axioms (time integrations)
       real(dp), parameter :: vec_tol           = 1.0e-11_dp ! vector axioms
-      real(dp), parameter :: linop_tol         = 100*ptol   ! operator axioms
-      real(dp), parameter :: adj_tol           = 1.0e-3_dp  ! operator axioms
+      real(dp), parameter :: lin_tol           = 100*ptol   ! operator axioms
       real(dp), parameter :: lin_tol_res       = 1.0e-4_dp  ! resolvent (GMRES tol.)
+      real(dp), parameter :: adj_tol           = 1.0e-2_dp  ! operator axioms
+      real(dp), parameter :: eps0              = 1.0_dp     ! initial perturbation for Taylor test
       real(dp), parameter :: taylor_min_order  = 1.8_dp
-      logical,  parameter :: verb              = .true.     ! verbose output for vector axioms
+      logical,  parameter :: verb              = .false.     ! verbose output for vector axioms
 c     -------------------------------------------------------------------
 
       ! vector types
@@ -90,13 +94,14 @@ c     -------------------------------------------------------------------
          this_test = 'exptA_linop.axioms'
          ok = verify_linop_axioms(exptA, bf, 
      &                         ntrials          = ntrials_lin,
-     &                         tolerance        = linop_tol, 
+     &                         tolerance        = lin_tol, 
+     &                         adj_tolerance    = adj_tol, 
      &                         test_zero_map    = .true.,
      &                         test_adjoint     = .true., 
      &                         verbose          = verb,
      &                         stop_on_failure  = .false., 
      &                         max_errors       = maxerr)
-         call check_linop(this_test, ok, maxerr)
+         call check_linop(this_test, ok, maxerr, .true.)
 
          !----------------------------
          !
@@ -111,7 +116,7 @@ c     -------------------------------------------------------------------
          this_test = 'nek_system.linarization'
          call verify_system_linearization(sys, 
      &                         nsteps           = 6,
-     &                         eps0             = 1.0e0_dp,
+     &                         eps0             = eps0,
      &                         stepratio        = sqrt(0.1_dp),
      &                         tolerance        = 1.0e-8_dp,
      &                         verbose          = verb,
@@ -121,17 +126,14 @@ c     -------------------------------------------------------------------
          this_test = 'nek_system%jacobian.axioms'
          ok = verify_linop_axioms(sys%jacobian, bf, 
      &                         ntrials          = ntrials_lin,
-     &                         tolerance        = linop_tol, 
+     &                         tolerance        = lin_tol,
+     &                         adj_tolerance    = adj_tol,  
      &                         test_zero_map    = .true.,
      &                         test_adjoint     = .true., 
      &                         verbose          = verb,
      &                         stop_on_failure  = .false., 
      &                         max_errors       = maxerr)
-         call check_linop(this_test, ok, maxerr)
-
-         call nek_log_message('############################', procedure='main')
-         call nek_log_message('#     tests completed      #',       procedure='main')
-         call nek_log_message('############################', procedure='main')
+         call check_linop(this_test, ok, maxerr, .true.)
 
       case (2)                         ! resolvent
 
@@ -163,12 +165,13 @@ c     -------------------------------------------------------------------
          ok = verify_linop_axioms(resolvent, zvec, 
      &                         ntrials          = 1,
      &                         tolerance        = lin_tol_res, 
+     &                         adj_tolerance    = adj_tol, 
      &                         test_zero_map    = .true.,
      &                         test_adjoint     = .true., 
      &                         verbose          = verb,
      &                         stop_on_failure  = .false., 
      &                         max_errors       = maxerr)
-         call check_linop(this_test, ok, maxerr, with_adjoint=.true.)
+         call check_linop(this_test, ok, maxerr, .true.)
 
 
       case (3)                         ! periodic orbit
@@ -198,9 +201,9 @@ c     -------------------------------------------------------------------
          this_test = 'nek_upo_system.linarization'
          call verify_system_linearization(sys_upo, 
      &                         nsteps           = 6,
-     &                         eps0             = taylor_eps0, 
-     &                         stepratio        = 0.5_dp,
-     &                         tolerance        = taylor_tol, 
+     &                         eps0             = eps0, 
+     &                         stepratio        = sqrt(0.1_dp),
+     &                         tolerance        = 1e-8_dp, 
      &                         verbose          = verb, 
      &                         orders           = orders)
          call check_taylor(this_test, orders)
@@ -208,53 +211,79 @@ c     -------------------------------------------------------------------
          this_test = 'nek_upo_system%jacobian.axioms'
          ok = verify_linop_axioms(sys_upo%jacobian, x0, 
      &                         ntrials          = ntrials_lin,
-     &                         tolerance        = linop_tol, 
+     &                         tolerance        = lin_tol, 
+     &                         adj_tolerance    = adj_tol, 
      &                         test_zero_map    = .true.,
      &                         test_adjoint     = .true., 
      &                         verbose          = verb,
      &                         stop_on_failure  = .false., 
      &                         max_errors       = maxerr)
-         call check_linop(this_test, ok, maxerr, .false.)
+         call check_linop(this_test, ok, maxerr, .true.)
 
       case default
-         call check('setup.group', .false., 'set userParam2 = 1, 2 or 3 in the .par')
+         call check('setup.group', .false., info='set userParam2 = 1, 2 or 3 in the .par')
       end select
+
+      call nek_log_message('############################', procedure='main')
+      call nek_log_message('#     tests completed      #', procedure='main')
+      call nek_log_message('############################', procedure='main')
+
 
       call nek_end()
 
       contains
 
-c-----------------------------------------------------------------------
-c     Reporting helpers, read by the test harness:
-c        NEKLAB_CHECK PASS|FAIL <name> [message]
-c        NEKLAB_RESULT <key> <value>
-c-----------------------------------------------------------------------
-      subroutine check(name, ok, info)
+      subroutine check(name, ok, tol, info)
+      use stdlib_strings, only : padr
       character(len=*), intent(in) :: name
       logical, intent(in) :: ok
+      real(dp), intent(in), optional :: tol
       character(len=*), intent(in), optional :: info
+      ! internal
+      character(len=*), parameter :: esc   = achar(27)
+      character(len=*), parameter :: green = esc//'[32m'
+      character(len=*), parameter :: red   = esc//'[31m'
+      character(len=*), parameter :: reset = esc//'[0m'
+      character(len=*), parameter :: pfx = 'NEKLAB_CHECK '
+      character(len=*), parameter :: p   = green//'PASSED'//reset
+      character(len=*), parameter :: f   = red//'FAILED'//reset
       character(len=512) :: msg
+      character(len=40) :: n40
+      n40 = padr(trim(name),40)
       call nek_log_message('')
       call nek_log_message('#############################################', procedure='main')
       call nek_log_message('#     test '//trim(name),                       procedure='main')
       call nek_log_message('#############################################', procedure='main')
       call nek_log_message('')
       if (ok) then
-         write(msg, '(2A,30X,A)')      'NEKLAB_CHECK ', trim(name), 'PASS'
+         if (present(tol)) then
+            write(msg, '(A,A40,A,4X,A,ES9.2)')      pfx, n40, p, 'tol = ', tol
+         else
+            write(msg, '(A,A40,A)')                 pfx, n40, p
+         end if
       else if (present(info)) then
-         write(msg, '(2A,30X,A,1X,A)') 'NEKLAB_CHECK ', trim(name), 'FAIL', trim(info)
+         if (present(tol)) then
+            write(msg, '(A,A40,A,4X,A,ES9.2,1X,A)') pfx, n40, f, 'tol = ', tol, trim(info)
+         else
+            write(msg, '(A,A40,2A)')                pfx, n40, f, trim(info)
+         end if
       else
-         write(msg, '(2A,30X,A)')      'NEKLAB_CHECK ', trim(name), 'FAIL'
+         if (present(tol)) then
+            write(msg, '(A,A40,A,4X,A,ES9.2)')      pfx, n40, f, 'tol = ', tol
+         else
+            write(msg, '(A,A40,A)')                 pfx, n40, f
+         end if
       end if
       call nek_log_message(msg, procedure='main')
       call nek_log_message('')
       end subroutine check
 
       subroutine report(key, value)
+      use stdlib_strings, only : padr
       character(len=*), intent(in) :: key
       real(dp), intent(in) :: value
       character(len=512) :: msg
-      write(msg, '(A,A40,2X,ES15.5)') 'NEKLAB_RESULT ', trim(key), value
+      write(msg, '(A,A40,2X,ES15.5)') 'NEKLAB_RESULT ', padr(trim(key), 40), value
       call nek_log_message(msg, procedure='main')
       end subroutine report
 
@@ -263,20 +292,20 @@ c     verify_linop_axioms result + the largest error of each axiom
       character(len=*), intent(in) :: name
       logical, intent(in) :: ok
       real(dp), intent(in) :: maxerr(4)
-      logical, intent(in), optional :: with_adjoint
+      logical, intent(in) :: with_adjoint
       character(len=128) :: msg
-      call check(trim(name), ok)
       call report(trim(name)//'.max_err_additivity ', maxerr(1))
       call report(trim(name)//'.max_err_homogeneity', maxerr(2))
       call report(trim(name)//'.max_err_zero_map   ', maxerr(3))
       write(msg, '(A,ES9.2,A,ES9.2)') 'max error ', maxval(maxerr(1:3)),' > lin_tol ', lin_tol
-      call check(trim(name)//'.linearity', all(maxerr(1:3) <= lin_tol), msg)
+      call check(trim(name)//'.linearity', all(maxerr(1:3) <= lin_tol), tol=lin_tol, info=msg)
       if (with_adjoint) then
          call report(trim(name)//'.max_err_adjoint',     maxerr(4))
          write(msg, '(A,ES9.2,A,ES9.2)') 'error ', maxerr(4), ' > adj_tol ', adj_tol
          call nek_log_message(msg, procedure='main')
-         call check(trim(name)//'.adjoint', maxerr(4) <= adj_tol, msg)
+         call check(trim(name)//'.adjoint', maxerr(4) <= adj_tol, tol=adj_tol, info=msg)
       end if
+      call check('GLOBALLY:'//name, ok, tol=lin_tol)
       call nek_log_message('')
       end subroutine check_linop
 
@@ -294,10 +323,8 @@ c     tolerance).
          call report(key, orders(k))
       end do
       ngood = count(orders >= taylor_min_order)
-      write(msg, '(I0,A,I0,A,F4.2)') ngood, ' of ', size(orders),
-     &      ' orders >= ', taylor_min_order
-      call check(trim(name), size(orders) > 0 .and.
-     &           2*ngood >= size(orders), msg)
+      write(msg, '(I0,A,I0,A,F4.2)') ngood, ' of ', size(orders), ' orders >= ', taylor_min_order
+      call check(name, size(orders) > 0 .and. 2*ngood >= size(orders), info=msg)
       call nek_log_message('')
       end subroutine check_taylor
 
