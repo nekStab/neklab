@@ -2,7 +2,7 @@
 stopAt = endTime
 endTime = 0.1
 
-userparam02 = 1.0 # fixed point, 2.0: resolvent, 3.0: periodic orbit
+userparam01 = 1.0 # fixed point, 2.0: resolvent, 3.0: periodic orbit
 
 dt = 0.1
 variableDt = no
