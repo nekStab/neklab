@@ -30,8 +30,8 @@ c     ---- Settings (defaults; can be overwritten in userchk before
 c          calling a driver, e.g.  tau = 0.2d0) -------------------------
       character(len=128), public :: base_flow = 'BF.fld'
       character(len=128), public :: snapshot  = 'snapshot.fld'
-      logical,  public :: test_zero_map    = test_zero_map     ! test zero invariant map
-      logical,  public :: test_adjoint     = test_adjoint     ! test adjoint compatibility
+      logical,  public :: test_zero_map    = .true.     ! test zero invariant map
+      logical,  public :: test_adjoint     = .true.     ! test adjoint compatibility
       logical,  public :: verb             = .true.     ! verbose output
       real(dp), public :: tau              = 0.1_dp     ! integration time of exptA
       real(dp), public :: omega            = 8.0_dp*atan(1.0_dp)/0.1_dp ! frequency

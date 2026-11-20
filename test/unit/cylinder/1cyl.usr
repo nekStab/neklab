@@ -2,7 +2,7 @@ c-----------------------------------------------------------------------
 c     UNIT TESTS -- 2D cylinder
 c
 c     Drivers, helpers and settings live in unit_tests.f
-c     Select the group with userParam1 = 1, 2 or 3 in the .par.
+c     Select the group with userParam01 = 1, 2 or 3 in the .par.
 c-----------------------------------------------------------------------
       include 'unit_tests.f'
 c-----------------------------------------------------------------------
@@ -27,7 +27,7 @@ c-----------------------------------------------------------------------
 
       case default
 
-         call check('setup.group', .false., info='set userParam2 = 1, 2 or 3 in the .par')
+         call check('setup.group', .false., info='set userParam01 = 1, 2 or 3 in the .par')
 
       end select
 
