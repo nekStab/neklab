@@ -5,6 +5,7 @@ log in the message, so a broken case makes its own test fail and the rest of
 the suite continues.
 """
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -38,6 +39,33 @@ def _run(command, cwd, env, logfile, stdin="", verbose=False, append=False):
          if verbose:
             print(line, end="")
       return proc.wait()
+
+
+def compiler_errors(path, max_errors=6):
+   """The compiler's error messages in a build log, each with the source lines
+   gfortran prints above it, duplicates removed. Falls back to the log's end."""
+   try:
+      lines = Path(path).read_text(errors="replace").splitlines()
+   except OSError:
+      return f"(no file {path})"
+   blocks, seen = [], set()
+   for i, line in enumerate(lines):
+      if re.search(r"\b(Error|error):", line) or line.startswith("make: ***"):
+         # gfortran: "file.f:103:60:", source line, caret line, "Error: ..."
+         start = i
+         for j in range(i - 1, max(i - 6, -1), -1):
+            if re.match(r"^\S+:\d+:\d+:\s*$", lines[j]):
+               start = j
+               break
+         block = "\n".join(lines[start:i + 1]).strip("\n")
+         if block not in seen:
+            seen.add(block)
+            blocks.append(block)
+   if not blocks:
+      return tail(path)
+   shown = blocks[:max_errors]
+   more = f"\n... {len(blocks) - max_errors} more, see {path}" if len(blocks) > max_errors else ""
+   return "\n\n".join(shown) + more
 
 
 _TOOLS_BUILT = set()
@@ -76,7 +104,12 @@ def build_neklab(case_dir, neklab_source_root, nek_source_root, verbose=False):
    _run([makeneklab, "clean"], case_dir, env, log, stdin="Y\n", verbose=verbose)
    rc = _run([makeneklab], case_dir, env, log, verbose=verbose, append=True)
    if rc != 0 or not (Path(case_dir) / "nek5000").exists():
-      raise BuildError(f"makeneklab failed (code {rc}):\n{tail(log)}")
+      raise BuildError(f"makeneklab failed (code {rc}), full log: {log}\n\n"
+                       f"{compiler_errors(log)}")
+
+
+def nek_command(case_dir, nprocs, mpiexec="mpiexec"):
+   return [mpiexec, "-np", str(nprocs), str(Path(case_dir) / "nek5000")]
 
 
 def run_nek(case_dir, case_name, nprocs, mpiexec="mpiexec", verbose=False):
@@ -85,7 +118,7 @@ def run_nek(case_dir, case_name, nprocs, mpiexec="mpiexec", verbose=False):
    (case_dir / "SESSION.NAME").write_text(f"1\n{case_name}\n{case_dir}/\n")
    (case_dir / "ioinfo").unlink(missing_ok=True)    # a leftover would stop the run early
    log = case_dir / f"{case_name}.log.{nprocs}"
-   rc = _run([mpiexec, "-np", nprocs, case_dir / "nek5000"], case_dir, os.environ.copy(),
+   rc = _run(nek_command(case_dir, nprocs, mpiexec), case_dir, os.environ.copy(),
              log, verbose=verbose)
    if rc != 0:
       raise RunError(f"nek5000 exited with code {rc}. End of {log}:\n{tail(log)}")

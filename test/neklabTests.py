@@ -65,7 +65,8 @@ def main():
    p.add_argument("--update-references", action="store_true",
                   help="full level: store results as the new references")
    p.add_argument("--keep-scratch", action="store_true", help="keep the scratch copies")
-   p.add_argument("-v", "--verbose", action="store_true", help="show build and run output")
+   p.add_argument("-v", "--verbose", action="store_true",
+                  help="also echo the full makeneklab and nek5000 output")
    args = p.parse_args()
 
    levels = [l.strip() for l in args.levels.split(",")]
@@ -96,7 +97,9 @@ def main():
    raise_stack_limit()
 
    suite = unittest.TestSuite(cls(method) for cls, method in tests)
-   result = unittest.TextTestRunner(verbosity=2, buffer=not args.verbose).run(suite)
+   # Output is never buffered: every test narrates its steps as they happen.
+   # -v additionally echoes the makeneklab and nek5000 output.
+   result = unittest.TextTestRunner(verbosity=2, buffer=False).run(suite)
 
    if result.wasSuccessful() and not args.keep_scratch:
       shutil.rmtree(scratch, ignore_errors=True)

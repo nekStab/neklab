@@ -28,6 +28,7 @@ import hashlib
 import json
 import os
 import shutil
+import time
 import unittest
 from fnmatch import fnmatch
 from pathlib import Path
@@ -42,6 +43,11 @@ LEVELS = ("unit", "fast", "full")
 IGNORE = ("obj", "nek5000", "makefile", "makefile_usr.inc", "*.log.*", "*.out",
           "SESSION.NAME", "ioinfo", "eigs_output.txt", "nek_dummy.usr",
           ".neklab_stash", "*.mod", "*.smod")
+
+
+def say(step, message=""):
+   """One line of the runner's narration: '[step]    message'."""
+   print(f"  {'[' + step + ']':10} {message}", flush=True)
 
 
 class NeklabTestCase(unittest.TestCase):
@@ -76,7 +82,8 @@ class NeklabTestCase(unittest.TestCase):
       shutil.rmtree(self.dir, ignore_errors=True)
       shutil.copytree(source, self.dir, ignore=lambda d, names:
                       [n for n in names if any(fnmatch(n, p) for p in IGNORE)])
-      print(f"Case copied to {self.dir}")
+      print(f"\n=== {type(self).__name__}  ({self.level}: {self.case_dir})", flush=True)
+      say("case", f"copied to {self.dir}")
 
       self.failures = []    # collected by the check* methods
       self.measured = {}    # every value checked; written to measured_values.json
@@ -85,24 +92,34 @@ class NeklabTestCase(unittest.TestCase):
    # --- prepare, build, run ----------------------------------------------------
 
    def prepare(self):
-      """Apply size_params, par_values and usr_params; make the case runnable."""
+      """Apply size_params, par_values, usr_params and fortran_params; make the case runnable."""
       size = self.dir / "SIZE"
       if self.size_params:
-         files.set_fortran_parameters(size, self.size_params)
+         self._show_edits("SIZE", files.set_fortran_parameters(size, self.size_params))
       # lpmin = minimum number of ranks the SIZE file is dimensioned for
       lpmin = files.get_fortran_parameter(size, "lpmin")
       if lpmin and lpmin.isdigit() and int(lpmin) > self.nprocs:
-         files.set_fortran_parameters(size, {"lpmin": self.nprocs})
-         print(f"SIZE: lpmin {lpmin} -> {self.nprocs} (ranks used by this test)")
+         self._show_edits("SIZE", files.set_fortran_parameters(size, {"lpmin": self.nprocs}),
+                          note=f"(this test runs on {self.nprocs} ranks)")
       if self.par_values:
-         files.set_par_values(self.dir / f"{self.case_name}.par", self.par_values)
+         par = f"{self.case_name}.par"
+         for section, key, old, new in files.set_par_values(self.dir / par, self.par_values):
+            say("edit", f"{par:14} [{section}] {key}: " +
+                (f"{old} -> {new}" if old is not None else f"{new} (added)"))
       if self.usr_params:
-         files.set_fortran_parameters(self.dir / f"{self.case_name}.usr", self.usr_params)
+         usr = f"{self.case_name}.usr"
+         self._show_edits(usr, files.set_fortran_parameters(self.dir / usr, self.usr_params))
       for name, params in self.fortran_params.items():
          if params:
-            files.set_fortran_parameters(self.dir / name, params)
+            self._show_edits(name, files.set_fortran_parameters(self.dir / name, params))
       if not (self.dir / f"{self.case_name}.ma2").exists():
+         say("genmap", f"{self.case_name}.re2 -> {self.case_name}.ma2")
          nek.run_genmap(self.dir, self.case_name, self.nek_root, verbose=self.verbose)
+
+   @staticmethod
+   def _show_edits(filename, changes, note=""):
+      for name, old, new in changes:
+         say("edit", f"{filename:14} {name}: {old} -> {new} {note}".rstrip())
 
    def build(self):
       """Build the case, or reuse the executable of an identical earlier build.
@@ -115,9 +132,12 @@ class NeklabTestCase(unittest.TestCase):
       earlier = NeklabTestCase._builds.get(key)
       if earlier is not None and (earlier / "nek5000").exists():
          shutil.copy2(earlier / "nek5000", self.dir / "nek5000")
-         print(f"Reusing nek5000 built in {earlier}")
+         say("build", f"same sources as {earlier.name}: reusing its nek5000")
          return
+      say("build", f"makeneklab in {self.dir}  (log: build.out) ...")
+      start = time.time()
       nek.build_neklab(self.dir, self.neklab_root, self.nek_root, verbose=self.verbose)
+      say("build", f"done in {time.time() - start:.0f} s")
       NeklabTestCase._builds[key] = self.dir
 
    SOURCES = ("SIZE", "*.usr", "*.f", "*.f90", "*.F", "*.F90", "*.inc")
@@ -133,14 +153,19 @@ class NeklabTestCase(unittest.TestCase):
    def run_nek(self):
       for old in self.dir.glob("eigs_output.txt"):
          old.unlink()
+      say("run", f"{self.mpiexec} -np {self.nprocs} ./nek5000  "
+                 f"(log: {self.case_name}.log.{self.nprocs}) ...")
+      start = time.time()
       self.log = nek.run_nek(self.dir, self.case_name, self.nprocs, self.mpiexec,
                              verbose=self.verbose)
+      say("run", f"finished in {time.time() - start:.0f} s")
       return self.log
 
    # --- checks (all collected, reported together by finish) --------------------
 
-   def check(self, ok, message):
-      print(("  ok    " if ok else "  FAIL  ") + message)
+   def check(self, ok, message, quiet=False):
+      if not quiet or not ok:
+         print(f"  {'':10} {'PASSED' if ok else 'FAILED'}  {message}", flush=True)
       if not ok:
          self.failures.append(message)
 
@@ -155,14 +180,28 @@ class NeklabTestCase(unittest.TestCase):
       completed  text the driver prints at its end (a run that stops early fails)
       """
       checks = files.read_checks(self.log)
-      self.measured.update(files.read_results(self.log))
-      self.check(bool(checks), "the driver reported its checks")
+      results = files.read_results(self.log)
+      self.measured.update(results)
+
+      say("checks", f"{len(checks)} reported in {Path(self.log).name}:")
+      for name, (status, message) in checks.items():
+         self.check(status == "PASS", f"{name}  {message}".rstrip())
+      self.check(bool(checks), "the driver reported its checks", quiet=True)
+      missing = [n for n in expected if n not in checks]
+      for name in missing:
+         self.check(False, f"{name}  (expected, never reported)")
       if completed:
-         self.check(files.log_contains(self.log, completed), f'the driver reached "{completed}"')
-      for name, (status, message) in sorted(checks.items()):
-         self.check(status == "PASS", f"{name} {message}".strip())
-      for name in expected:
-         self.check(name in checks, f"{name} was reported")
+         reached = files.log_contains(self.log, completed)
+         self.check(reached, f'run stopped before "{completed}"', quiet=True)
+         if reached:
+            say("checks", f'driver reached "{completed}"')
+
+      if results:
+         say("results", f"{len(results)} values (written to measured_values.json):")
+         width = max(len(k) for k in results)
+         for key, value in results.items():
+            shown = f"{value: .5e}" if isinstance(value, float) else value
+            print(f"  {'':10} {key:{width}}  {shown}")
 
    def check_reference(self, key, value, tol):
       """Compare with test/references/<reference>/values.json (or record it in update mode)."""
@@ -182,7 +221,9 @@ class NeklabTestCase(unittest.TestCase):
       if self.update_references and self.level == "full" and not self.failures:
          self._save_reference_values()
       if self.failures:
+         say("result", f"{len(self.failures)} check(s) failed")
          self.fail(f"{len(self.failures)} check(s) failed:\n  " + "\n  ".join(self.failures))
+      say("result", "all checks passed")
 
    # --- reference values ---------------------------------------------------------
 

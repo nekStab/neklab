@@ -49,9 +49,11 @@ def set_fortran_parameters(path, params):
    Only the value is replaced; comments and spacing are kept. Assignments and
    keyword arguments (no `::` or `parameter` before the name) are not touched.
    Raises KeyError if a name is not found, so a typo cannot go unnoticed.
+   Returns the changes as a list of (name, old value, new value).
    """
    with open(path) as f:
       text = f.read()
+   changes = []
    for name, value in params.items():
       pattern = re.compile(
          rf"^[^!\n]*(?:\bparameter\b|::)[^!\n]*?\b{re.escape(name)}\s*=(?!=)\s*",
@@ -63,12 +65,15 @@ def set_fortran_parameters(path, params):
          old = text[m.end():end]
          trail = old[len(old.rstrip()):]          # keep the spaces before a comment
          new += [text[pos:m.end()], _fortran_value(value), trail]
+         if n == 0:
+            changes.append((name, old.strip(), _fortran_value(value)))
          pos, n = end, n + 1
       if n == 0:
          raise KeyError(f'"{name}" is not declared with a value in {path}')
       text = "".join(new) + text[pos:]
    with open(path, "w") as f:
       f.write(text)
+   return changes
 
 
 def set_par_values(path, values):
@@ -76,10 +81,12 @@ def set_par_values(path, values):
 
    Keys and sections are matched case-insensitively, inline comments are kept.
    A key that is missing is added at the end of its section (the section is
-   created if needed).
+   created if needed). Returns the changes as a list of
+   (section, key, old value or None if added, new value).
    """
    with open(path) as f:
       lines = f.read().splitlines()
+   changes = []
 
    for section, entries in values.items():
       for key, value in entries.items():
@@ -96,6 +103,7 @@ def set_par_values(path, values):
          for i in range(start + 1, end):
             m = key_re.match(lines[i])
             if m:
+               changes.append((section, key, m.group(2).strip(), str(value)))
                lines[i] = m.group(1) + str(value) + (m.group(3) or "")
                break
          else:
@@ -103,9 +111,11 @@ def set_par_values(path, values):
             while insert_at > start + 1 and not lines[insert_at - 1].strip():
                insert_at -= 1
             lines.insert(insert_at, f"{key} = {value}")
+            changes.append((section, key, None, str(value)))
 
    with open(path, "w") as f:
       f.write("\n".join(lines) + "\n")
+   return changes
 
 
 def get_fortran_parameter(path, name):
@@ -131,7 +141,7 @@ def read_checks(logfile):
       NEKLAB_CHECK PASS|FAIL <name> [message]
    A check reported several times counts as failed if it failed once.
    """
-   checks = {}
+   checks = {}                 # in the order they first appear in the log
    with open(logfile, errors="replace") as f:
       for line in f:
          line = _ANSI.sub("", line).rstrip()
