@@ -1,99 +1,109 @@
 #!/usr/bin/env python3
+"""Run the neklab tests.
 
-import sys
-from shutil import copyfile
+   ./neklabTests.py --list                         show the tests
+   ./neklabTests.py --levels unit --nprocs 4       run the unit tests
+   ./neklabTests.py -k Cylinder                    only tests whose name contains "Cylinder"
+   ./neklabTests.py --levels full --update-references   (trusted version only)
+
+Levels: unit (suites/unit.py), fast (suites/fast.py), full (suites/full.py).
+Each test runs in a copy of its case under test/scratch/; the copies are
+deleted when every test passed (keep them with --keep-scratch).
+The exit code is 0 only if every selected test passed.
+
+The compiler is chosen by app/makeneklab, not by this script.
+"""
+import argparse
+import importlib
+import inspect
 import os
+import shutil
+import sys
+import unittest
+from pathlib import Path
 
-if sys.version_info < (3, 6):
-   print("Sorry, requires Python > 3.6")
-   sys.exit(1)
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
 
-from lib.neklabTestCase import (
-   NeklabTestCase,
-   pn_pn_2_parallel,
-)
+from lib.neklabTestCase import NeklabTestCase, LEVELS
 
-class CylEigsDir(NeklabTestCase):
-    
-   example_subdir = os.path.join('cylinder','stability', 'direct')
-   case_name = "1cyl"
 
-   def setUp(self):
-      self.size_params = dict(
-         ldim="2",
-         lpmin="12",
-         lx1="6",
-         lxd="9",
-         lx2="lx1-2",
-         lelg="1996",
-         lpelt="lelt",
-      )
+def find_tests(levels, patterns):
+   """(class, method) of every test in suites/<level>.py whose name matches a pattern."""
+   tests = []
+   for level in levels:
+      module = importlib.import_module(f"suites.{level}")
+      for _, cls in inspect.getmembers(module, inspect.isclass):
+         if issubclass(cls, NeklabTestCase) and cls.__module__ == module.__name__ \
+               and cls.level == level and cls.case_dir \
+               and not cls.__dict__.get("abstract", False):
+            for method in unittest.TestLoader().getTestCaseNames(cls):
+               name = f"{cls.__name__}.{method}"
+               if not patterns or any(p.lower() in name.lower() for p in patterns):
+                  tests.append((cls, method))
+   return tests
 
-      self.build_tools(["genmap"])
-      self.run_genmap()
 
-   @pn_pn_2_parallel
-   def test_PnPn2_Parallel(self):
-      self.size_params["lx2"] = "lx1-2"
-      self.config_size()
-      self.build_neklab(usr_file="1cyl")
-      self.run_nek(step_limit=None)
+def raise_stack_limit():
+   """neklab keeps large work vectors on the stack; the usual 8 MB is not enough
+   when few ranks are used. Raise the limit for the nek5000 runs started here."""
+   try:
+      import resource
+      _, hard = resource.getrlimit(resource.RLIMIT_STACK)
+      resource.setrlimit(resource.RLIMIT_STACK, (hard, hard))
+   except (ImportError, ValueError, OSError):
+      pass
 
-      eigs = self.get_converged_eigs_data()
-      self.assertAlmostEqualDelayed(
-         eigs['lambda_1']['modulus'], target_val=1.0156, delta=1e-04, label="growth rate"
-      )
 
-      self.assertDelayedFailures()
+def main():
+   p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+   p.add_argument("--levels", default="unit", help="comma-separated: unit,fast,full [unit]")
+   p.add_argument("-k", dest="patterns", action="append", default=[], help="name filter (repeatable)")
+   p.add_argument("--list", action="store_true", help="list the selected tests and exit")
+   p.add_argument("--nprocs", type=int, default=4, help="MPI ranks per run [4]")
+   p.add_argument("--mpiexec", default="mpiexec", help="MPI launcher [mpiexec]")
+   p.add_argument("--update-references", action="store_true",
+                  help="full level: store results as the new references")
+   p.add_argument("--keep-scratch", action="store_true", help="keep the scratch copies")
+   p.add_argument("-v", "--verbose", action="store_true", help="show build and run output")
+   args = p.parse_args()
+
+   levels = [l.strip() for l in args.levels.split(",")]
+   if any(l not in LEVELS for l in levels):
+      sys.exit(f"Unknown level in {levels}; choose from {LEVELS}.")
+   if args.update_references and levels != ["full"]:
+      sys.exit("--update-references only works with --levels full.")
+
+   tests = find_tests(levels, args.patterns)
+   if args.list:
+      for cls, method in tests:
+         skip = getattr(getattr(cls, method), "__unittest_skip_why__", "")
+         print(f"{cls.level:5}  {cls.__name__}.{method}" + (f"   [skipped: {skip}]" if skip else ""))
+      return 0
+   if not tests:
+      sys.exit("No test selected.")
+   if "NEKLAB_SOURCE_ROOT" not in os.environ:
+      sys.exit("Set NEKLAB_SOURCE_ROOT (and NEK_SOURCE_ROOT if Nek5000 is not in neklab/Nek5000).")
+
+   scratch = HERE / "scratch"
+   os.environ.update(
+      NPROCS=str(args.nprocs),
+      MPIEXEC=args.mpiexec,
+      SCRATCH_ROOT=str(scratch),
+      VERBOSE_TESTS="true" if args.verbose else "false",
+      UPDATE_REFERENCES="true" if args.update_references else "false",
+   )
+   raise_stack_limit()
+
+   suite = unittest.TestSuite(cls(method) for cls, method in tests)
+   result = unittest.TextTestRunner(verbosity=2, buffer=not args.verbose).run(suite)
+
+   if result.wasSuccessful() and not args.keep_scratch:
+      shutil.rmtree(scratch, ignore_errors=True)
+   else:
+      print(f"\nScratch copies kept in {scratch}")
+   return 0 if result.wasSuccessful() else 1
+
 
 if __name__ == "__main__":
-   import unittest
-   import argparse
-
-   # Get arguments from command line
-   parser = argparse.ArgumentParser()
-   parser.add_argument(
-      "--f77",
-      default="mpif77",
-      help="The Fortran 77 compiler to use [default: mpif77]",
-   )
-   parser.add_argument(
-      "--cc", default="mpicc", help="The C compiler to use [default: mpicc]"
-   )
-   parser.add_argument(
-      "--ifmpi",
-      default="true",
-      choices=["true", "false"],
-      help="Enable/disable parallel tests with MPI [default: true]",
-   )
-   parser.add_argument(
-      "--nprocs",
-      default="4",
-      help="Number of processes to use for MPI tests [default: 4]",
-   )
-   parser.add_argument(
-      "-v", "--verbose", action="store_true", help="Enable verbose output"
-   )
-
-   args = parser.parse_args()
-
-   # # Set environment
-   os.environ["CC"] = args.cc
-   os.environ["FC"] = args.f77
-   os.environ["IFMPI"] = args.ifmpi
-   os.environ["PARALLEL_PROCS"] = 12 #args.nprocs
-   if args.verbose:
-      os.environ["VERBOSE_TESTS"] = "true"
-      ut_verbose = 2
-   else:
-      os.environ["VERBOSE_TESTS"] = "false"
-      ut_verbose = 1
-
-   testList = (
-      CylEigsDir,
-   )
-
-   suite = unittest.TestSuite(
-      [unittest.TestLoader().loadTestsFromTestCase(t) for t in testList]
-   )
-   unittest.TextTestRunner(verbosity=ut_verbose, buffer=True).run(suite)
+   sys.exit(main())
