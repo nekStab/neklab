@@ -61,7 +61,7 @@
      &                               solve_temperature = .true.,
      &                               silent            = .true.,
      &                               endtime           = self%tau,
-     &                               recompute_dt      = .true.,
+     &                               recompute_dt      = .false.,
      &                               cfl_limit         = opts%cfl_limit,
      &                               vtol              = opts%vtol,
      &                               ptol              = opts%ptol)
@@ -86,9 +86,10 @@
       
       ! Set nek configuration (after the v[xzy] and v[xyz]p fields are updated)
                call setup_linear_solver(transpose    = .false.,
+     &                                  solve_temperature = .true.,
      &                                  silent       = .true.,
      &                                  endtime      = self%tau,
-     &                                  recompute_dt = .true.,
+     &                                  recompute_dt = .false.,
      &                                  cfl_limit    = self%opts%cfl_limit)
 
       ! Set initial condition for the linearized solver.
@@ -134,9 +135,10 @@
       
       ! Set nek configuration (after the v[xzy] and v[xyz]p fields are updated)
                call setup_linear_solver(transpose    = .true.,
+     &                                  solve_temperature = .true.,
      &                                  silent       = .true.,
      &                                  endtime      = self%tau,
-     &                                  recompute_dt = .true.,
+     &                                  recompute_dt = .false.,
      &                                  cfl_limit    = self%opts%cfl_limit)
 
       ! Set initial condition for the linearized solver.
@@ -180,7 +182,9 @@
                ! We don't need to reset the end time but we do it to get a clean logfile
                itmp = nsteps
                rtmp = time
-               call setup_linear_solver(endtime = time + nrst*dt, silent = .true.)
+               call setup_linear_solver(endtime = time + nrst*dt,
+     &                                  solve_temperature = .true.,
+     &                                  silent = .true.)
                nsteps = itmp
                do istep = nsteps + 1, nsteps + nrst
                   call nek_advance()
@@ -190,7 +194,9 @@
                ! Reset iteration count and time
                istep = itmp
                time  = rtmp
-               call setup_linear_solver(endtime = time, silent = .true.)
+               call setup_linear_solver(endtime = time,  
+     &                                  solve_temperature = .true.,
+     &                                  silent = .true.)
             class default
                call type_error('vec_out','nek_dvector','OUT',this_module, this_procedure)
             end select
