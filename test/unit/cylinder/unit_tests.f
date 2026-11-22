@@ -1,13 +1,9 @@
 c-----------------------------------------------------------------------
-c     unit_tests.f -- drivers and helpers for the neklab unit tests
-c                     (2D cylinder)
+c     unit_tests.f -- drivers and settings for the neklab unit tests (2D cylinder)
 c
 c     NOT compiled on its own. It is pulled into the .usr with
 c
 c           include 'unit_tests.f'
-c
-c     placed ABOVE subroutine userchk (a module must come before the
-c     code that uses it). Fixed-form source, like the .usr itself.
 c
 c        1  fixed point     nek_dvector, nek_zvector, exptA_linop,
 c                           nek_system + nek_jacobian           on BF.fld
@@ -15,9 +11,12 @@ c        2  resolvent       resolvent_linop                     on BF.fld
 c        3  periodic orbit  nek_ext_dvector,
 c                           nek_upo_system + nek_upo_jacobian   on snapshot.fld
 c-----------------------------------------------------------------------
+      include 'neklab_test_helpers.f'
+c-----------------------------------------------------------------------
       module unit_tests_cyl
       use LightKrylov
       use neklab
+      use neklab_test_helpers
       implicit none
       private
       character(len=128), parameter :: this_module = 'unit_tests_cyl'
@@ -105,7 +104,7 @@ c=======================================================================
      &                      verbose          = verb,
      &                      stop_on_failure  = .false.,
      &                      max_errors       = maxerr)
-      call check_linop(this_test, ok, maxerr, .true., lin_tol, adj_tol)
+      call check_linop(this_test, ok, maxerr, test_adjoint, lin_tol, adj_tol)
 
       ! ---- nek_system
       sys = nek_system()
@@ -121,7 +120,7 @@ c=======================================================================
      &                      tolerance        = 1.0e-8_dp,
      &                      verbose          = verb,
      &                      orders           = orders)
-      call check_taylor(this_test, orders)
+      call check_taylor(this_test, orders, taylor_min_order)
 
       this_test = 'nek_system%jacobian.axioms'
       ok = verify_linop_axioms(sys%jacobian, bf,
@@ -133,7 +132,7 @@ c=======================================================================
      &                      verbose          = verb,
      &                      stop_on_failure  = .false.,
      &                      max_errors       = maxerr)
-      call check_linop(this_test, ok, maxerr, .true., lin_tol, adj_tol)
+      call check_linop(this_test, ok, maxerr, test_adjoint, lin_tol, adj_tol)
       end subroutine test_fixed_point
 
 c-----------------------------------------------------------------------
@@ -180,7 +179,7 @@ c-----------------------------------------------------------------------
      &                      verbose          = verb,
      &                      stop_on_failure  = .false.,
      &                      max_errors       = maxerr)
-      call check_linop(this_test, ok, maxerr, .true., lin_tol_res,
+      call check_linop(this_test, ok, maxerr, test_adjoint, lin_tol_res,
      &                 adj_tol)
       end subroutine test_resolvent
 
@@ -225,7 +224,7 @@ c-----------------------------------------------------------------------
      &                      tolerance        = 1.0e-8_dp,
      &                      verbose          = verb,
      &                      orders           = orders)
-      call check_taylor(this_test, orders)
+      call check_taylor(this_test, orders, taylor_min_order)
 
       this_test = 'nek_upo_system%jacobian.axioms'
       ok = verify_linop_axioms(sys_upo%jacobian, x0,
@@ -237,115 +236,8 @@ c-----------------------------------------------------------------------
      &                      verbose          = verb,
      &                      stop_on_failure  = .false.,
      &                      max_errors       = maxerr)
-      call check_linop(this_test, ok, maxerr, .true., lin_tol, adj_tol)
+      call check_linop(this_test, ok, maxerr, test_adjoint, lin_tol,
+     &                 adj_tol)
       end subroutine test_periodic_orbit
-
-c-----------------------------------------------------------------------
-      subroutine tests_completed()
-      call nek_log_message('############################', procedure='main')
-      call nek_log_message('#     tests completed      #', procedure='main')
-      call nek_log_message('############################', procedure='main')
-      call nek_end()
-      end subroutine tests_completed
-
-c=======================================================================
-c     HELPERS
-c=======================================================================
-
-      subroutine check(name, ok, tol, info)
-      use stdlib_strings, only : padr
-      character(len=*), intent(in) :: name
-      logical, intent(in) :: ok
-      real(dp), intent(in), optional :: tol
-      character(len=*), intent(in), optional :: info
-      ! internal
-      character(len=*), parameter :: esc   = achar(27)
-      character(len=*), parameter :: green = esc//'[32m'
-      character(len=*), parameter :: red   = esc//'[31m'
-      character(len=*), parameter :: reset = esc//'[0m'
-      character(len=*), parameter :: pfx = 'NEKLAB_CHECK '
-      character(len=*), parameter :: p   = green//'PASSED'//reset
-      character(len=*), parameter :: f   = red//'FAILED'//reset
-      character(len=512) :: msg
-      character(len=45) :: ntr
-      character(len=20) :: tstr
-      ntr = padr(trim(name),45)
-      call nek_log_message('')
-      call nek_log_message('#####################################################', procedure='main')
-      call nek_log_message('#     test '//trim(name), procedure='main')
-      call nek_log_message('#####################################################', procedure='main')
-      call nek_log_message('')
-      tstr = ''
-      if (present(tol)) then
-         write(tstr, '(A6,ES10.2,4X)') 'tol = ', tol
-      end if
-      if (ok) then
-         write(msg, '(A,A45,A20,A)')      pfx, ntr, tstr, p
-      else if (present(info)) then
-         write(msg, '(A,A45,A20,A,1X,A)') pfx, ntr, tstr, f, trim(info)
-      else
-         write(msg, '(A,A45,A20,A)')      pfx, ntr, tstr, f
-      end if
-      call nek_log_message(msg, procedure='main')
-      call nek_log_message('')
-      end subroutine check
-
-c-----------------------------------------------------------------------
-      subroutine report(key, value)
-      use stdlib_strings, only : padr
-      character(len=*), intent(in) :: key
-      real(dp), intent(in) :: value
-      character(len=512) :: msg
-      write(msg, '(A,A40,2X,ES15.5)') 'NEKLAB_RESULT ',
-     &                                padr(trim(key), 40), value
-      call nek_log_message(msg, procedure='main')
-      end subroutine report
-
-c-----------------------------------------------------------------------
-      subroutine check_linop(name, ok, maxerr, with_adjoint, tol, a_tol)
-c     verify_linop_axioms result + the largest error of each axiom
-      character(len=*), intent(in) :: name
-      logical, intent(in) :: ok
-      real(dp), intent(in) :: maxerr(4)
-      logical, intent(in) :: with_adjoint
-      real(dp), intent(in) :: tol
-      real(dp), intent(in) :: a_tol
-      logical :: chk
-      character(len=128) :: msg
-      call report(trim(name)//'.max_err_additivity ', maxerr(1))
-      call report(trim(name)//'.max_err_homogeneity', maxerr(2))
-      call report(trim(name)//'.max_err_zero_map   ', maxerr(3))
-      write(msg, '(A,ES9.2,A,ES9.2)') 'max error ', maxval(maxerr(1:3)),' > lin_tol ', tol
-      chk = all(maxerr(1:3) <= tol)
-      call check(trim(name)//'.linearity', chk, tol=tol, info=msg)
-      if (with_adjoint) then
-         call report(trim(name)//'.max_err_adjoint', maxerr(4))
-         write(msg, '(A,ES9.2,A,ES9.2)') 'error ', maxerr(4), ' > adj_tol ', a_tol
-         chk = maxerr(4) <= a_tol
-         call check(trim(name)//'.adjoint', chk, tol=a_tol, info=msg)
-      end if
-      call check('GLOBAL : '//name, ok)
-      call nek_log_message('')
-      end subroutine check_linop
-
-c-----------------------------------------------------------------------
-      subroutine check_taylor(name, orders)
-c     pass if at least half of the observed orders reach taylor_min_order
-      character(len=*), intent(in) :: name
-      real(dp), intent(in) :: orders(:)
-      character(len=128) :: key, msg
-      integer :: k, ngood
-      logical :: chk
-      call nek_log_message('')
-      do k = 1, size(orders)
-         write(key, '(2A,I0)') trim(name), '.order_', k
-         call report(key, orders(k))
-      end do
-      ngood = count(orders >= taylor_min_order)
-      write(msg, '(I0,A,I0,A,F4.2)') ngood, ' of ', size(orders), ' orders >= ', taylor_min_order
-      chk = (size(orders) > 0 .and. ngood >= size(orders)/2)
-      call check(name, chk, info=msg)
-      call nek_log_message('')
-      end subroutine check_taylor
 
       end module unit_tests_cyl

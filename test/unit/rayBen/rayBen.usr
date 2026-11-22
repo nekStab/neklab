@@ -1,0 +1,129 @@
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+c     UNIT TESTS -- Rayleigh-Benard convection, with temperature
+c
+c     Checks nek_dvector with a temperature field, exptA_temp_linop and
+c     nek_temp_system
+c-----------------------------------------------------------------------
+      include 'unit_tests.f'
+c-----------------------------------------------------------------------
+      subroutine userchk
+      use unit_tests_rbc
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      call test_fixed_point_temp()
+
+      call tests_completed()
+
+      call nek_end()
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      use neklab, only: neklab_forcing
+      implicit none
+      include 'SIZE'
+      include 'SOLN'            ! jp
+      include 'NEKUSE'          ! FFX, FFY, FFZ
+      include 'PARALLEL'        ! GLLEL
+      include 'ADJOINT'         ! ifadj
+
+      integer ix,iy,iz,ieg,ijke,iel
+      real rapr
+
+      common /rayleigh_r/ rapr
+ 
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      iel = gllel(ieg)
+      ijke = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+      if (jp == 0) then
+      	ffy = temp*rapr               ! base flow
+      else if (.not. ifadj) then
+         ffy = tp(ijke, 1, 1)*rapr     ! direct: Ra * Pr * T'   
+      end if
+      
+      call neklab_forcing(FFX,FFY,FFZ,ix,iy,iz,ieg,jp)
+
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      implicit none
+      include 'SIZE'
+      include 'SOLN'            ! jp, vyp
+      include 'NEKUSE'          ! qvol
+      include 'PARALLEL'        ! GLLEL
+      include 'ADJOINT'         ! ifadj
+      integer ix,iy,iz,ieg,ijke,iel
+      real rapr
+      common /rayleigh_r/ rapr
+      qvol = 0.0d0
+      avol = 0.0d0
+      if (jp > 0 .and. ifadj) then
+         iel  = gllel(ieg)
+         ijke = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+         qvol = rapr*vyp(ijke,1)       ! adjoint: Ra Pr v_y^+
+      end if
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TSTEP'
+      include 'INPUT'
+      include 'NEKUSE'
+      include 'SOLN'            ! jp
+      if (JP.eq.0) then         ! velocity
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp= 1.0d0 - y
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      if (JP.eq.0) then         ! velocity
+         ux= 0.0d0
+         uy= 0.0d0
+         uz= 0.0d0
+         temp= 1.0d0 - y
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      use LightKrylov_Logger
+      include 'SIZE'
+      include 'TOTAL'
+      common /rayleigh_r/ rapr
+      Prandtl  = uparam(5)
+      Rayleigh  = uparam(6)
+      param(2) = sqrt(Prandtl/Rayleigh)
+      param(8) = 1.0d0/sqrt(Prandtl*Rayleigh)
+      rapr = Rayleigh*Prandtl
+      
+      call logger_setup(nio=0, log_level=lk_information_level, log_stdout=.true., log_timestamp=.true.)
+
+      end
