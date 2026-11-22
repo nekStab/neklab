@@ -30,7 +30,7 @@ c          calling a driver, or from test/suites/unit.py) ---------------
       logical,  public :: test_adjoint     = .true.     ! test adjoint compatibility
       logical,  public :: verb             = .true.     ! verbose output
       real(dp), public :: tau              = 0.1_dp     ! integration time of exptA
-      real(dp), public :: cfl_limit        = 0.5_dp
+      real(dp), public :: cfl_limit        = 0.4_dp
       real(dp), public :: ptol             = 1.0e-08_dp ! pressure tolerance
       real(dp), public :: p2v_factor       = 0.01_dp    ! vtol = ptol*p2v_factor
       integer,  public :: ntrials_vec      = 10         ! vector axioms (cheap)

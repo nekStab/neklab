@@ -84,7 +84,6 @@ CYLINDER_SETTINGS = {
    # "base_flow":   "'BF.fld'",
 }
 
-
 class CylinderGroup(UnitTest):
    """Common part of the cylinder groups (not a test itself)."""
 
@@ -154,18 +153,34 @@ class UnitCylinderPeriodicOrbit(CylinderGroup):
    )
 
 
+# --- Rayleigh-Benard: unit/rayBen (rayBen.par, rayBen.usr + unit_tests.f) -----
+
+RAYBEN_PAR = {
+   "GENERAL":     {"endTime": 0.1},     # integration time of nek_temp_system (= tau)
+   "VELOCITY":    {"residualProj": "no"},
+   "PRESSURE":    {"residualProj": "no"},
+   "TEMPERATURE": {"residualProj": "no"},
+}
+
+RAYBEN_SETTINGS = {
+   # Settings block of unit/rayBen/unit_tests.f (defaults are in the file), e.g.
+   # "tau":         0.1,
+   # "ntrials_lin": 2,
+   # "adj_tol":     1e-2,
+}
+
+
 class UnitRayleighBenard(UnitTest):
    """Temperature: vectors with theta, exptA_temp, temperature fixed-point system."""
 
    case_dir = "unit/rayBen"
    case_name = "rayBen"
-   par_values = {"GENERAL": {"endTime": 0.05}}
-   usr_params = {"tau": 0.05, "ntrials_lin": 2}
+   completed = "tests completed"
+   par_values = RAYBEN_PAR
+   fortran_params = {"unit_tests.f": RAYBEN_SETTINGS}
    expected = (
-      "setup.temperature_active",
-      "vector.nek_dvector_temp.axioms",
-      "setup.base_flow",
-      "linop.exptA_temp.linearity", "linop.exptA_temp.adjoint",
-      "system.nek_temp_system.taylor",
-      "linop.nek_temp_jacobian.linearity", "linop.nek_temp_jacobian.adjoint",
+      "nek_dvector_temp.axioms",
+      *linop_checks("exptA_temp_linop.axioms"),
+      "nek_temp_system.linearization",
+      *linop_checks("nek_temp_system%jacobian.axioms"),
    )
