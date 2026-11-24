@@ -6,7 +6,7 @@
    ./neklabTests.py -k Cylinder                    only tests whose name contains "Cylinder"
    ./neklabTests.py --levels full --update-references   (trusted version only)
 
-Levels: unit (suites/unit.py), fast (suites/fast.py), full (suites/full.py).
+Levels: unit (suites/unit/, one file per case), fast (suites/fast.py), full (suites/full.py).
 Each test runs in a copy of its case under test/scratch/; the copies are
 deleted when every test passed (keep them with --keep-scratch).
 The exit code is 0 only if every selected test passed.
@@ -17,6 +17,7 @@ import argparse
 import importlib
 import inspect
 import os
+import pkgutil
 import shutil
 import sys
 import unittest
@@ -28,19 +29,27 @@ sys.path.insert(0, str(HERE))
 from lib.neklabTestCase import NeklabTestCase, LEVELS
 
 
+def level_modules(level):
+   """suites/<level>.py, or every file of the package suites/<level>/."""
+   module = importlib.import_module(f"suites.{level}")
+   yield module
+   for info in pkgutil.iter_modules(getattr(module, "__path__", [])):
+      yield importlib.import_module(f"suites.{level}.{info.name}")
+
+
 def find_tests(levels, patterns):
-   """(class, method) of every test in suites/<level>.py whose name matches a pattern."""
+   """(class, method) of every test of the given levels whose name matches a pattern."""
    tests = []
    for level in levels:
-      module = importlib.import_module(f"suites.{level}")
-      for _, cls in inspect.getmembers(module, inspect.isclass):
-         if issubclass(cls, NeklabTestCase) and cls.__module__ == module.__name__ \
-               and cls.level == level and cls.case_dir \
-               and not cls.__dict__.get("abstract", False):
-            for method in unittest.TestLoader().getTestCaseNames(cls):
-               name = f"{cls.__name__}.{method}"
-               if not patterns or any(p.lower() in name.lower() for p in patterns):
-                  tests.append((cls, method))
+      for module in level_modules(level):
+         for _, cls in inspect.getmembers(module, inspect.isclass):
+            if issubclass(cls, NeklabTestCase) and cls.__module__ == module.__name__ \
+                  and cls.level == level and cls.case_dir \
+                  and not cls.__dict__.get("abstract", False):
+               for method in unittest.TestLoader().getTestCaseNames(cls):
+                  name = f"{cls.__name__}.{method}"
+                  if not patterns or any(p.lower() in name.lower() for p in patterns):
+                     tests.append((cls, method))
    return tests
 
 
@@ -65,6 +74,9 @@ def main():
    p.add_argument("--update-references", action="store_true",
                   help="full level: store results as the new references")
    p.add_argument("--keep-scratch", action="store_true", help="keep the scratch copies")
+   p.add_argument("--params", choices=("all", "changed"), default="all",
+                  help="parameters listed before each build: all, or only those "
+                       "that differ from the case folder [all]")
    p.add_argument("-v", "--verbose", action="store_true",
                   help="also echo the full makeneklab and nek5000 output")
    args = p.parse_args()
@@ -92,6 +104,7 @@ def main():
       MPIEXEC=args.mpiexec,
       SCRATCH_ROOT=str(scratch),
       VERBOSE_TESTS="true" if args.verbose else "false",
+      PARAMS=args.params,
       UPDATE_REFERENCES="true" if args.update_references else "false",
    )
    raise_stack_limit()

@@ -1,79 +1,61 @@
-"""Small, targeted edits of case files, and reading results from a log.
+"""Reading and editing case files, and reading results from a log.
 
-Every edit changes only the values it is asked to change; all other lines,
+Edits change only the values they are asked to change; all other lines,
 including comments, stay exactly as they are.
 """
 import re
 
 
-def _fortran_value(value):
-   """Python value -> Fortran literal. Floats get the _dp kind; strings are used as written."""
-   if isinstance(value, bool):
-      return ".true." if value else ".false."
-   if isinstance(value, float):
-      return f"{value!r}_dp"
-   return str(value)
+# --- SIZE ----------------------------------------------------------------------
+
+_SIZE_PARAM = r"^([^!\n]*\bparameter\s*\([^!\n]*?\b{name}\s*=\s*)([^,)\s!]+)"
 
 
-def _value_end(text, i):
-   """End of the Fortran value starting at text[i]: the first top-level ',' or
-   ')', a '!' comment or the end of the line (strings and brackets skipped)."""
-   depth, quote = 0, None
-   while i < len(text) and text[i] != "\n":
-      c = text[i]
-      if quote:
-         if c == quote:
-            quote = None
-      elif c in "'\"":
-         quote = c
-      elif c == "(":
-         depth += 1
-      elif c == ")":
-         if depth == 0:
-            break
-         depth -= 1
-      elif c == "," and depth == 0 or c == "!":
-         break
-      i += 1
-   return i
+def read_size(path):
+   """parameter (name=value) declarations of a SIZE file -> {name: value as written}."""
+   values = {}
+   for line in open(path):
+      code = line.split("!")[0]
+      m = re.search(r"\bparameter\s*\((.*)\)", code, re.IGNORECASE)
+      if m:
+         for item in m.group(1).split(","):
+            if "=" in item:
+               name, value = item.split("=", 1)
+               values[name.strip().lower()] = value.strip()
+   return values
 
 
-def set_fortran_parameters(path, params):
-   """Change the value of Fortran parameters or initialised variables in a file.
+def set_size_parameters(path, params):
+   """Change parameter (name=value) values in SIZE; comments are kept.
 
-   Works for the declaration forms
-         parameter (lpmin=8)                                 ! SIZE style
-         real(dp), parameter :: tau = 0.05_dp                ! parameter
-         real(dp), public    :: tau = 0.1_dp                 ! module variable
-         real(dp), public    :: omega = 8.0_dp*atan(1.0_dp)  ! expressions too
-   Only the value is replaced; comments and spacing are kept. Assignments and
-   keyword arguments (no `::` or `parameter` before the name) are not touched.
-   Raises KeyError if a name is not found, so a typo cannot go unnoticed.
-   Returns the changes as a list of (name, old value, new value).
+   Raises KeyError for an unknown name. Returns [(name, old, new)].
    """
-   with open(path) as f:
-      text = f.read()
+   text = open(path).read()
    changes = []
    for name, value in params.items():
-      pattern = re.compile(
-         rf"^[^!\n]*(?:\bparameter\b|::)[^!\n]*?\b{re.escape(name)}\s*=(?!=)\s*",
-         re.IGNORECASE | re.MULTILINE,
-      )
-      new, pos, n = [], 0, 0
-      for m in pattern.finditer(text):
-         end = _value_end(text, m.end())
-         old = text[m.end():end]
-         trail = old[len(old.rstrip()):]          # keep the spaces before a comment
-         new += [text[pos:m.end()], _fortran_value(value), trail]
-         if n == 0:
-            changes.append((name, old.strip(), _fortran_value(value)))
-         pos, n = end, n + 1
-      if n == 0:
-         raise KeyError(f'"{name}" is not declared with a value in {path}')
-      text = "".join(new) + text[pos:]
-   with open(path, "w") as f:
-      f.write(text)
+      pattern = re.compile(_SIZE_PARAM.format(name=re.escape(name)), re.IGNORECASE | re.MULTILINE)
+      m = pattern.search(text)
+      if not m:
+         raise KeyError(f'"{name}" is not a parameter in {path}')
+      changes.append((name, m.group(2), str(value)))
+      text = pattern.sub(lambda m: m.group(1) + str(value), text, count=1)
+   open(path, "w").write(text)
    return changes
+
+
+# --- .par ----------------------------------------------------------------------
+
+def read_par(path):
+   """A .par file -> {SECTION: {key: value}}, comments removed, order kept."""
+   sections, current = {}, None
+   for line in open(path):
+      code = line.split("#")[0].strip()
+      if code.startswith("[") and code.endswith("]"):
+         current = sections.setdefault(code[1:-1].upper(), {})
+      elif "=" in code and current is not None:
+         key, value = code.split("=", 1)
+         current[key.strip()] = value.strip()
+   return sections
 
 
 def set_par_values(path, values):
@@ -118,34 +100,99 @@ def set_par_values(path, values):
    return changes
 
 
-def get_fortran_parameter(path, name):
-   """Value of a Fortran parameter as written in the file (string), or None."""
-   with open(path) as f:
-      m = re.search(rf"^[^!\n]*\bparameter\b[^!\n]*?\b{name}\s*=\s*([^,)\s!]+)",
-                    f.read(), re.IGNORECASE | re.MULTILINE)
-   return m.group(1) if m else None
+# --- settings (Settings block of unit_tests.f) --------------------------------
+
+def _settings_part(text):
+   """The specification part of the module (before `contains`), where the settings are."""
+   m = re.search(r"^\s*contains\b", text, re.IGNORECASE | re.MULTILINE)
+   return text[:m.start()] if m else text
+
+
+_SETTING = r"^([^!\n]*::\s*{name}\s*=\s*)(.*?)(\s*(?:!.*)?)$"
+
+
+def read_settings(path):
+   """Values of the settings in a unit_tests.f module -> {name: value as written}.
+
+   Settings are the initialised variables declared before `contains`
+   (`real(dp), public :: tau = 0.1_dp`); parameters are skipped.
+   """
+   values = {}
+   for line in _settings_part(open(path).read()).splitlines():
+      if line[:1] in "cC*" or "parameter" in line.lower():
+         continue
+      m = re.match(r"^[^!]*::\s*(\w+)\s*=\s*(.*?)\s*(?:!.*)?$", line)
+      if m:
+         values[m.group(1).lower()] = m.group(2)
+   return values
+
+
+def fortran_value(value):
+   """Python value -> Fortran literal: floats get _dp, strings are quoted."""
+   if isinstance(value, bool):
+      return ".true." if value else ".false."
+   if isinstance(value, float):
+      return f"{value!r}_dp"
+   if isinstance(value, str):
+      return "'" + value.replace("'", "''") + "'"
+   return str(value)
+
+
+def set_settings(path, values):
+   """Change the default of settings in a unit_tests.f module; comments are kept.
+
+   Raises KeyError for a name that is not a setting. Returns [(name, old, new)].
+   """
+   text = open(path).read()
+   part = _settings_part(text)
+   rest = text[len(part):]
+   changes = []
+   for name, value in values.items():
+      pattern = re.compile(_SETTING.format(name=re.escape(name)), re.IGNORECASE | re.MULTILINE)
+      m = pattern.search(part)
+      if not m:
+         raise KeyError(f'"{name}" is not a setting in {path}; settings: {sorted(read_settings(path))}')
+      new = fortran_value(value)
+      changes.append((name, m.group(2), new))
+      part = part[:m.start(2)] + new + part[m.end(2):]
+   open(path, "w").write(part + rest)
+   return changes
+
+
+def same_value(a, b):
+   """True if two values (as written in Fortran/.par or Python) are the same setting."""
+   def norm(v):
+      if isinstance(v, bool):
+         return v
+      v = str(v).strip().strip("'\"").lower()
+      if v in (".true.", "t", "true", "yes"):
+         return True
+      if v in (".false.", "f", "false", "no"):
+         return False
+      try:
+         return float(re.sub(r"_dp$", "", v).replace("d", "e"))
+      except ValueError:
+         return v
+   return norm(a) == norm(b)
 
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
-_CHECK_NEW = re.compile(                     # NEKLAB_CHECK <name> [tol = x] PASSED|FAILED [msg]
+_CHECK = re.compile(                         # NEKLAB_CHECK <name> [tol = x] PASSED|FAILED [msg]
    r"NEKLAB_CHECK\s+(?P<name>.*?)\s+(?:tol\s*=\s*\S+\s+)?(?P<status>PASSED|FAILED)\b\s*(?P<msg>.*)$")
-_CHECK_OLD = re.compile(                     # NEKLAB_CHECK PASS|FAIL <name> [msg]
-   r"NEKLAB_CHECK\s+(?P<status>PASS|FAIL)\s+(?P<name>\S+)\s*(?P<msg>.*)$")
 
 
 def read_checks(logfile):
    """NEKLAB_CHECK lines -> {name: ("PASS"|"FAIL", message)}.
 
-   Both forms are read, anywhere in the line (log prefixes and colours are fine):
+   Read anywhere in the line (log prefixes and colours are fine):
       NEKLAB_CHECK <name> [tol = 1.0E-06] PASSED|FAILED [message]
-      NEKLAB_CHECK PASS|FAIL <name> [message]
    A check reported several times counts as failed if it failed once.
    """
    checks = {}                 # in the order they first appear in the log
    with open(logfile, errors="replace") as f:
       for line in f:
          line = _ANSI.sub("", line).rstrip()
-         m = _CHECK_NEW.search(line) or _CHECK_OLD.search(line)
+         m = _CHECK.search(line)
          if not m:
             continue
          status = "PASS" if m["status"].startswith("PASS") else "FAIL"

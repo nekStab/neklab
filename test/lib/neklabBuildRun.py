@@ -95,13 +95,18 @@ def run_genmap(case_dir, case_name, nek_source_root, tolerance="0.01", verbose=F
       raise BuildError(f"genmap failed:\n{tail(log)}")
 
 
-def build_neklab(case_dir, neklab_source_root, nek_source_root, verbose=False):
-   """Clean build of the case with makeneklab (the script finds the .usr itself)."""
+def build_neklab(case_dir, neklab_source_root, nek_source_root, verbose=False, clean=True):
+   """Build the case with makeneklab (the script finds the .usr itself).
+
+   clean=False keeps an existing obj/, so make recompiles only what is newer.
+   """
    env = dict(os.environ, NEKLAB_SOURCE_ROOT=str(neklab_source_root),
               NEK_SOURCE_ROOT=str(nek_source_root))
    makeneklab = Path(neklab_source_root) / "app" / "makeneklab"
    log = Path(case_dir) / "build.out"
-   _run([makeneklab, "clean"], case_dir, env, log, stdin="Y\n", verbose=verbose)
+   open(log, "w").close()
+   if clean:
+      _run([makeneklab, "clean"], case_dir, env, log, stdin="Y\n", verbose=verbose, append=True)
    rc = _run([makeneklab], case_dir, env, log, verbose=verbose, append=True)
    if rc != 0 or not (Path(case_dir) / "nek5000").exists():
       raise BuildError(f"makeneklab failed (code {rc}), full log: {log}\n\n"
