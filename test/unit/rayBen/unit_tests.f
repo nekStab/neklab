@@ -169,7 +169,6 @@ c     above in its copy of this file).
       call log_setting('eps0', eps0)
       call log_setting('taylor_tol', taylor_tol)
       call log_setting('taylor_min_order', taylor_min_order)
-      call log_nek_parameters()
       end subroutine log_settings
 
       end module unit_tests_rbc

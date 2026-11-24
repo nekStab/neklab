@@ -71,14 +71,11 @@ def main():
    p.add_argument("--list", action="store_true", help="list the selected tests and exit")
    p.add_argument("--nprocs", type=int, default=4, help="MPI ranks per run [4]")
    p.add_argument("--mpiexec", default="mpiexec", help="MPI launcher [mpiexec]")
-   p.add_argument("--update-references", action="store_true",
-                  help="full level: store results as the new references")
+   p.add_argument("--update-references", action="store_true", help="full level: store results as the new references")
    p.add_argument("--keep-scratch", action="store_true", help="keep the scratch copies")
    p.add_argument("--params", choices=("all", "changed"), default="all",
-                  help="parameters listed before each build: all, or only those "
-                       "that differ from the case folder [all]")
-   p.add_argument("-v", "--verbose", action="store_true",
-                  help="also echo the full makeneklab and nek5000 output")
+                  help="parameters listed before each build: all, or only those that differ from the case folder [all]")
+   p.add_argument("-v", "--verbose", action="store_true", help="also echo the full makeneklab and nek5000 output")
    args = p.parse_args()
 
    levels = [l.strip() for l in args.levels.split(",")]

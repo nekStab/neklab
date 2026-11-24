@@ -75,7 +75,7 @@ c     one value for measured_values.json
       character(len=*), intent(in) :: key
       real(dp), intent(in) :: value
       character(len=512) :: msg
-      write(msg, '(A,A40,2X,ES15.5)') 'NEKLAB_RESULT ', padr(trim(key), 40), value
+      write(msg, '(A,A50,2X,ES15.5)') 'NEKLAB_RESULT ', padr(trim(key), 50), value
       call nek_log_message(msg, procedure='main')
       end subroutine report
 
