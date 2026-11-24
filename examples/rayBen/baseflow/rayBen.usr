@@ -2,7 +2,6 @@
 c-----------------------------------------------------------------------
       subroutine userchk
       use LightKrylov, only: zero_basis
-      use LightKrylov_Logger
       use neklab
       include "SIZE"
       include "TOTAL"
@@ -12,10 +11,11 @@ c-----------------------------------------------------------------------
       type(exptA_temp_linop), allocatable :: exptA_temp
 
       ! State vectors
-      type(nek_dvector) :: bf
+      type(nek_dvector), allocatable :: bf, eps, res
 
       ! Tolerance for the Newton solver
-      real(dp) :: tol
+      real(dp) :: tol, norm
+      integer :: i
       type(nek_dvector), allocatable :: eigvecs(:)
       complex(kind=dp), allocatable :: eigvals(:)
       real(kind=dp), allocatable :: residuals(:)
@@ -24,23 +24,43 @@ c-----------------------------------------------------------------------
 
       ! Stability analysis parameters
       integer, parameter :: kdim = 128, nev = 10
+      real(dp), parameter :: eps_amplitude = 1e-3_dp
 
       if (istep.eq.0) then
-         time = 0.0d0
-         ! Setup logger
-         call logger_setup(nio=0, log_level=information_level, log_stdout=.false.,log_timestamp=.true.)
+         allocate(bf, eps, res)
+	      call bf%zero()
+	      call eps%rand(ifnorm = .true.)
+	      call eps%scal(eps_amplitude)
             
          ! Load initial guess
-         call load_fld('BF_rayBen0.f00001')
+         call rzero(vx, lx1*ly1*lz1*lelv)
+         call rzero(vy, lx1*ly1*lz1*lelv)
+         call rzero(vz, lx1*ly1*lz1*lelv)
          call nek2vec(bf, vx, vy, vz, pr, t)
+	      call bf%add(eps)
          
          ! Define system
          sys = nek_temp_system()
          sys%jacobian = nek_temp_jacobian()
          sys%jacobian%X = bf
-			
+	      call sys%init()
+
          ! Set Newton tolerance
-         tol = 1.0e-8_dp
+         tol = 1.0e-6_dp
+
+         call res%zero()
+         call sys%eval(bf, res, tol)
+
+         norm = res%norm()
+         print *, "Initial residual norm: ", norm
+
+         !do i = 1, 10
+         !   call eps%rand(ifnorm = .true.)
+         !   call sys%jacobian%matvec(eps, res)
+         !   call outpost_dnek(res, 'prt')
+         !end do
+         !call nek_end()
+
          
          ! Compute fixed point
          call newton_fixed_point_iteration(sys, bf, tol, tol_mode=2)
@@ -48,6 +68,7 @@ c-----------------------------------------------------------------------
          !Outpost solution
          call outpost_dnek(bf, "BF_")
 
+         call nek_end()
          ! Exponential propagator
          exptA_temp = exptA_temp_linop(1.0_dp, bf) ; call exptA_temp%init()
          allocate (eigvecs(nev)); call zero_basis(eigvecs)
@@ -79,9 +100,8 @@ c-----------------------------------------------------------------------
       include 'NEKUSE'          ! FFX, FFY, FFZ
       include 'PARALLEL'        ! GLLEL
 
-      integer ix,iy,iz,ieg,ip,iel
+      integer ix,iy,iz,ieg,ijke,iel
       real rtmp, uparam, param, rapr
-      logical ifheat
 
       common /rayleigh_r/ rapr
  
@@ -89,15 +109,16 @@ c-----------------------------------------------------------------------
       ffy = 0.0d0
       ffz = 0.0d0
 
-      if(ifheat)then
       iel = gllel(ieg)
-      ip = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
-      if (jp .eq. 0) rtmp = temp !t(ix, iy, iz, iel, 1)
-      if (jp .eq. 1) rtmp = tp(ip, 1, 1)
+      ijke = ix + nx1*(iy-1+ny1*(iz-1+nz1*(iel-1)))
+      if (jp == 0) then
+         rtmp = temp
+      else 
+         rtmp = tp(ijke, 1, 1)
+      end if
       
-                 ! Pr         ! Ra
+      ! Pr         ! Ra
       ffy = rtmp*rapr
-      endif
       
       call neklab_forcing(FFX,FFY,FFZ,ix,iy,iz,ieg,jp)
 
@@ -108,6 +129,7 @@ c-----------------------------------------------------------------------
       include 'TSTEP'
       include 'INPUT'
       include 'NEKUSE'
+      include 'SOLN'            ! jp
       if (JP.eq.0) then         ! velocity
          ux = 0.0d0
          uy = 0.0d0
@@ -144,13 +166,16 @@ c-----------------------------------------------------------------------
       end
 c-----------------------------------------------------------------------
       subroutine usrdat2
+      use LightKrylov_Logger
       include 'SIZE'
       include 'TOTAL'
       common /rayleigh_r/ rapr
       Prandtl  = uparam(5)
-      Rayleigh  = uparam(6)
+      Rayleigh = uparam(6)
       param(2) = sqrt(Prandtl/Rayleigh)
       param(8) = 1.0d0/sqrt(Prandtl*Rayleigh)
       rapr = Rayleigh*Prandtl
+      ! Setup logger
+      call logger_setup(nio=0, log_level=lk_information_level, log_stdout=.false.,log_timestamp=.true.)
       
       end
