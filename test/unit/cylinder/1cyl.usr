@@ -1,36 +1,22 @@
 c-----------------------------------------------------------------------
 c     UNIT TESTS -- 2D cylinder
 c
-c     Drivers, helpers and settings live in unit_tests.f
+c     Drivers and settings live in unit_tests.f, the helpers in
+c     neklab_test_helpers.f.
 c     Select the group with userParam01 = 1, 2 or 3 in the .par.
 c-----------------------------------------------------------------------
-      include '../unit_tests.f'
+      include 'unit_tests.f'
 c-----------------------------------------------------------------------
       subroutine userchk
+c     The tests themselves live in unit_tests.f (run_tests); the group is
+c     chosen with userParam01 in the .par.
       use unit_tests_cyl
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      select case (nint(uparam(1)))
-      case (1)
-
-         call test_fixed_point()
-
-      case (2)
-
-         call test_resolvent()
-
-      case (3)
-
-         call test_periodic_orbit()
-
-      case default
-
-         call check('setup.group', .false., info='set userParam01 = 1, 2 or 3 in the .par')
-
-      end select
-
+      call log_settings()
+      call run_tests(nint(uparam(1)))
       call tests_completed()
       end
 c----------------------------------------------------------------------

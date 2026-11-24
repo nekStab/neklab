@@ -9,18 +9,16 @@ c-----------------------------------------------------------------------
       include 'unit_tests.f'
 c-----------------------------------------------------------------------
       subroutine userchk
+c     The tests themselves live in unit_tests.f (run_tests); the group is
+c     chosen with userParam01 in the .par.
       use unit_tests_rbc
       implicit none
       include 'SIZE'
       include 'TOTAL'
 
-      call test_fixed_point_temp()
-
+      call log_settings()
+      call run_tests(nint(uparam(1)))
       call tests_completed()
-
-      call nek_end()
-
-      return
       end
 c-----------------------------------------------------------------------
       subroutine userf (ix,iy,iz,ieg)

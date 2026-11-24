@@ -21,7 +21,7 @@ c-----------------------------------------------------------------------
       character(len=128), parameter :: this_module = 'unit_tests_rbc'
 
       public :: test_fixed_point_temp
-      public :: tests_completed
+      public :: tests_completed, log_settings, run_tests
       public :: check, report, check_linop, check_taylor
 
 c     ---- Settings (defaults; can be overwritten in userchk before
@@ -132,5 +132,44 @@ c=======================================================================
      &                      max_errors       = maxerr)
       call check_linop(this_test, ok, maxerr, test_adjoint, lin_tol, adj_tol)
       end subroutine test_fixed_point_temp
+
+c-----------------------------------------------------------------------
+      subroutine run_tests(group)
+c     Run one group of checks; the test harness sets the group in the .par
+c     (userParam01). To add a test: write a driver above and add a case.
+      integer, intent(in) :: group
+      character(len=64) :: msg
+      select case (group)
+      case (1)
+         call test_fixed_point_temp()
+      case default
+         write(msg, '(A,I0,A)') 'unknown group ', group,
+     &                          ' (userParam01 in the .par: 1)'
+         call check('setup.group', .false., info=msg)
+      end select
+      end subroutine run_tests
+c-----------------------------------------------------------------------
+      subroutine log_settings()
+c     Write every setting and the Nek5000 setup to the log, so the log
+c     records what this run used (the test harness edits the defaults
+c     above in its copy of this file).
+      call log_section('unit test settings (unit_tests_rbc)')
+      call log_setting('test_zero_map', test_zero_map)
+      call log_setting('test_adjoint', test_adjoint)
+      call log_setting('verb', verb)
+      call log_setting('tau', tau)
+      call log_setting('cfl_limit', cfl_limit)
+      call log_setting('ptol', ptol)
+      call log_setting('p2v_factor', p2v_factor)
+      call log_setting('ntrials_vec', ntrials_vec)
+      call log_setting('ntrials_lin', ntrials_lin)
+      call log_setting('vec_tol', vec_tol)
+      call log_setting('lin_tol', lin_tol)
+      call log_setting('adj_tol', adj_tol)
+      call log_setting('eps0', eps0)
+      call log_setting('taylor_tol', taylor_tol)
+      call log_setting('taylor_min_order', taylor_min_order)
+      call log_nek_parameters()
+      end subroutine log_settings
 
       end module unit_tests_rbc

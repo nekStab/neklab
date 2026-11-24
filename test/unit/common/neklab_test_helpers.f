@@ -6,6 +6,10 @@ c
 c           include 'neklab_test_helpers.f'
 c
 c     Fixed-form source, like the .usr itself.
+c
+c     Besides the check/report helpers, it logs what a run used, so every
+c     log (lightkrylov.log and the Nek logfile) records its own setup:
+c        log_section('title'), log_setting(name, value)  -- one per setting
 c-----------------------------------------------------------------------
       module neklab_test_helpers
       use LightKrylov, only: dp
@@ -15,6 +19,12 @@ c-----------------------------------------------------------------------
 
       public :: check, report, check_linop, check_taylor
       public :: tests_completed
+      public :: log_section, log_setting
+
+      interface log_setting
+         module procedure log_setting_r, log_setting_i
+         module procedure log_setting_l, log_setting_c
+      end interface
 
       contains
 
@@ -65,8 +75,7 @@ c     one value for measured_values.json
       character(len=*), intent(in) :: key
       real(dp), intent(in) :: value
       character(len=512) :: msg
-      write(msg, '(A,A40,2X,ES15.5)') 'NEKLAB_RESULT ',
-     &                                padr(trim(key), 40), value
+      write(msg, '(A,A40,2X,ES15.5)') 'NEKLAB_RESULT ', padr(trim(key), 40), value
       call nek_log_message(msg, procedure='main')
       end subroutine report
 
@@ -95,7 +104,6 @@ c       adjoint consistency against a_tol (only if with_adjoint)
          chk = maxerr(4) <= a_tol
          call check(trim(name)//'.adjoint', chk, tol=a_tol, info=msg)
       end if
-      call check('GLOBAL : '//name, ok)
       call nek_log_message('')
       end subroutine check_linop
 
@@ -129,5 +137,47 @@ c     end marker the harness waits for, then stop Nek
       call nek_log_message('############################', procedure='main')
       call nek_end()
       end subroutine tests_completed
+
+c=======================================================================
+c     LOGGING OF THE SETUP
+c=======================================================================
+
+      subroutine log_section(title)
+      character(len=*), intent(in) :: title
+      call nek_log_message('')
+      call nek_log_message('---- '//trim(title)//' ----', procedure='setup')
+      end subroutine log_section
+
+      subroutine log_setting_r(name, value)
+      character(len=*), intent(in) :: name
+      real(dp), intent(in) :: value
+      character(len=256) :: msg
+      write(msg, '(2X,A,T30,"= ",ES14.6)') name, value
+      call nek_log_message(msg, procedure='setup')
+      end subroutine log_setting_r
+
+      subroutine log_setting_i(name, value)
+      character(len=*), intent(in) :: name
+      integer, intent(in) :: value
+      character(len=256) :: msg
+      write(msg, '(2X,A,T30,"= ",I14)') name, value
+      call nek_log_message(msg, procedure='setup')
+      end subroutine log_setting_i
+
+      subroutine log_setting_l(name, value)
+      character(len=*), intent(in) :: name
+      logical, intent(in) :: value
+      character(len=256) :: msg
+      write(msg, '(2X,A,T30,"= ",L14)') name, value
+      call nek_log_message(msg, procedure='setup')
+      end subroutine log_setting_l
+
+      subroutine log_setting_c(name, value)
+      character(len=*), intent(in) :: name
+      character(len=*), intent(in) :: value
+      character(len=256) :: msg
+      write(msg, '(2X,A,T30,"= ",A14)') name, "'"//trim(value)//"'"
+      call nek_log_message(msg, procedure='setup')
+      end subroutine log_setting_c
 
       end module neklab_test_helpers

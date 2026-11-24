@@ -1,6 +1,6 @@
 [GENERAL]
 stopAt = endTime
-endTime = 0.05
+endTime = 0.1
 
 userParam05 = 1.0 # Pr
 userParam06 = 1900.0 # > 1707.762
@@ -24,7 +24,7 @@ filterCutoffRatio = 0.84
 [VELOCITY]
 viscosity = 1.0
 residualtol = 1.0E-10
-residualproj = no
+residualproj = yes
 density = 1.0
 
 [PRESSURE]
