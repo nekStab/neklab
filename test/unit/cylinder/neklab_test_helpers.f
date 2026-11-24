@@ -1,1 +1,1 @@
-../common/neklab_test_helpers.f
+../../common/neklab_test_helpers.f

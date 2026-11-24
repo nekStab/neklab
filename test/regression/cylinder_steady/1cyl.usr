@@ -1,0 +1,191 @@
+      include 'neklab_test_helpers.f'
+c-----------------------------------------------------------------------
+      subroutine userchk
+      use neklab 
+      use neklab_test_helpers
+      include "SIZE"
+      include "TOTAL"
+
+      ! System for which we seek a fixed point
+      type(nek_system), allocatable :: sys
+      ! State vectors
+      type(nek_dvector), allocatable :: bf, eps
+      ! Tolerance for the Newton solver
+      real(dp) :: tol, bfnorm
+      logical  :: was_fixed_point
+
+      !----------------------------------------
+      ! Test parameters
+      !----------------------------------------
+      real(dp) :: newton_tol  = 1.0e-6_dp
+      integer  :: tol_mode    = 2
+      logical  :: if_load_BF  = .true.       ! full: .false.
+      real(dp) :: noise_level = 5.0e-6_dp    ! full: 0.0_dp
+      
+      if (istep.eq.0) then
+         allocate(bf, eps)
+         
+         if (if_load_BF) then
+            ! Load reference solution from file
+            call load_fld('BF.fld')
+         end if
+         
+         ! Set initial guess for the fixed point
+         call nek2vec(bf, vx, vy, vz, pr, t)
+
+         ! Add small noise to the initial guess
+         if (noise_level > 0.0_dp) then
+            call eps%rand(ifnorm=.true.)
+            call bf%axpby(noise_level, eps, 1.0_dp)
+         end if
+         
+         ! Define system
+         sys = nek_system()
+         sys%jacobian = nek_jacobian()
+         sys%jacobian%X = bf
+         call sys%init(cfl_limit = 0.5_dp)
+			
+         ! Set Newton tolerance
+         tol = newton_tol
+         
+         ! Compute fixed point
+         call newton_fixed_point_iteration(sys, bf, tol, 
+     &                     tol_mode             = tol_mode, 
+     &                     input_is_fixed_point = was_fixed_point)
+
+         ! checks
+         call check('newton_fp.started_off_fixed_point', .not. was_fixed_point)
+         bfnorm = bf%norm()
+         call report('bf_norm', bfnorm)
+         call load_fld('BF.fld')
+         call nek2vec(eps, vx, vy, vz, pr, t)
+         call bf%sub(eps)
+         bfnorm = bf%norm()
+         call report('bf_error', bfnorm)
+         call check('newton_fp.residual_norm', bfnorm < newton_tol)
+
+         ! Outpost baseflow
+         call outpost_dnek(bf, "BF_")
+
+         call tests_completed()
+      end if
+
+      return
+      end
+c----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      use LightKrylov_Logger
+      include 'SIZE'
+      include 'TOTAL'
+      integer iel,ifc
+      
+      !this mesh was generatd with genbox
+      !with only BCs for velicity
+      !here we chenge outflow to dirichlet if adjoint
+      !and initilize BCs for scalar field
+
+      if(uparam(1)==3.2)then !if adjoint, change BCs
+      do iel=1,nelt
+      do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
+      enddo
+      enddo
+      endif
+
+      if(ifheat)then
+      cbc(:,:,2)=cbc(:,:,1)
+      do iel=1,nelt
+       do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+      enddo
+      enddo
+      endif
+
+      ! Setup logger
+      call logger_setup(nio=0, log_level=lk_information_level, log_stdout=.false., log_timestamp=.true.)
+      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end
