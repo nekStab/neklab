@@ -52,6 +52,14 @@
                write(msg,'(A,ES15.8)') "Set pressure tolerance from .par: ", opts%vtol
                call nek_log_message(msg, this_module, this_procedure)
             end if
+
+            if (present(recompute_dt)) then
+               opts%recompute_dt = recompute_dt
+               call nek_log_message("Set recompute_dt", this_module, this_procedure)
+            else
+               opts%recompute_dt = .true.
+               call nek_log_message("Set recompute_dt to default (.true.)", this_module, this_procedure)
+            end if
             
          ! For the baseflow field for dt/nsteps/cfl computation.
             call vec2nek(vx, vy, vz, pr, t, self%baseflow)
@@ -61,7 +69,7 @@
      &                               solve_temperature = .false.,
      &                               silent            = .true.,
      &                               endtime           = self%tau,
-     &                               recompute_dt      = .true.,
+     &                               recompute_dt      = opts%recompute_dt,
      &                               cfl_limit         = opts%cfl_limit,
      &                               vtol              = opts%vtol,
      &                               ptol              = opts%ptol)

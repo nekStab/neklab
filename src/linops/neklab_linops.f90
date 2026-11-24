@@ -34,6 +34,7 @@
             real(kind=dp) :: p2v_factor        = 0.0_dp
             real(kind=dp) :: ptol_min_par      = 0.0_dp
             real(kind=dp) :: vtol_min_par      = 0.0_dp
+            logical       :: recompute_dt      = .true.
             logical       :: is_set            = .false.
          end type nek_linop_settings
       
@@ -56,12 +57,13 @@
       
       ! --> Type-bound procedures: exponential_propagator.f90
          interface
-            module subroutine init_exptA(self, bf, cfl_limit, ptol, p2v_factor, silent)
+            module subroutine init_exptA(self, bf, cfl_limit, ptol, p2v_factor, recompute_dt, silent)
                class(exptA_linop), intent(inout) :: self
                type(nek_dvector), optional, intent(in) :: bf
                real(kind=dp), optional, intent(in) :: cfl_limit
                real(kind=dp), optional, intent(in) :: ptol
                real(kind=dp), optional, intent(in) :: p2v_factor
+               logical, optional, intent(in) :: recompute_dt
                logical, optional, intent(in) :: silent
             end subroutine
       
@@ -109,12 +111,13 @@
       
       ! --> Type-bound procedures: exponential_propagator_temp.f90
          interface
-            module subroutine init_exptA_temp(self, bf, cfl_limit, ptol, p2v_factor, silent)
+            module subroutine init_exptA_temp(self, bf, cfl_limit, ptol, p2v_factor, recompute_dt, silent)
                class(exptA_temp_linop), intent(inout) :: self
                type(nek_dvector), optional, intent(in) :: bf
                real(kind=dp), optional, intent(in) :: cfl_limit
                real(kind=dp), optional, intent(in) :: ptol
                real(kind=dp), optional, intent(in) :: p2v_factor
+               logical, optional, intent(in) :: recompute_dt
                logical, optional, intent(in) :: silent
             end subroutine
       
@@ -161,13 +164,14 @@
       
       ! --> Type-bound procedures: resolvent.f90
          interface
-            module subroutine init_resolvent(self, bf, omega, cfl_limit, ptol, p2v_factor, silent)
+            module subroutine init_resolvent(self, bf, omega, cfl_limit, ptol, p2v_factor, recompute_dt, silent)
                class(resolvent_linop), intent(inout) :: self
                type(nek_dvector), optional, intent(in) :: bf
                real(kind=dp), optional, intent(in) :: omega
                real(kind=dp), optional, intent(in) :: cfl_limit
                real(kind=dp), optional, intent(in) :: ptol
                real(kind=dp), optional, intent(in) :: p2v_factor
+               logical, optional, intent(in) :: recompute_dt
                logical, optional, intent(in) :: silent
             end subroutine
 

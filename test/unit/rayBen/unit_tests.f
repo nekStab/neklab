@@ -90,7 +90,7 @@ c=======================================================================
 
       ! ---- exponential propagator with temperature
       exptA = exptA_temp_linop(tau = tau, baseflow = bf)
-      call exptA%init(cfl_limit=cfl_limit, ptol=ptol, p2v_factor=p2v_factor)
+      call exptA%init(cfl_limit=cfl_limit, ptol=ptol, p2v_factor=p2v_factor, recompute_dt=.false.)
 
       this_test = 'exptA_temp_linop.axioms'
       ok = verify_linop_axioms(exptA, bf,
@@ -108,7 +108,7 @@ c=======================================================================
       sys = nek_temp_system()
       sys%jacobian = nek_temp_jacobian()
       sys%jacobian%X = bf
-      call sys%init(cfl_limit=cfl_limit, p2v_factor=p2v_factor, newton_tol_factor=0.1_dp)
+      call sys%init(cfl_limit=cfl_limit, p2v_factor=p2v_factor, newton_tol_factor=0.1_dp, recompute_dt=.false.)
 
       this_test = 'nek_temp_system.linearization'
       call verify_system_linearization(sys,

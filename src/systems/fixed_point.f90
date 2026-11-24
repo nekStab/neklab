@@ -39,6 +39,14 @@
                call nek_log_message(msg, this_module, this_procedure)
             end if
 
+            if (present(recompute_dt)) then
+               opts%recompute_dt = recompute_dt
+               call nek_log_message("Set recompute_dt", this_module, this_procedure)
+            else
+               opts%recompute_dt = .true.
+               call nek_log_message("Set recompute_dt to default (.true.)", this_module, this_procedure)
+            end if
+
             opts%is_set = .true.
          end associate
          end procedure
