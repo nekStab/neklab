@@ -56,7 +56,7 @@ class CylinderNewtonFull(FullTest):
    With --update-references: writes bf_norm to values.json and the converged
    base flow as BF_ref.fld, which CylinderNewtonFast starts from.
    """
-   case_dir = "regression/cylinder_steady"
+   case_dir = "regression/cylinder_steady_newton"
    case_name = "1cyl"
    settings_source = "1cyl.usr"
    reference = "cylinder/newton_fp"

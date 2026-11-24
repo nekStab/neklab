@@ -102,7 +102,7 @@ class CylinderNewtonFast(FastTest):
    The .usr loads BF.fld, adds noise_level*||BF|| of random noise, reconverges,
    and loads BF.fld again to print the error of the result against it.
    """
-   case_dir = "regression/cylinder_steady"
+   case_dir = "regression/cylinder_steady_newton"
    case_name = "1cyl"
    settings_source = "1cyl.usr"
    reference = "cylinder/newton_fp"

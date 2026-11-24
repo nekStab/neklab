@@ -11,7 +11,7 @@ c-----------------------------------------------------------------------
       ! State vectors
       type(nek_dvector), allocatable :: bf, eps
       ! Tolerance for the Newton solver
-      real(dp) :: tol, bfnorm
+      real(dp) :: tol, bfnorm, refnorm
       logical  :: was_fixed_point
 
       !----------------------------------------
@@ -59,8 +59,9 @@ c-----------------------------------------------------------------------
          call report('bf_norm', bfnorm)
          call load_fld('BF.fld')
          call nek2vec(eps, vx, vy, vz, pr, t)
+         refnorm = eps%norm()
          call bf%sub(eps)
-         bfnorm = bf%norm()
+         bfnorm = bf%norm()/refnorm
          call report('bf_error', bfnorm)
          call check('newton_fp.residual_norm', bfnorm < newton_tol)
 
