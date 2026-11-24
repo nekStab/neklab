@@ -46,9 +46,9 @@ class CylinderPeriodicOrbit(UnitTest):
    """
    case = CYLINDER
    group = 3
-   settings = {"test_adjoint": False}
+   settings = {"test_adjoint": True}
    checks = [
       "nek_ext_dvector.axioms",
       "nek_upo_system.linearization",
-      *linop("nek_upo_system%jacobian.axioms", adjoint=False),
+      *linop("nek_upo_system%jacobian.axioms", adjoint=True),
    ]
