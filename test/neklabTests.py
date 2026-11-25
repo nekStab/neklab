@@ -28,13 +28,16 @@ sys.path.insert(0, str(HERE))
 
 from lib.neklabTestCase import NeklabTestCase, LEVELS
 
+# Where the tests of each level are defined: a package, every file of which is read.
+SUITES = {"unit": "suites.unit", "fast": "suites.regression", "full": "suites.regression"}
+
 
 def level_modules(level):
-   """suites/<level>.py, or every file of the package suites/<level>/."""
-   module = importlib.import_module(f"suites.{level}")
+   """The package of the level and every file in it."""
+   module = importlib.import_module(SUITES[level])
    yield module
    for info in pkgutil.iter_modules(getattr(module, "__path__", [])):
-      yield importlib.import_module(f"suites.{level}.{info.name}")
+      yield importlib.import_module(f"{SUITES[level]}.{info.name}")
 
 
 def find_tests(levels, patterns):
@@ -50,7 +53,9 @@ def find_tests(levels, patterns):
                   name = f"{cls.__name__}.{method}"
                   if not patterns or any(p.lower() in name.lower() for p in patterns):
                      tests.append((cls, method))
-   return tests
+   # an analysis after the ones it needs, full before fast (fast starts from full's fields)
+   order = {"unit": 0, "full": 1, "fast": 2}
+   return sorted(tests, key=lambda t: (getattr(t[0], "depth", 0), order.get(t[0].level, 9)))
 
 
 def raise_stack_limit():
