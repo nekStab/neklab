@@ -1,0 +1,191 @@
+c-----------------------------------------------------------------------
+c     UNIT TEST -- 2D cylinder, resolvent
+c
+c     nek_zvector and resolvent_linop, on the steady base flow BF.fld.
+c
+c     NOT AVAILABLE YET: the run logs its settings and stops before any
+c     check (the test is skipped in suites/unit/cylinder.py). Remove the
+c     two lines marked below once the resolvent works.
+c
+c     Settings: the initialised variables at the top of userchk. The test
+c     harness (suites/unit/cylinder.py) edits them in its scratch copy.
+c-----------------------------------------------------------------------
+      include 'neklab_test_helpers.f'
+c-----------------------------------------------------------------------
+      subroutine userchk
+      use LightKrylov
+      use neklab
+      use neklab_test_helpers
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+c     ---- Settings -----------------------------------------------------
+      character(len=128) :: base_flow = 'BF.fld'
+      logical  :: test_zero_map    = .true.     ! test zero invariant map
+      logical  :: test_adjoint     = .true.     ! test adjoint compatibility
+      logical  :: verb             = .true.     ! verbose output
+      real(dp) :: omega            = 8.0_dp*atan(1.0_dp)/0.1_dp ! frequency
+      real(dp) :: cfl_limit        = 0.4_dp
+      real(dp) :: ptol             = 1.0e-08_dp ! pressure tolerance
+      real(dp) :: p2v_factor       = 0.01_dp    ! vtol = ptol*p2v_factor
+      integer  :: ntrials_vec      = 10         ! vector axioms (cheap)
+      real(dp) :: vec_tol          = 1.0e-11_dp ! vector axioms
+      real(dp) :: lin_tol_res      = 1.0e-4_dp  ! resolvent (GMRES tol.)
+      real(dp) :: adj_tol          = 1.0e-2_dp  ! operator axioms
+c     -------------------------------------------------------------------
+
+      type(nek_dvector),     allocatable :: bf
+      type(nek_zvector),     allocatable :: zvec
+      type(resolvent_linop), allocatable :: resolvent
+      real(dp) :: maxerr(4)
+      logical  :: ok
+      character(len=128) :: this_test
+
+c     ---- what this run uses, in the log
+      call log_section('unit test settings (cylinder_resolvent)')
+      call log_setting('base_flow', base_flow)
+      call log_setting('test_zero_map', test_zero_map)
+      call log_setting('test_adjoint', test_adjoint)
+      call log_setting('verb', verb)
+      call log_setting('omega', omega)
+      call log_setting('cfl_limit', cfl_limit)
+      call log_setting('ptol', ptol)
+      call log_setting('p2v_factor', p2v_factor)
+      call log_setting('ntrials_vec', ntrials_vec)
+      call log_setting('vec_tol', vec_tol)
+      call log_setting('lin_tol_res', lin_tol_res)
+      call log_setting('adj_tol', adj_tol)
+
+      ! ---- NOT AVAILABLE YET (remove these two lines to enable the test)
+      call nek_log_message('Currently not available. Exiting.', procedure='userchk')
+      call nek_end()
+
+      allocate(bf, zvec)
+
+      ! ---- base flow
+      call load_fld(trim(base_flow))
+      call nek2vec(bf, vx, vy, vz, pr, t)
+
+      ! ---- nek_zvector
+      this_test = 'nek_zvector.axioms'
+      call zvec%zero()
+      ok = verify_vector_axioms(zvec,
+     &                      ntrials          = ntrials_vec,
+     &                      tolerance        = vec_tol,
+     &                      verbose          = verb)
+      call check(this_test, ok)
+
+      ! ---- resolvent operator
+      resolvent = resolvent_linop(omega=omega, baseflow=bf)
+      call resolvent%init(bf=bf, omega=omega, cfl_limit=cfl_limit,
+     &                    ptol=ptol, p2v_factor=p2v_factor)
+
+      this_test = 'resolvent_linop.axioms'
+      ok = verify_linop_axioms(resolvent, zvec,
+     &                      ntrials          = 1,
+     &                      tolerance        = lin_tol_res,
+     &                      adj_tolerance    = adj_tol,
+     &                      test_zero_map    = test_zero_map,
+     &                      test_adjoint     = test_adjoint,
+     &                      verbose          = verb,
+     &                      stop_on_failure  = .false.,
+     &                      max_errors       = maxerr)
+      call check_linop(this_test, ok, maxerr, test_adjoint, lin_tol_res,
+     &                 adj_tol)
+
+      call tests_completed()
+      end
+c----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      use LightKrylov_Logger
+      include 'SIZE'
+      include 'TOTAL'
+      integer iel,ifc
+
+      call logger_setup(nio=0, log_level=lk_information_level, log_stdout=.true., log_timestamp=.true.)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end

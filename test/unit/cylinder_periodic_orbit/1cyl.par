@@ -1,0 +1,28 @@
+[GENERAL]
+stopAt = endTime
+endTime = 0.1
+
+userparam01 = 1.0 # fixed point, 2.0: resolvent, 3.0: periodic orbit
+
+dt = 0.1
+variableDt = no
+timeStepper = bdf3
+targetCFL = 0.5
+
+writeControl = runTime
+writeInterval = 100.
+writeDoublePrecision = no
+
+dealiasing = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.0E-8
+residualProj = yes
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.0E-10
+residualProj = yes
+density = 1.0
+viscosity = -100.0
