@@ -85,7 +85,9 @@ c     ---- what this run uses, in the log
       sys_upo = nek_upo_system()
       sys_upo%jacobian = nek_upo_jacobian()
       sys_upo%jacobian%X = x0
-      call sys_upo%init(cfl_limit=cfl_limit, p2v_factor=p2v_factor, newton_tol_factor=0.1_dp)
+      call sys_upo%init(cfl_limit            = cfl_limit,
+     &                      p2v_factor       = p2v_factor,
+     &                      newton_tol_factor= 0.1_dp)
 
       this_test = 'nek_upo_system.linearization'
       call verify_system_linearization(sys_upo,
@@ -107,8 +109,7 @@ c     ---- what this run uses, in the log
      &                      verbose          = verb,
      &                      stop_on_failure  = .false.,
      &                      max_errors       = maxerr)
-      call check_linop(this_test, ok, maxerr, test_adjoint, lin_tol,
-     &                 adj_tol)
+      call check_linop(this_test, ok, maxerr, test_adjoint, lin_tol, adj_tol)
 
       call tests_completed()
       end

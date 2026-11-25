@@ -1,7 +1,6 @@
 [GENERAL]
 startFrom = 0
 stopAt = endtime
-#numSteps = 1000
 endTime = 1.0
 
 dt = 0.009
@@ -14,9 +13,6 @@ writeInterval = 20
 writeDoublePrecision = yes
 
 dealiasing = yes
-#filtering = explicit
-#filterWeight = 0.01
-#filterCutoffRatio = 0.84
 
 [PROBLEMTYPE]
 equation = incompNS

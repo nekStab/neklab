@@ -1,0 +1,217 @@
+      include 'neklab_test_helpers.f'
+c-----------------------------------------------------------------------
+      subroutine userchk
+      use neklab 
+      use neklab_test_helpers
+      include "SIZE"
+      include "TOTAL"
+
+      ! Linear operator
+      type(exptA_linop), allocatable :: exptA
+      ! State vectors
+      type(nek_dvector), allocatable :: bf, x0
+      ! Eigenvectors
+      type(nek_zvector), allocatable :: eigvecs(:)
+      complex(dp), allocatable :: eigvals(:)
+      real(dp), allocatable :: residuals(:)
+      integer :: info
+      
+      !----------------------------------------
+      ! Test parameters
+      !----------------------------------------
+      integer :: kdim = 128
+      integer :: nev  = 1           ! full: 2
+      logical :: load_x0 = .true.   ! full: .false.
+
+      if (istep.eq.0) then
+         allocate(bf, x0, eigvecs(nev))
+         
+         ! Load baseflow
+         call load_fld('BF.fld U P T')
+         call nek2vec(bf, vx, vy, vz, pr, t)
+
+         ! Exponential propagator.
+         exptA = exptA_linop(tau=1.0_dp, baseflow=bf)
+         call exptA%init()
+
+         call nek_log_message('!------------------|', 'main')
+         call nek_log_message('!      DIRECT      |', 'main')
+         call nek_log_message('!------------------|', 'main')
+
+         ! Pick naming convention
+         file_prefix = "dir"
+
+         if (load_x0) then
+            ! Load initial guess
+            call load_fld('x0r.fld U P T')
+            call nek2vec(x0%re, vx, vy, vz, pr, t)
+            call load_fld('x0i.fld U P T')
+            call nek2vec(x0%im, vx, vy, vz, pr, t)
+            
+            ! Stability analysis.
+            call eigs(exptA, eigvecs, eigvals, residuals, info, kdim=kdim, x0=x0, write_intermediate=.true.)
+         else
+            ! Stability analysis.
+            call eigs(exptA, eigvecs, eigvals, residuals, info, kdim=kdim, write_intermediate=.true.)
+         end if
+
+         ! Transform eigenspectrum to continuous-time representation.
+         eigvals = log(eigvals)/exptA%tau
+         ! Export eigenfunctions to disk.
+         call outpost_nek(eigvecs(:nev), file_prefix)
+         ! rename eigs
+         call rename('eigs_output.txt', file_prefix//'_eigs_output.txt')
+
+         call nek_log_message('!------------------|', 'main')
+         call nek_log_message('!      ADJOINT     |', 'main')
+         call nek_log_message('!------------------|', 'main')
+
+         ! Pick naming convention
+         file_prefix = "adj"
+
+         if (load_x0) then
+            ! Load initial guess
+            call load_fld('y0r.fld U P T')
+            call nek2vec(x0%re, vx, vy, vz, pr, t)
+            call load_fld('y0i.fld U P T')
+            call nek2vec(x0%im, vx, vy, vz, pr, t)
+            
+            ! Stability analysis.
+            call eigs(exptA, eigvecs, eigvals, residuals, info, kdim=kdim, x0=x0, transpose=.true., write_intermediate=.true.)
+         else
+            ! Stability analysis.
+            call eigs(exptA, eigvecs, eigvals, residuals, info, kdim=kdim, transpose=.true., write_intermediate=.true.)
+         end if
+
+         ! Transform eigenspectrum to continuous-time representation.
+         eigvals = log(eigvals)/exptA%tau
+         ! Export eigenfunctions to disk.
+         call outpost_nek(eigvecs(:nev), file_prefix)
+         ! rename eigs
+         call rename('eigs_output.txt', file_prefix//'_eigs_output.txt')
+
+         ! checks
+         
+
+         call tests_completed()
+      end if
+
+      return
+      end
+c----------------------------------------------------------------------
+      subroutine userf (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0d0
+      ffy = 0.0d0
+      ffz = 0.0d0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux=1.0d0
+         uy=0.0d0
+         uz=0.0d0
+         temp=0.0d0
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer e
+
+      if (JP.eq.0) then         ! velocity
+         e  = gllel(ieg)
+         ux = 1.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp=0.0d0
+
+      else                      ! perturbation
+         ux = 0.0d0
+         uy = 0.0d0
+         uz = 0.0d0
+         temp = 0.0d0
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff = 0.0d0
+      utrans = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol = 0.0d0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      use LightKrylov_Logger
+      include 'SIZE'
+      include 'TOTAL'
+      integer iel,ifc
+      
+      !this mesh was generatd with genbox
+      !with only BCs for velicity
+      !here we chenge outflow to dirichlet if adjoint
+      !and initilize BCs for scalar field
+
+      if(uparam(1)==3.2)then !if adjoint, change BCs
+      do iel=1,nelt
+      do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
+      enddo
+      enddo
+      endif
+
+      if(ifheat)then
+      cbc(:,:,2)=cbc(:,:,1)
+      do iel=1,nelt
+       do ifc = 1, 2*ndim
+        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
+        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
+      enddo
+      enddo
+      endif
+
+      ! Setup logger
+      call logger_setup(nio=0, log_level=lk_information_level, log_stdout=.false., log_timestamp=.true.)
+      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      return
+      end

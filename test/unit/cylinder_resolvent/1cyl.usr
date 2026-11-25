@@ -78,8 +78,11 @@ c     ---- what this run uses, in the log
 
       ! ---- resolvent operator
       resolvent = resolvent_linop(omega=omega, baseflow=bf)
-      call resolvent%init(bf=bf, omega=omega, cfl_limit=cfl_limit,
-     &                    ptol=ptol, p2v_factor=p2v_factor)
+      call resolvent%init(bf                 = bf, 
+     &                      omega            = omega,
+     &                      cfl_limit        = cfl_limit,
+     &                      ptol             = ptol, 
+     &                      p2v_factor       = p2v_factor)
 
       this_test = 'resolvent_linop.axioms'
       ok = verify_linop_axioms(resolvent, zvec,
@@ -91,8 +94,7 @@ c     ---- what this run uses, in the log
      &                      verbose          = verb,
      &                      stop_on_failure  = .false.,
      &                      max_errors       = maxerr)
-      call check_linop(this_test, ok, maxerr, test_adjoint, lin_tol_res,
-     &                 adj_tol)
+      call check_linop(this_test, ok, maxerr, test_adjoint, lin_tol_res, adj_tol)
 
       call tests_completed()
       end
