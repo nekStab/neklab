@@ -1,23 +1,28 @@
-"""Unit tests on the 2D cylinder: test/unit/cylinder/ (1cyl.par, 1cyl.usr, unit_tests.f)."""
-from lib.neklabUnit import Case, UnitTest, linop
+"""Unit tests on the 2D cylinder: one case folder per test in test/unit/.
 
-CYLINDER = Case(
-   folder="unit/cylinder",
-   name="1cyl",
-   par={
+   cylinder_fixed_point/      on BF.fld        vectors, exptA, nek_system + Jacobian
+   cylinder_resolvent/        on BF.fld        resolvent (skipped: not available yet)
+   cylinder_periodic_orbit/   on snapshot.fld  extended vector, UPO system + Jacobian
+
+Each folder has its own 1cyl.usr with the checks written in userchk; the
+mesh, SIZE, the fields and neklab_test_helpers.f are symlinks to test/unit/common/.
+"""
+from lib.neklabUnit import UnitTest, linop
+
+
+class CylinderUnitTest(UnitTest):
+   """What the cylinder tests share (not a test itself: it has no folder)."""
+   name = "1cyl"
+   par = {
       "GENERAL":  {"endTime": 0.1},
-      # residual projection makes each solve depend on the previous ones,
-      # so the operators would not be exactly linear
       "PRESSURE": {"residualProj": "yes"},
       "VELOCITY": {"residualProj": "yes"},
-   },
-)
+   }
 
 
-class CylinderFixedPoint(UnitTest):
+class CylinderFixedPoint(CylinderUnitTest):
    """Vectors, exptA, nek_system and its Jacobian, on the steady base flow BF.fld."""
-   case = CYLINDER
-   group = 1
+   folder = "cylinder_fixed_point"
    checks = [
       "nek_dvector.axioms",
       "nek_zvector.axioms",
@@ -27,28 +32,26 @@ class CylinderFixedPoint(UnitTest):
    ]
 
 
-class CylinderResolvent(UnitTest):
+class CylinderResolvent(CylinderUnitTest):
    """Resolvent operator, on BF.fld."""
-   case = CYLINDER
-   group = 2
+   folder = "cylinder_resolvent"
    checks = [
       "nek_zvector.axioms",
       *linop("resolvent_linop.axioms"),
    ]
-   skip = "test_resolvent in unit_tests.f exits at once ('Currently not available')"
+   skip = "resolvent not available yet: the .usr stops before its checks"
 
 
-class CylinderPeriodicOrbit(UnitTest):
+class CylinderPeriodicOrbit(CylinderUnitTest):
    """Extended vector, UPO system and its Jacobian, on the unsteady snapshot.fld.
 
-   No adjoint check: off a converged orbit jac_adjoint_map is not the transpose
-   of jac_direct_map, so it would fail by construction.
+   The snapshot is not on a periodic orbit, so jac_adjoint_map is only close
+   to the transpose of jac_direct_map; with the short guessed period the
+   adjoint check passes within adj_tol (see the header of the .usr).
    """
-   case = CYLINDER
-   group = 3
-   settings = {"test_adjoint": True}
+   folder = "cylinder_periodic_orbit"
    checks = [
       "nek_ext_dvector.axioms",
       "nek_upo_system.linearization",
-      *linop("nek_upo_system%jacobian.axioms", adjoint=True),
+      *linop("nek_upo_system%jacobian.axioms"),
    ]

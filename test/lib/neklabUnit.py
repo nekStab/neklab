@@ -1,8 +1,10 @@
 """What a unit test definition is built from (used by suites/unit/*.py).
 
-A unit test runs one group of checks of a case folder and passes if every
-check the driver reports passes and the driver gets to its end. See
-suites/unit/__init__.py for how to add one.
+A unit test is one complete case folder test/unit/<folder>/ with its own
+.usr: the checks are written directly in userchk, and the settings are the
+initialised variables at its top. The test passes if every check the run
+reports passes, every name in `checks` is reported and the run reaches
+tests_completed(). See suites/unit/__init__.py for how to add one.
 """
 import unittest
 from dataclasses import dataclass, field
@@ -12,18 +14,22 @@ from lib.neklabTestCase import NeklabTestCase
 
 @dataclass(frozen=True)
 class Case:
-   """A case folder in test/unit/ and what all of its tests share."""
+   """A case folder and what all of its analyses share.
 
-   folder: str                                   # relative to test/, e.g. "unit/cylinder"
+   Only used by lib/neklabRegression.py; the unit tests have one folder each.
+   """
+
+   folder: str                                   # relative to test/, e.g. "regression/cylinder_steady"
    name: str                                     # basename of the .usr/.par/.re2 files
-   par: dict = field(default_factory=dict)       # .par changes for every test of the case
-   settings: dict = field(default_factory=dict)  # unit_tests.f settings for every test
-   group_key: str = "userParam01"                # .par key read by run_tests(group)
+   par: dict = field(default_factory=dict)       # .par changes for every analysis of the case
+   settings: dict = field(default_factory=dict)  # settings for every analysis
+   group_key: str = "userParam01"                # .par key for Analysis.group
 
 
 def linop(name, adjoint=True):
    """The check names that check_linop prints for one linear operator."""
    return ([f"{name}.linearity"] + ([f"{name}.adjoint"] if adjoint else []))
+
 
 def merged(*dicts):
    """Merge nested dicts left to right: merged({"A": {"x": 1}}, {"A": {"y": 2}})."""
@@ -35,33 +41,36 @@ def merged(*dicts):
 
 
 class UnitTest(NeklabTestCase):
-   """Base of the definitions: a test is a Case, a group and the expected checks."""
+   """Base of the definitions: a test is a folder, its .usr and the expected checks.
 
-   abstract = True
+   A class without `folder` is not a test; use one to share `name` and `par`
+   between the tests of a case (see suites/unit/cylinder.py).
+   """
+
    level = "unit"
 
    # --- what a definition sets ----------------------------------------------------
-   case = None          # Case
-   group = None         # number passed to run_tests() in the case's unit_tests.f
-   checks = ()          # check names the driver must report
-   par = {}             # .par changes for this test (on top of case.par)
-   settings = {}        # unit_tests.f settings for this test (on top of case.settings)
-   size = {}            # SIZE changes (full rebuild)
+   folder = None        # case folder in test/unit/, e.g. "cylinder_fixed_point"
+   name = None          # basename of its .usr/.par/.re2 files, e.g. "1cyl"
+   checks = ()          # check names the run must report
+   par = {}             # .par changes
+   settings = {}        # changes to the settings at the top of userchk in <name>.usr
+   size = {}            # SIZE changes
    skip = None          # reason to skip this test, or None
 
    completed = "tests completed"     # printed by tests_completed() at the end of a run
 
    def __init_subclass__(cls, **kwargs):
       super().__init_subclass__(**kwargs)
-      if cls.case is not None:
-         cls.case_dir, cls.case_name = cls.case.folder, cls.case.name
+      if cls.folder:
+         cls.case_dir = f"unit/{cls.folder}"
+         cls.case_name = cls.name
+         cls.settings_source = f"{cls.name}.usr"
       if cls.skip:
          cls.test_checks = unittest.skip(cls.skip)(cls.test_checks)
 
    def prepare(self):
-      group = {"GENERAL": {self.case.group_key: self.group}} if self.group is not None else {}
-      self.par_values = merged(self.case.par, group, self.par)
-      self.settings = merged(self.case.settings, type(self).settings)
+      self.par_values = self.par
       self.size_params = self.size
       super().prepare()
 
