@@ -78,7 +78,7 @@ c     ---- what this run uses, in the log
 
       ! ---- resolvent operator
       resolvent = resolvent_linop(omega=omega, baseflow=bf)
-      call resolvent%init(bf                 = bf, 
+      call resolvent%init(  bf               = bf, 
      &                      omega            = omega,
      &                      cfl_limit        = cfl_limit,
      &                      ptol             = ptol, 

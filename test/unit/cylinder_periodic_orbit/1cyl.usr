@@ -85,7 +85,7 @@ c     ---- what this run uses, in the log
       sys_upo = nek_upo_system()
       sys_upo%jacobian = nek_upo_jacobian()
       sys_upo%jacobian%X = x0
-      call sys_upo%init(cfl_limit            = cfl_limit,
+      call sys_upo%init(    cfl_limit        = cfl_limit,
      &                      p2v_factor       = p2v_factor,
      &                      newton_tol_factor= 0.1_dp)
 

@@ -108,7 +108,9 @@ c     ---- what this run uses, in the log
       sys = nek_system()
       sys%jacobian = nek_jacobian()
       sys%jacobian%X = bf
-      call sys%init(cfl_limit=cfl_limit, p2v_factor=p2v_factor, newton_tol_factor=0.1_dp)
+      call sys%init(       cfl_limit         = cfl_limit, 
+     &                     p2v_factor        = p2v_factor,
+     &                     newton_tol_factor = 0.1_dp)
 
       this_test = 'nek_system.linearization'
       call verify_system_linearization(sys,
