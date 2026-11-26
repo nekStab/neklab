@@ -1,7 +1,17 @@
+c-----------------------------------------------------------------------
+c     REGRESSION -- 2D cylinder, Newton for the steady base flow
+c
+c     full: from useric (if_load_BF = .false., noise_level = 0)
+c     fast: from BF.fld + noise (the defaults below)
+c
+c     Reports bf_norm, and bf_error against ref_BF.fld when the harness
+c     provided it (not on the first --update-references). Writes the
+c     converged base flow as BF_1cyl0.f00001.
+c-----------------------------------------------------------------------
       include 'neklab_test_helpers.f'
 c-----------------------------------------------------------------------
       subroutine userchk
-      use neklab 
+      use neklab
       use neklab_test_helpers
       include "SIZE"
       include "TOTAL"
@@ -12,7 +22,7 @@ c-----------------------------------------------------------------------
       type(nek_dvector), allocatable :: bf, eps
       ! Tolerance for the Newton solver
       real(dp) :: tol, bfnorm, refnorm
-      logical  :: was_fixed_point
+      logical  :: was_fixed_point, have_ref
 
       !----------------------------------------
       ! Test parameters
@@ -21,15 +31,15 @@ c-----------------------------------------------------------------------
       integer  :: tol_mode    = 2
       logical  :: if_load_BF  = .true.       ! full: .false.
       real(dp) :: noise_level = 5.0e-6_dp    ! full: 0.0_dp
-      
+
       if (istep.eq.0) then
          allocate(bf, eps)
-         
+
          if (if_load_BF) then
-            ! Load reference solution from file
+            ! Load the starting point from file
             call load_fld('BF.fld')
          end if
-         
+
          ! Set initial guess for the fixed point
          call nek2vec(bf, vx, vy, vz, pr, t)
 
@@ -38,35 +48,39 @@ c-----------------------------------------------------------------------
             call eps%rand(ifnorm=.true.)
             call bf%axpby(noise_level, eps, 1.0_dp)
          end if
-         
+
          ! Define system
          sys = nek_system()
          sys%jacobian = nek_jacobian()
          sys%jacobian%X = bf
          call sys%init(cfl_limit = 0.5_dp)
-			
+
          ! Set Newton tolerance
          tol = newton_tol
-         
+
          ! Compute fixed point
-         call newton_fixed_point_iteration(sys, bf, tol, 
-     &                     tol_mode             = tol_mode, 
+         call newton_fixed_point_iteration(sys, bf, tol,
+     &                     tol_mode             = tol_mode,
      &                     input_is_fixed_point = was_fixed_point)
 
          ! checks
          call check('newton_fp.started_off_fixed_point', .not. was_fixed_point)
          bfnorm = bf%norm()
          call report('bf_norm', bfnorm)
-         call load_fld('BF.fld')
-         call nek2vec(eps, vx, vy, vz, pr, t)
-         refnorm = eps%norm()
-         call bf%sub(eps)
-         bfnorm = bf%norm()/refnorm
-         call report('bf_error', bfnorm)
-         call check('newton_fp.residual_norm', bfnorm < newton_tol)
 
-         ! Outpost baseflow
+         ! Outpost the converged base flow (before bf is changed below):
+         ! --update-references saves it as the reference
          call outpost_dnek(bf, "BF_")
+
+         ! Error against the reference base flow, if the harness copied it
+         inquire(file='ref_BF.fld', exist=have_ref)
+         if (have_ref) then
+            call load_fld('ref_BF.fld')
+            call nek2vec(eps, vx, vy, vz, pr, t)
+            refnorm = eps%norm()
+            call bf%sub(eps)
+            call report('bf_error', bf%norm()/refnorm)
+         end if
 
          call tests_completed()
       end if
@@ -157,7 +171,7 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
       integer iel,ifc
-      
+
       !this mesh was generatd with genbox
       !with only BCs for velicity
       !here we chenge outflow to dirichlet if adjoint
@@ -183,7 +197,7 @@ c-----------------------------------------------------------------------
 
       ! Setup logger
       call logger_setup(nio=0, log_level=lk_information_level, log_stdout=.false., log_timestamp=.true.)
-      
+
       return
       end
 c-----------------------------------------------------------------------

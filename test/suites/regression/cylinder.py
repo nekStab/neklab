@@ -11,29 +11,32 @@ from lib.neklabRegression import Analysis, Case, make_tests
 from lib.neklabUnit import merged
 
 # --- Newton for the steady base flow ---------------------------------------------
+NEWTON_REF = "cylinder/newton_fp"
+
 NEWTON_FP = Analysis(
    case=Case(folder="regression/cylinder_steady_newton", name="1cyl"),
    name="NewtonFp",
-   reference="cylinder/newton_fp",
-   # BF.fld is read twice by the .usr: as the start (fast) and to measure the
-   # error of the converged base flow (both variants)
-   inputs={"BF.fld": "cylinder/newton_fp/BF_ref.fld"},
-   # ADAPT: the name outpost_dnek(bf, "BF_") gives the file (check after one run)
-   saves_fields={"BF_1cyl0.f00001": "BF_ref.fld"},
+   reference=NEWTON_REF,
+   # the .usr compares the converged base flow with ref_BF.fld when it is there
+   # and reports bf_error (not on the first --update-references: no reference yet)
+   reference_fields={"ref_BF.fld": f"{NEWTON_REF}/BF_ref.fld"},
+   saves_fields={"BF_1cyl0.f00001": "BF_ref.fld"},     # outpost_dnek(bf, "BF_")
    checks=["newton_fp.started_off_fixed_point"],
    compare={"bf_norm": 1e-6},
-   bounds={"bf_rel_error": (0.0, 1e-5)},
+   field_errors={"bf_error": 1e-5},
    fast=dict(
-      # the defaults of the .usr: load BF.fld, add noise
+      # the defaults of the .usr: start from BF.fld + noise
+      inputs={"BF.fld": f"{NEWTON_REF}/BF_ref.fld"},
       # max={"newton_iterations": 4},    # once the .usr reports it
    ),
    full=dict(
-      settings={"if_load_BF": False, "noise_level": 0.0},
+      settings={"if_load_BF": False, "noise_level": 0.0},     # start from useric
    ),
 )
 
 
 # --- Eigenpairs of the base flow (direct and adjoint, one run) -------------------
+# The .usr is still a stub: it does not report its results yet, so both tests fail.
 EIGS_REF = "cylinder/eigs"
 NEV = 4                    # leading modes checked by the full test
 
@@ -67,7 +70,7 @@ EIGS = Analysis(
    name="Eigs",
    reference=EIGS_REF,
    needs=(NEWTON_FP,),
-   inputs={"BF.fld": "cylinder/newton_fp/BF_ref.fld"},
+   inputs={"BF.fld": f"{NEWTON_REF}/BF_ref.fld"},
    saves_fields=MODE_FILES,
    # the .usr compares mode i with ref_<side><i>_re.fld / _im.fld when present
    reference_fields={f"ref_{name}": f"{EIGS_REF}/{name}" for name in MODE_FILES.values()},
