@@ -3,10 +3,6 @@ c     REGRESSION -- 2D cylinder, Newton for the steady base flow
 c
 c     full: from useric (if_load_BF = .false., noise_level = 0)
 c     fast: from BF.fld + noise (the defaults below)
-c
-c     Reports bf_norm, and bf_error against ref_BF.fld when the harness
-c     provided it (not on the first --update-references). Writes the
-c     converged base flow as BF_1cyl0.f00001.
 c-----------------------------------------------------------------------
       include 'neklab_test_helpers.f'
 c-----------------------------------------------------------------------
@@ -24,20 +20,25 @@ c-----------------------------------------------------------------------
       real(dp) :: tol, bfnorm, refnorm
       logical  :: was_fixed_point, have_ref
 
-      !----------------------------------------
-      ! Test parameters
-      !----------------------------------------
+c     ---- Settings -----------------------------------------------------
       real(dp) :: newton_tol  = 1.0e-6_dp
       integer  :: tol_mode    = 2
       logical  :: if_load_BF  = .true.       ! full: .false.
       real(dp) :: noise_level = 5.0e-6_dp    ! full: 0.0_dp
+c     -------------------------------------------------------------------
 
       if (istep.eq.0) then
+         call log_section('newton test settings')
+         call log_setting('newton_tol', newton_tol)
+         call log_setting('tol_mode', tol_mode)
+         call log_setting('if_load_BF', if_load_BF)
+         call log_setting('noise_level', noise_level)
+
          allocate(bf, eps)
 
          if (if_load_BF) then
             ! Load the starting point from file
-            call load_fld('BF.fld')
+            call load_fld('BF.fld U P T')
          end if
 
          ! Set initial guess for the fixed point
@@ -68,14 +69,13 @@ c-----------------------------------------------------------------------
          bfnorm = bf%norm()
          call report('bf_norm', bfnorm)
 
-         ! Outpost the converged base flow (before bf is changed below):
-         ! --update-references saves it as the reference
-         call outpost_dnek(bf, "BF_")
+         ! Outpost the converged base flow
+         call outpost_nek(bf, "BF_")
 
-         ! Error against the reference base flow, if the harness copied it
+         ! Error against the reference base flow
          inquire(file='ref_BF.fld', exist=have_ref)
          if (have_ref) then
-            call load_fld('ref_BF.fld')
+            call load_fld('ref_BF.fld U P T')
             call nek2vec(eps, vx, vy, vz, pr, t)
             refnorm = eps%norm()
             call bf%sub(eps)

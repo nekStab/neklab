@@ -31,6 +31,9 @@
          public :: initialize_krylov_subspace
          public :: arnoldi_factorization, krylov_schur_restart
          public :: lanczos_bidiagonalization, lanczos_tridiagonalization
+
+      ! Basic vector operations.
+         public :: zero_basis
       
       ! Matrix factorizations.
          public :: eigs, eighs, svds
@@ -89,7 +92,7 @@
          public :: nek2vec, vec2nek
          public :: nek2ext_vec, ext_vec2nek
          public :: setup_nonlinear_solver, setup_linear_solver
-         public :: outpost_dnek, outpost_ext_dnek, outpost_nek
+         public :: outpost_nek
 
       ! Logging
          public :: nek_log_information, nek_log_warning, nek_log_error, nek_log_message

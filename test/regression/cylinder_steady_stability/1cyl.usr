@@ -1,30 +1,47 @@
+c-----------------------------------------------------------------------
+c     REGRESSION -- 2D cylinder, Stability analysis of the steady base flow
+c
+c     full: from noise converge 2 modes
+c     fast: from initial guess converge 1 mode
+c-----------------------------------------------------------------------
       include 'neklab_test_helpers.f'
 c-----------------------------------------------------------------------
       subroutine userchk
-      use neklab 
+      use neklab
       use neklab_test_helpers
+      implicit none
       include "SIZE"
       include "TOTAL"
 
       ! Linear operator
       type(exptA_linop), allocatable :: exptA
       ! State vectors
-      type(nek_dvector), allocatable :: bf, x0
+      type(nek_dvector), allocatable :: bf, x0, wrk, amp, amp_ref
       ! Eigenvectors
-      type(nek_zvector), allocatable :: eigvecs(:)
+      type(nek_dvector), allocatable :: eigvecs(:)
       complex(dp), allocatable :: eigvals(:)
       real(dp), allocatable :: residuals(:)
-      integer :: info
+      integer :: info, imode, i, nv
+      logical :: ok, if_adjoint, have_re, have_im
+      real(dp) :: nrm, nrm_ref
+      character(len=3) :: fpfx
+      character(len=256) :: msg, key
+      character(len=128) :: ref_fld, fre, fim
       
-      !----------------------------------------
-      ! Test parameters
-      !----------------------------------------
-      integer :: kdim = 128
-      integer :: nev  = 1           ! full: 2
-      logical :: load_x0 = .true.   ! full: .false.
+c     ---- Settings -----------------------------------------------------
+      integer  :: kdim = 128
+      integer  :: nev  = 2           ! full: 4
+      logical  :: load_x0 = .true.  ! full: .false.
+      real(dp) :: res_tol = rtol_dp  ! eigs residual counted as converged
+c     -------------------------------------------------------------------
 
       if (istep.eq.0) then
-         allocate(bf, x0, eigvecs(nev))
+         call log_section('eigs test settings')
+         call log_setting('kdim', kdim)
+         call log_setting('nev', nev)
+         call log_setting('load_x0', load_x0)
+
+         allocate(bf, x0, wrk, amp, amp_ref, eigvecs(nev))
          
          ! Load baseflow
          call load_fld('BF.fld U P T')
@@ -34,64 +51,78 @@ c-----------------------------------------------------------------------
          exptA = exptA_linop(tau=1.0_dp, baseflow=bf)
          call exptA%init()
 
-         call nek_log_message('!------------------|', 'main')
-         call nek_log_message('!      DIRECT      |', 'main')
-         call nek_log_message('!------------------|', 'main')
+         do imode = 1, 2
+            fpfx        = merge('dir',    'adj',    imode==1)
+            ref_fld     = merge('x0.fld', 'y0.fld', imode==1)
+            if_adjoint  = (imode == 2)
+            msg = '---- eigs: '//fpfx//' ----'
+            call nek_log_message(msg, procedure='main')
 
-         ! Pick naming convention
-         file_prefix = "dir"
+            call zero_basis(eigvecs)
 
-         if (load_x0) then
-            ! Load initial guess
-            call load_fld('x0r.fld U P T')
-            call nek2vec(x0%re, vx, vy, vz, pr, t)
-            call load_fld('x0i.fld U P T')
-            call nek2vec(x0%im, vx, vy, vz, pr, t)
-            
             ! Stability analysis.
-            call eigs(exptA, eigvecs, eigvals, residuals, info, kdim=kdim, x0=x0, write_intermediate=.true.)
-         else
-            ! Stability analysis.
-            call eigs(exptA, eigvecs, eigvals, residuals, info, kdim=kdim, write_intermediate=.true.)
-         end if
+            if (load_x0) then
+               ! Load initial guess
+               call load_fld(trim(ref_fld)//' U P T')
+               call nek2vec(x0, vx, vy, vz, pr, t)
+               call eigs(exptA, eigvecs, eigvals, residuals, info, 
+     &                  kdim=kdim, write_intermediate=.true., 
+     &                  transpose = if_adjoint, x0=x0)
+            else
+               call eigs(exptA, eigvecs, eigvals, residuals, info, 
+     &                  kdim=kdim, write_intermediate=.true., 
+     &                  transpose = if_adjoint)
+            end if
 
-         ! Transform eigenspectrum to continuous-time representation.
-         eigvals = log(eigvals)/exptA%tau
-         ! Export eigenfunctions to disk.
-         call outpost_nek(eigvecs(:nev), file_prefix)
-         ! rename eigs
-         call rename('eigs_output.txt', file_prefix//'_eigs_output.txt')
+            ! Transform eigenspectrum to continuous-time representation.
+            eigvals = log(eigvals)/exptA%tau
 
-         call nek_log_message('!------------------|', 'main')
-         call nek_log_message('!      ADJOINT     |', 'main')
-         call nek_log_message('!------------------|', 'main')
+            ! Export eigenfunctions to disk.
+            call outpost_nek(eigvecs(:nev), fpfx)
+            ! rename eigs
+            if (nid == 0) call rename('eigs_output.txt', fpfx//'_eigs_output.txt')
 
-         ! Pick naming convention
-         file_prefix = "adj"
-
-         if (load_x0) then
-            ! Load initial guess
-            call load_fld('y0r.fld U P T')
-            call nek2vec(x0%re, vx, vy, vz, pr, t)
-            call load_fld('y0i.fld U P T')
-            call nek2vec(x0%im, vx, vy, vz, pr, t)
-            
-            ! Stability analysis.
-            call eigs(exptA, eigvecs, eigvals, residuals, info, kdim=kdim, x0=x0, transpose=.true., write_intermediate=.true.)
-         else
-            ! Stability analysis.
-            call eigs(exptA, eigvecs, eigvals, residuals, info, kdim=kdim, transpose=.true., write_intermediate=.true.)
-         end if
-
-         ! Transform eigenspectrum to continuous-time representation.
-         eigvals = log(eigvals)/exptA%tau
-         ! Export eigenfunctions to disk.
-         call outpost_nek(eigvecs(:nev), file_prefix)
-         ! rename eigs
-         call rename('eigs_output.txt', file_prefix//'_eigs_output.txt')
-
-         ! checks
-         
+            ! checks
+            ok = all(residuals(:nev) < res_tol)
+            call check('eigs.'//fpfx//'.converged', ok, tol=res_tol)
+            ! eigenvalue
+            do i = 1, nev
+               write(key, '(2A,I0,A)') fpfx, '_lambda_', i, '_re'
+               call report(key, real(eigvals(i), dp))
+               write(key, '(2A,I0,A)') fpfx, '_lambda_', i, '_im'
+               call report(key, aimag(eigvals(i)))
+               write(key, '(2A,I0,A)') fpfx, '_mode_', i, '_residual'
+               call report(key, residuals(i))
+            end do
+            ! amplitude error against the reference mode, if provided
+            write(fre, '(2A,I0,A)') 'ref_', fpfx, 1, '_re.fld'
+            write(fim, '(2A,I0,A)') 'ref_', fpfx, 1, '_im.fld'
+            inquire(file=trim(fre), exist=have_re)
+            inquire(file=trim(fim), exist=have_im)
+            if (have_re .and. have_im) then
+               nv = lx1*ly1*lz1*nelv
+               call amp%zero()
+               associate(re => eigvecs(1), im => eigvecs(2))
+                  amp%vx = sqrt(re%vx**2 + im%vx**2)
+                  amp%vy = sqrt(re%vy**2 + im%vy**2)
+                  amp%vz = sqrt(re%vz**2 + im%vz**2)
+               end associate
+               call load_fld(trim(fre)//' U P T')
+               call nek2vec(x0, vx, vy, vz, pr, t)
+               call load_fld(trim(fim)//' U P T')
+               call nek2vec(wrk, vx, vy, vz, pr, t)
+               call amp_ref%zero()
+               associate(re => x0, im => wrk)
+                  amp_ref%vx = sqrt(re%vx**2 + im%vx**2)
+                  amp_ref%vy = sqrt(re%vy**2 + im%vy**2)
+                  amp_ref%vz = sqrt(re%vz**2 + im%vz**2)
+               end associate
+               nrm = amp%norm()
+               call amp%sub(amp_ref)
+               write(key, '(2A,I0,A)') fpfx, '_mode_amp_err'
+               call report(key, amp%norm()/nrm)
+            end if
+         end do
 
          call tests_completed()
       end if
@@ -181,30 +212,6 @@ c-----------------------------------------------------------------------
       use LightKrylov_Logger
       include 'SIZE'
       include 'TOTAL'
-      integer iel,ifc
-      
-      !this mesh was generatd with genbox
-      !with only BCs for velicity
-      !here we chenge outflow to dirichlet if adjoint
-      !and initilize BCs for scalar field
-
-      if(uparam(1)==3.2)then !if adjoint, change BCs
-      do iel=1,nelt
-      do ifc = 1, 2*ndim
-        if(cbc(ifc,iel,1).eq.'O  ')cbc(ifc,iel,1)='v  '
-      enddo
-      enddo
-      endif
-
-      if(ifheat)then
-      cbc(:,:,2)=cbc(:,:,1)
-      do iel=1,nelt
-       do ifc = 1, 2*ndim
-        if(cbc(ifc,iel,1).eq.'W  ')cbc(ifc,iel,2)='t  '
-        if(cbc(ifc,iel,1).eq.'v  ')cbc(ifc,iel,2)='t  '
-      enddo
-      enddo
-      endif
 
       ! Setup logger
       call logger_setup(nio=0, log_level=lk_information_level, log_stdout=.false., log_timestamp=.true.)

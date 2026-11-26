@@ -44,7 +44,7 @@
       !! Desired number of eigenpairs to converge.
             logical, intent(in), optional :: adjoint
       !! Whether direct or adjoint analysis should be conducted.
-		type(nek_dvector), optional, intent(in) :: X0
+		      type(nek_dvector), optional, intent(in) :: X0
       !! Initial guess for the eigenvectors
       
       ! Eigenvalue computation related variables.
@@ -90,7 +90,7 @@
             call save_eigenspectrum(eigvals, residuals, trim(file_prefix)//"_eigenspectrum.npy")
       
       ! Export eigenfunctions to disk.
-            call outpost_dnek(eigvecs(:nev), file_prefix)
+            call outpost_nek(eigvecs(:nev), file_prefix)
 
             call nek_log_message('Exiting eigenvalue computation.', this_module, this_procedure)
 
@@ -143,8 +143,8 @@
             end if
       
       ! Export optimal perturbations and optimal responses.
-            file_prefix = "prt"; call outpost_dnek(V(:nsv), file_prefix)
-            file_prefix = "rsp"; call outpost_dnek(U(:nsv), file_prefix)
+            file_prefix = "prt"; call outpost_nek(V(:nsv), file_prefix)
+            file_prefix = "rsp"; call outpost_nek(U(:nsv), file_prefix)
 
       ! Finalize exptA timings
             call exptA%finalize_timer()
@@ -196,7 +196,7 @@
       ! Outpost initial condition.
             file_prefix = 'nwt'
             call set_fldindex(file_prefix, 1)
-            call outpost_nek(bf, file_prefix)
+            call abs_outpost_nek(bf, file_prefix)
             if (present(input_is_fixed_point)) then
                input_is_fixed_point = meta%input_is_fixed_point
             end if
@@ -326,7 +326,7 @@
       ! output basis vectors
                   if (mod(istep, opts%iorststep) == 0) then
                      write (file_prefix, '(A)') 'rst'
-                     call outpost_dnek(OTD%basis, file_prefix)
+                     call outpost_nek(OTD%basis, file_prefix)
                   end if
 
       ! set the forcing

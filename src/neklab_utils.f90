@@ -8,7 +8,7 @@
          use LightKrylov, only: dp
          use LightKrylov_Logger
       ! Abstract types for real-valued vectors.
-         use LightKrylov, only: abstract_vector_rdp
+         use LightKrylov, only: abstract_vector_rdp, abstract_vector_cdp
       ! Neklab vectors
          use neklab_vectors
          use neklab_nek_setup
@@ -28,12 +28,12 @@
       !! Local number of grid points for the temperature/passive scalar mesh.
       
       ! utilities for regular nek vectors
-         public :: nek2vec, vec2nek, abs_vec2nek, outpost_dnek, outpost_dnek_abs_vector
+         public :: nek2vec, vec2nek, abs_vec2nek
       ! utilities for extended nek vectors
-         public :: nek2ext_vec, ext_vec2nek, abs_ext_vec2nek, outpost_ext_dnek
+         public :: nek2ext_vec, ext_vec2nek, abs_ext_vec2nek
          public :: get_period, get_period_abs
       ! combined utility for outposting nek vectors
-         public :: outpost_nek
+         public :: outpost_nek, abs_outpost_nek
       ! miscellaneous
          public :: nopcopy
       
@@ -53,9 +53,20 @@
             module procedure abstract_vec2nek_prt
          end interface
       
-         interface outpost_dnek
+         interface outpost_nek
             module procedure outpost_dnek_vector
+            module procedure outpost_ext_dnek_vector
+            module procedure outpost_znek_vector
             module procedure outpost_dnek_basis
+            module procedure outpost_ext_dnek_basis
+            module procedure outpost_znek_basis
+         end interface
+
+         interface abs_outpost_nek
+            module procedure abs_outpost_dnek_vector
+            module procedure abs_outpost_dnek_basis
+            module procedure abs_outpost_znek_vector
+            module procedure abs_outpost_znek_basis
          end interface
       
       ! Extended nek vector utilities
@@ -72,11 +83,6 @@
          interface abs_ext_vec2nek
             module procedure abstract_ext_vec2nek_std
             module procedure abstract_ext_vec2nek_prt
-         end interface
-      
-         interface outpost_ext_dnek
-            module procedure outpost_ext_dnek_vector
-            module procedure outpost_ext_dnek_basis
          end interface
       
       contains
@@ -310,19 +316,6 @@
 
          end subroutine outpost_dnek_vector
       
-         subroutine outpost_dnek_abs_vector(vec, prefix)
-            class(abstract_vector_rdp), intent(in) :: vec
-            character(len=3), intent(in) :: prefix
-            select type (vec)
-            type is (nek_dvector)
-
-               call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
-               
-            class default
-               call type_error('vec','nek_dvector','IN',this_module,'outpost_dnek_abs_vector')
-            end select
-         end subroutine outpost_dnek_abs_vector
-      
          subroutine outpost_dnek_basis(vec, prefix)
             type(nek_dvector), intent(in) :: vec(:)
             character(len=3), intent(in) :: prefix
@@ -347,17 +340,90 @@
             end do
          end subroutine outpost_ext_dnek_basis
 
-         subroutine outpost_nek(vec, prefix)
+         subroutine outpost_znek_vector(vec, prefix)
+            type(nek_zvector), intent(in) :: vec
+            character(len=3), intent(in) :: prefix
+            ! internal
+            character(len=3) :: p3
+            associate(v => vec%re)
+               p3 = prefix(1:2)//"r"
+               call outpost(v%vx, v%vy, v%vz, v%pr, v%theta, p3)
+            end associate
+            associate(v => vec%im)
+               p3 = prefix(1:2)//"i"
+               call outpost(v%vx, v%vy, v%vz, v%pr, v%theta, p3)
+            end associate
+         end subroutine outpost_znek_vector
+      
+         subroutine outpost_znek_basis(vec, prefix)
+            type(nek_zvector), intent(in) :: vec(:)
+            character(len=3), intent(in) :: prefix
+            integer :: i
+            do i = 1, size(vec)
+               call outpost_znek_vector(vec(i), prefix)
+            end do
+         end subroutine outpost_znek_basis
+
+         subroutine abs_outpost_dnek_vector(vec, prefix)
             class(abstract_vector_rdp), intent(in) :: vec
             character(len=3), intent(in) :: prefix
+            ! internal
+            character(len=*), parameter :: this_procedure = 'abs_outpost_dnek_vector'
             select type (vec)
             type is (nek_dvector)
-               call outpost_dnek    (vec, prefix)
+
+               call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
+
             type is (nek_ext_dvector)
-               call outpost_ext_dnek(vec, prefix)
+
+               call outpost(vec%vx, vec%vy, vec%vz, vec%pr, vec%theta, prefix)
+               
             class default
-               call type_error('vec','nek_dvector/nek_ext_dvector','IN',this_module,'outpost_nek')
+               call type_error('vec','nek_dvector or nek_ext_dvector','IN',this_module,this_procedure)
             end select
-         end subroutine outpost_nek
+         end subroutine abs_outpost_dnek_vector
+
+         subroutine abs_outpost_dnek_basis(vec, prefix)
+            class(abstract_vector_rdp), intent(in) :: vec(:)
+            character(len=3), intent(in) :: prefix
+            ! internal
+            character(len=*), parameter :: this_procedure = 'outpost_dnek_basis'
+            integer :: i
+            do i = 1, size(vec)
+               call abs_outpost_dnek_vector(vec(i), prefix)
+            end do
+         end subroutine abs_outpost_dnek_basis
+
+         subroutine abs_outpost_znek_vector(vec, prefix)
+            class(abstract_vector_cdp), intent(in) :: vec
+            character(len=3), intent(in) :: prefix
+            character(len=*), parameter :: this_procedure = 'abs_outpost_znek_vector'
+            ! internal
+            character(len=3) :: p3
+            select type (vec)
+            type is (nek_zvector)
+               associate(v => vec%re)
+                  p3 = prefix(1:2)//"r"
+                  call outpost(v%vx, v%vy, v%vz, v%pr, v%theta, p3)
+               end associate
+               associate(v => vec%im)
+                  p3 = prefix(1:2)//"i"
+                  call outpost(v%vx, v%vy, v%vz, v%pr, v%theta, p3)
+               end associate
+            class default
+               call type_error('vec','nek_zvector','IN',this_module,this_procedure)
+            end select
+         end subroutine abs_outpost_znek_vector
+
+         subroutine abs_outpost_znek_basis(vec, prefix)
+            class(abstract_vector_cdp), intent(in) :: vec(:)
+            character(len=3), intent(in) :: prefix
+            ! internal
+            character(len=*), parameter :: this_procedure = 'abs_outpost_znek_basis'
+            integer :: i
+            do i = 1, size(vec)
+               call abs_outpost_znek_vector(vec(i), prefix)
+            end do
+         end subroutine abs_outpost_znek_basis
 
       end module neklab_utils
