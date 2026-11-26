@@ -5,7 +5,7 @@
    cylinder_periodic_orbit/   on snapshot.fld  extended vector, UPO system + Jacobian
 
 Each folder has its own 1cyl.usr with the checks written in userchk; the
-mesh, SIZE, the fields and neklab_test_helpers.f are symlinks to test/unit/common/.
+mesh, the fields and neklab_test_helpers.f are symlinks to test/common/.
 """
 from lib.neklabUnit import UnitTest, linop
 

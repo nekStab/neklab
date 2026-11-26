@@ -6,7 +6,8 @@
    ./neklabTests.py -k Cylinder                    only tests whose name contains "Cylinder"
    ./neklabTests.py --levels full --update-references   (trusted version only)
 
-Levels: unit (suites/unit/, one file per case), fast (suites/fast.py), full (suites/full.py).
+Levels: unit (suites/unit/, one file per case), fast and full (both from
+suites/regression/: every Analysis gives a fast and a full test).
 Each test runs in a copy of its case under test/scratch/; the copies are
 deleted when every test passed (keep them with --keep-scratch).
 The exit code is 0 only if every selected test passed.
@@ -58,6 +59,14 @@ def find_tests(levels, patterns):
    return sorted(tests, key=lambda t: (getattr(t[0], "depth", 0), order.get(t[0].level, 9)))
 
 
+def nothing_selected(levels, patterns):
+   where = ", ".join(sorted({SUITES[l].replace(".", "/") + "/" for l in levels}))
+   msg = f"No test selected (levels {','.join(levels)}; looked in {where})."
+   if patterns:
+      msg += f" Check the -k filter {patterns}: ./neklabTests.py --levels unit,fast,full --list"
+   return msg
+
+
 def raise_stack_limit():
    """neklab keeps large work vectors on the stack; the usual 8 MB is not enough
    when few ranks are used. Raise the limit for the nek5000 runs started here."""
@@ -71,12 +80,13 @@ def raise_stack_limit():
 
 def main():
    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-   p.add_argument("--levels", default="unit", help="comma-separated: unit,fast,full [unit]")
+   p.add_argument("--levels", "--level", default="unit", help="comma-separated: unit,fast,full [unit]")
    p.add_argument("-k", dest="patterns", action="append", default=[], help="name filter (repeatable)")
    p.add_argument("--list", action="store_true", help="list the selected tests and exit")
    p.add_argument("--nprocs", type=int, default=4, help="MPI ranks per run [4]")
    p.add_argument("--mpiexec", default="mpiexec", help="MPI launcher [mpiexec]")
-   p.add_argument("--update-references", action="store_true", help="full level: store results as the new references")
+   p.add_argument("--update-references", action="store_true",
+                  help="with --levels full only: store the results and fields as the new references")
    p.add_argument("--keep-scratch", action="store_true", help="keep the scratch copies")
    p.add_argument("--params", choices=("all", "changed"), default="all",
                   help="parameters listed before each build: all, or only those that differ from the case folder [all]")
@@ -87,16 +97,19 @@ def main():
    if any(l not in LEVELS for l in levels):
       sys.exit(f"Unknown level in {levels}; choose from {LEVELS}.")
    if args.update_references and levels != ["full"]:
-      sys.exit("--update-references only works with --levels full.")
+      sys.exit("--update-references only works with --levels full "
+               "(the fast tests have no references of their own).")
 
    tests = find_tests(levels, args.patterns)
    if args.list:
       for cls, method in tests:
          skip = getattr(getattr(cls, method), "__unittest_skip_why__", "")
          print(f"{cls.level:5}  {cls.__name__}.{method}" + (f"   [skipped: {skip}]" if skip else ""))
+      if not tests:
+         print(nothing_selected(levels, args.patterns))
       return 0
    if not tests:
-      sys.exit("No test selected.")
+      sys.exit(nothing_selected(levels, args.patterns))
    if "NEKLAB_SOURCE_ROOT" not in os.environ:
       sys.exit("Set NEKLAB_SOURCE_ROOT (and NEK_SOURCE_ROOT if Nek5000 is not in neklab/Nek5000).")
 

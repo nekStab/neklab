@@ -19,7 +19,7 @@ class Case:
    Only used by lib/neklabRegression.py; the unit tests have one folder each.
    """
 
-   folder: str                                   # relative to test/, e.g. "regression/cylinder_steady"
+   folder: str                                   # relative to test/, e.g. "regression/cylinder_steady_newton"
    name: str                                     # basename of the .usr/.par/.re2 files
    par: dict = field(default_factory=dict)       # .par changes for every analysis of the case
    settings: dict = field(default_factory=dict)  # settings for every analysis

@@ -1,30 +1,19 @@
 """Base class of all neklab tests.
 
-A test is a complete case folder (SIZE, .par, .usr, unit_tests.f, mesh,
-input fields) plus a few values to change in it. The test:
+A test is a complete case folder (SIZE, .par, .usr, mesh, input fields) plus
+a few values to change in it. The test:
 
-   1. copies the folder to a scratch directory (the original is never touched),
-   2. changes size_params (SIZE), par_values (.par) and settings (the
-      Settings block of unit_tests.f) in that copy,
+   1. copies the folder to test/scratch/<TestClass>/ (the original is never
+      touched; symlinks are followed, so the copy is self-contained),
+   2. changes size_params (SIZE), par_values (.par) and settings (initialised
+      variables of the .usr) in that copy,
    3. prints all parameters, marking those that differ from the case folder,
-   4. builds the case (reusing an earlier build where possible) and runs it,
-   5. checks the results.
+   4. builds the case from clean with makeneklab and runs it,
+   5. reads the NEKLAB_CHECK / NEKLAB_RESULT lines of the log and checks them.
 
-Example:
-
-   class UnitCylinder(NeklabTestCase):
-      level = "unit"
-      case_dir = "unit/cylinder"            # relative to test/
-      case_name = "1cyl"
-      par_values = {"GENERAL": {"endTime": 0.05}}
-      settings = {"ntrials_lin": 2, "base_flow": "BF.fld"}
-
-      def test_axioms(self):
-         self.prepare()
-         self.build()
-         self.run_nek()
-         self.check_driver(expected=["vector.nek_dvector.axioms"])
-         self.finish()
+Test definitions do not use this class directly but one of
+   lib/neklabUnit.py        UnitTest        (level unit)
+   lib/neklabRegression.py  Analysis        (levels fast and full)
 """
 import sys
 import json
@@ -58,7 +47,6 @@ def status(ok):
    return f"{GREEN}PASSED{RESET}" if ok else f"{RED}FAILED{RESET}"
 
 
-
 def say(step, message=""):
    """One line of the runner's narration: '[step]    message'."""
    print(f"  {'[' + step + ']':10} {message}", flush=True)
@@ -72,14 +60,20 @@ class NeklabTestCase(unittest.TestCase):
    case_name = ""        # name of the .usr/.par/.re2 files
    size_params = {}      # {"lx1": 8}                         -> SIZE (full rebuild)
    par_values = {}       # {"GENERAL": {"endTime": 0.05}}     -> <case>.par
-   settings = {}         # {"tau": 0.05}                      -> unit_tests.f
+   settings = {}         # {"tau": 0.05}                      -> settings of the .usr
    reference = None      # folder in test/references with values.json
-
-   settings_source = "unit_tests.f"      # module whose Settings block `settings` edits
+   settings_source = None    # file whose settings `settings` edits [<case_name>.usr]
 
    # SIZE parameters shown in the summary (all changed ones are shown as well)
    SIZE_SHOWN = ("ldim", "lx1", "lxd", "lx2", "lelg", "lpmin", "ldimt", "lpert",
                  "lorder", "mxprev")
+
+   # Safety net: lines with these markers make the test fail, whatever the
+   # checks say (neklab_test.f90 `report` prints NEKLAB_TEST_FAIL)
+   FAIL_MARKERS = ("NEKLAB_TEST_FAIL",)
+
+   # check() in neklab_test_helpers.f prints at most this many characters of a name
+   CHECK_NAME_MAX = 45
 
    # --- set up -----------------------------------------------------------------
 
@@ -106,10 +100,14 @@ class NeklabTestCase(unittest.TestCase):
       self.measured = {}    # every value checked; written to measured_values.json
       self.log = None
 
+   @property
+   def settings_file(self):
+      return self.settings_source or f"{self.case_name}.usr"
+
    # --- prepare, build, run ----------------------------------------------------
 
    def prepare(self):
-      """Apply size_params and par_values, write the settings; make the case runnable."""
+      """Apply size_params, par_values and settings; make the case runnable."""
       size, par = self.dir / "SIZE", self.dir / f"{self.case_name}.par"
       if self.size_params:
          files.set_size_parameters(size, self.size_params)
@@ -120,7 +118,7 @@ class NeklabTestCase(unittest.TestCase):
       if self.par_values:
          files.set_par_values(par, self.par_values)
       if self.settings:
-         files.set_settings(self.dir / self.settings_source, self.settings)
+         files.set_settings(self.dir / self.settings_file, self.settings)
       if not (self.dir / f"{self.case_name}.ma2").exists():
          say("genmap", f"{self.case_name}.re2 -> {self.case_name}.ma2")
          nek.run_genmap(self.dir, self.case_name, self.nek_root, verbose=self.verbose)
@@ -169,12 +167,12 @@ class NeklabTestCase(unittest.TestCase):
                          "not set" if old is None else old))
          block(f"{par} [{section}]", rows)
 
-      # settings (Settings block of unit_tests.f)
-      if (self.dir / self.settings_source).exists():
-         orig = files.read_settings(self.source / self.settings_source)
+      # settings (initialised variables of the .usr)
+      if (self.dir / self.settings_file).exists():
+         orig = files.read_settings(self.source / self.settings_file)
          rows = [(not files.same_value(value, orig.get(name)), name, value, orig.get(name))
-                 for name, value in files.read_settings(self.dir / self.settings_source).items()]
-         block(f"{self.settings_source} settings", rows)
+                 for name, value in files.read_settings(self.dir / self.settings_file).items()]
+         block(f"{self.settings_file} settings", rows)
 
    def build(self):
       """Clean build of the case with makeneklab (no reuse of earlier builds)."""
@@ -211,6 +209,9 @@ class NeklabTestCase(unittest.TestCase):
 
       expected   check names that must be reported
       completed  text the driver prints at its end (a run that stops early fails)
+
+      Any line with one of FAIL_MARKERS also fails the test (safety net for
+      failures neklab reports itself, outside the checks of the .usr).
       """
       checks = files.read_checks(self.log)
       results = files.read_results(self.log)
@@ -220,9 +221,13 @@ class NeklabTestCase(unittest.TestCase):
       for name, (status, message) in checks.items():
          self.check(status == "PASS", name, message)
       self.check(bool(checks), "the driver reported its checks", quiet=True)
-      missing = [n for n in expected if n not in checks]
-      for name in missing:
-         self.check(False, name, "(expected, never reported)")
+      for name in expected:
+         if name not in checks:
+            hint = (f" -- longer than the {self.CHECK_NAME_MAX} characters check() prints"
+                    if len(name) > self.CHECK_NAME_MAX else "")
+            self.check(False, name, f"(expected, never reported){hint}")
+      for line in files.find_lines(self.log, self.FAIL_MARKERS):
+         self.check(False, "failure reported by neklab", line)
       if completed:
          reached = files.log_contains(self.log, completed)
          self.check(reached, f'run reached "{completed}"', quiet=True)
@@ -231,7 +236,6 @@ class NeklabTestCase(unittest.TestCase):
 
       if results:
          say("results", f"{len(results)} values (written to measured_values.json):")
-         width = max(len(k) for k in results)
          for key, value in results.items():
             shown = f"{value: .5e}" if isinstance(value, float) else value
             print(f"    {key:{NAME_WIDTH}}   {shown}")
@@ -248,17 +252,30 @@ class NeklabTestCase(unittest.TestCase):
          self.check_close(key, value, refs[key], tol)
 
    def finish(self):
-      """Write measured_values.json, save references in update mode, report failures."""
+      """Write measured_values.json, save references in update mode, report failures.
+
+      References are written only if every check passed and every file to be
+      saved exists (check_reference_outputs), so a failing run never leaves
+      half-updated references behind.
+      """
       with open(self.dir / "measured_values.json", "w") as f:
          json.dump(self.measured, f, indent=2, sort_keys=True, default=str)
-      if self.update_references and self.level == "full" and not self.failures:
-         self._save_reference_values()
+      if self.update_references and self.level == "full":
+         if not self.failures:
+            self.check_reference_outputs()
+         if self.failures:
+            say("refs", "not written: the test failed")
+         else:
+            self._save_reference_values()
       if self.failures:
          say("result", f"{len(self.failures)} check(s) failed")
          self.fail(f"{len(self.failures)} check(s) failed:\n  " + "\n  ".join(self.failures))
       say("result", "all checks passed")
 
    # --- reference values ---------------------------------------------------------
+
+   def check_reference_outputs(self):
+      """Before saving references: add a failure for anything that cannot be saved."""
 
    def _reference_file(self):
       return TEST_DIR / "references" / (self.reference or self.case_name) / "values.json"
@@ -273,4 +290,4 @@ class NeklabTestCase(unittest.TestCase):
       path = self._reference_file()
       path.parent.mkdir(parents=True, exist_ok=True)
       path.write_text(json.dumps(values, indent=2, sort_keys=True, default=str) + "\n")
-      print(f"Reference values written to {path}")
+      say("refs", f"values -> {path.relative_to(TEST_DIR)}")

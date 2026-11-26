@@ -1,5 +1,5 @@
-"""Test suites, one module per level: unit.py, fast.py, full.py.
+"""Test suites: unit/ (level unit) and regression/ (levels fast and full).
 
-Every NeklabTestCase subclass defined in these modules is picked up by
+Every NeklabTestCase subclass defined in these packages is picked up by
 neklabTests.py and selected according to its `level` attribute.
 """

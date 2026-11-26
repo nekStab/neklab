@@ -3,7 +3,7 @@
    rayBen_fixed_point/   on u = 0, T = 1 - y   vectors with temperature,
                                                exptA_temp, nek_temp_system + Jacobian
 
-The mesh, SIZE and neklab_test_helpers.f are symlinks to test/unit/common/.
+The mesh and neklab_test_helpers.f are symlinks to test/common/.
 """
 from lib.neklabUnit import UnitTest, linop
 
@@ -13,7 +13,6 @@ class RayleighBenardUnitTest(UnitTest):
    name = "rayBen"
    par = {
       "GENERAL":     {"endTime": 0.1},     # = tau in rayBen.usr
-      # residual projection makes the operators history-dependent
       "VELOCITY":    {"residualProj": "no"},
       "PRESSURE":    {"residualProj": "no"},
       "TEMPERATURE": {"residualProj": "no"},

@@ -1,11 +1,18 @@
 c-----------------------------------------------------------------------
-c     neklab_test_helpers.f -- reporting helpers shared by all unit tests
+c     neklab_test_helpers.f -- reporting helpers shared by all tests
 c
-c     Each case's unit_tests.f pulls it in with
+c     The .usr of every test case pulls it in with its first line
 c
 c           include 'neklab_test_helpers.f'
 c
-c     Fixed-form source, like the .usr itself.
+c     (each case folder holds a symlink to test/common/). Fixed-form
+c     source, like the .usr itself.
+c
+c     check(name, ok)      NEKLAB_CHECK <name> [tol = x] PASSED|FAILED [info]
+c                          (names of at most 45 characters)
+c     report(key, value)   NEKLAB_RESULT <key> <value>, 17 significant digits
+c                          (keys of at most 50 characters)
+c     tests_completed()    the end marker the harness waits for
 c
 c     Besides the check/report helpers, it logs what a run used, so every
 c     log (lightkrylov.log and the Nek logfile) records its own setup:
@@ -70,12 +77,13 @@ c     one PASSED/FAILED line; info is shown only when the check fails
 
 c-----------------------------------------------------------------------
       subroutine report(key, value)
-c     one value for measured_values.json
+c     one value for measured_values.json, in full precision: the harness
+c     compares it with the references to tolerances down to 1e-6 and below
       use stdlib_strings, only : padr
       character(len=*), intent(in) :: key
       real(dp), intent(in) :: value
       character(len=512) :: msg
-      write(msg, '(A,A50,2X,ES15.5)') 'NEKLAB_RESULT ', padr(trim(key), 50), value
+      write(msg, '(A,A50,2X,ES24.16)') 'NEKLAB_RESULT ', padr(trim(key), 50), value
       call nek_log_message(msg, procedure='main')
       end subroutine report
 

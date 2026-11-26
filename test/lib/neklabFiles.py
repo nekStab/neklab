@@ -100,10 +100,16 @@ def set_par_values(path, values):
    return changes
 
 
-# --- settings (Settings block of unit_tests.f) --------------------------------
+# --- settings (initialised variables of the .usr) -------------------------------
+#
+# A setting is a declaration with an initial value, e.g. at the top of userchk
+#    real(dp) :: tau = 0.1_dp
+# `parameter`s are never settings. Names must be unique in the file: the first
+# declaration with the name is the one that is read and changed. In a file with
+# a module, only the part before the first `contains` is searched.
 
 def _settings_part(text):
-   """The specification part of the module (before `contains`), where the settings are."""
+   """The text before the first `contains` (all of it if there is none)."""
    m = re.search(r"^\s*contains\b", text, re.IGNORECASE | re.MULTILINE)
    return text[:m.start()] if m else text
 
@@ -112,11 +118,7 @@ _SETTING = r"^([^!\n]*::\s*{name}\s*=\s*)(.*?)(\s*(?:!.*)?)$"
 
 
 def read_settings(path):
-   """Values of the settings in a unit_tests.f module -> {name: value as written}.
-
-   Settings are the initialised variables declared before `contains`
-   (`real(dp), public :: tau = 0.1_dp`); parameters are skipped.
-   """
+   """Values of the settings in a .usr (or module) -> {name: value as written}."""
    values = {}
    for line in _settings_part(open(path).read()).splitlines():
       if line[:1] in "cC*" or "parameter" in line.lower():
@@ -139,7 +141,7 @@ def fortran_value(value):
 
 
 def set_settings(path, values):
-   """Change the default of settings in a unit_tests.f module; comments are kept.
+   """Change the initial value of settings in a .usr (or module); comments are kept.
 
    Raises KeyError for a name that is not a setting. Returns [(name, old, new)].
    """
@@ -176,6 +178,8 @@ def same_value(a, b):
    return norm(a) == norm(b)
 
 
+# --- the log -----------------------------------------------------------------------
+
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 _CHECK = re.compile(                         # NEKLAB_CHECK <name> [tol = x] PASSED|FAILED [msg]
    r"NEKLAB_CHECK\s+(?P<name>.*?)\s+(?:tol\s*=\s*\S+\s+)?(?P<status>PASSED|FAILED)\b\s*(?P<msg>.*)$")
@@ -205,6 +209,21 @@ def read_checks(logfile):
 def log_contains(logfile, text):
    with open(logfile, errors="replace") as f:
       return any(text in _ANSI.sub("", line) for line in f)
+
+
+def find_lines(logfile, markers):
+   """Every line containing one of the markers, from the marker on, duplicates removed."""
+   found = []
+   with open(logfile, errors="replace") as f:
+      for line in f:
+         line = _ANSI.sub("", line).rstrip()
+         for marker in markers:
+            if marker in line:
+               text = line[line.index(marker):]
+               if text not in found:
+                  found.append(text)
+               break
+   return found
 
 
 def read_results(logfile):
