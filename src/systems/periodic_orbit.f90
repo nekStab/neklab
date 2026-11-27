@@ -7,48 +7,55 @@
          module procedure init_nek_upo_system
          character(len=128) :: msg
          character(len=*), parameter :: this_procedure = 'init_nek_upo_system'
+         character(len=*), parameter :: from_par = '      [.par]'
+         character(len=*), parameter :: default  = '      [default]'
+         character(len=*), parameter :: from_usr = '      [.usr]'
+         integer, parameter :: pad = 25
          associate (opts => self%opts)
             ! save minimal tolerances from .par file
             opts%ptol_min_par = param(21)
             opts%vtol_min_par = param(22)
-            write(msg,'(A,2(1X,ES15.8))') "Record minimal values for ptol/vtol from .par: ", opts%ptol_min_par, opts%vtol_min_par
+            write(msg,'(A,ES15.8,A)') padl("min values for ptol: ",pad), opts%ptol_min_par,from_par
+            call nek_log_message(msg, this_module, this_procedure)
+            write(msg,'(A,ES15.8,A)') padl("min values for vtol: ",pad), opts%vtol_min_par,from_par
             call nek_log_message(msg, this_module, this_procedure)
 
             if (present(cfl_limit)) then
                opts%cfl_limit = cfl_limit
                param(26) = cfl_limit
-               call nek_log_message("Set CFL limit", this_module, this_procedure)
+               write(msg,'(A,F15.8,A)') padl("CFL limit: ",pad), opts%cfl_limit, from_usr
             else if (opts%cfl_limit == 0.0_dp) then
                opts%cfl_limit = param(26)
-               write(msg,'(A,F15.8)') "Set CFL limit from .par: ", opts%cfl_limit
-               call nek_log_message(msg, this_module, this_procedure)
+               write(msg,'(A,F15.8,A)') padl("CFL limit: ",pad), opts%cfl_limit, from_par
             end if
+            call nek_log_message(msg, this_module, this_procedure)
 
             if (present(p2v_factor)) then
                opts%p2v_factor = p2v_factor
-               call nek_log_message("Set vtol/ptol", this_module, this_procedure)
+               write(msg,'(A,ES15.8,A)') padl("vtol/ptol ratio: ",pad), opts%p2v_factor, from_usr
             else if (opts%p2v_factor == 0.0_dp) then
                opts%p2v_factor = param(22) / param(21)
-               write(msg,'(A,ES15.8)') "Set vtol/ptol from .par: ", opts%p2v_factor
-               call nek_log_message(msg, this_module, this_procedure)
+               write(msg,'(A,ES15.8,A)') padl("vtol/ptol ratio: ",pad), opts%p2v_factor, from_par
             end if
-            
-            if (present(newton_tol_factor)) then
-               opts%newton_tol_factor = newton_tol_factor
-               call nek_log_message("Set newton_tol_factor", this_module, this_procedure)
-            else if (opts%newton_tol_factor == 0.0_dp) then
-               opts%newton_tol_factor = 0.1_dp
-               write(msg,'(A,ES15.8)') "Set newton_tol_factor to default: ", opts%newton_tol_factor
-               call nek_log_message(msg, this_module, this_procedure)
-            end if
+            call nek_log_message(msg, this_module, this_procedure)
 
             if (present(recompute_dt)) then
                opts%recompute_dt = recompute_dt
-               call nek_log_message("Set recompute_dt", this_module, this_procedure)
+               write(msg,'(A,L15,A)') padl("recompute_dt: ",pad), opts%recompute_dt, from_usr
             else
                opts%recompute_dt = .true.
-               call nek_log_message("Set recompute_dt to default (.true.)", this_module, this_procedure)
+               write(msg,'(A,L15,A)') padl("recompute_dt: ",pad), opts%recompute_dt, default
             end if
+            call nek_log_message(msg, this_module, this_procedure)
+            
+            if (present(newton_tol_factor)) then
+               opts%newton_tol_factor = newton_tol_factor
+               write(msg,'(A,ES15.8,A)') "newton_tol_factor: ", opts%newton_tol_factor, from_usr
+            else if (opts%newton_tol_factor == 0.0_dp) then
+               opts%newton_tol_factor = 0.1_dp
+               write(msg,'(A,ES15.8,A)') "newton_tol_factor: ", opts%newton_tol_factor, default
+            end if
+            call nek_log_message(msg, this_module, this_procedure)
 
             opts%is_set = .true.
          end associate

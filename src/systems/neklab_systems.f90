@@ -1,6 +1,7 @@
       module neklab_systems
       ! Fortran standard Library
          use stdlib_stats_distribution_normal, only: normal => rvs_normal
+         use stdlib_strings, only: padl
          use stdlib_optval, only: optval
          use stdlib_linalg, only: svd, diag
       !---------------------------------------
