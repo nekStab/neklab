@@ -11,7 +11,7 @@ targetCFL = 0.5
 
 writeControl = runTime
 writeInterval = 20
-writeDoublePrecision = no
+writeDoublePrecision = yes
 
 dealiasing = yes
 #filtering = explicit
@@ -28,7 +28,7 @@ residualProj = yes
 writeToFieldFile = yes
 
 [VELOCITY]
-residualTol = 1.0E-8
-residualProj = no
+residualTol = 1.0E-10
+residualProj = yes
 density = 1.0
 viscosity = -50.0

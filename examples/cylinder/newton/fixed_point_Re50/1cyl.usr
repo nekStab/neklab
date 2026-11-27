@@ -1,7 +1,5 @@
 c-----------------------------------------------------------------------
       subroutine userchk
-      use stdlib_logger, only: debug_level, information_level
-      use LightKrylov_Logger
       use neklab
       include "SIZE"
       include "TOTAL"
@@ -14,9 +12,6 @@ c-----------------------------------------------------------------------
       real(dp) :: tol
       
       if (istep.eq.0) then
-         ! Setup logger
-         call logger_setup(nio=0, log_level=information_level, log_stdout=.false., log_timestamp=.true.)
-            
          ! Load initial guess
          call load_fld('BF.fld')
          call nek2vec(bf, vx, vy, vz, pr, t)
@@ -25,7 +20,7 @@ c-----------------------------------------------------------------------
          sys = nek_system()
          sys%jacobian = nek_jacobian()
          sys%jacobian%X = bf
-         call sys%init(cfl_limit = 0.4_dp)
+         call sys%init(cfl_limit = 0.5_dp)
 			
          ! Set Newton tolerance
          tol = 1.0e-6_dp
@@ -34,7 +29,7 @@ c-----------------------------------------------------------------------
          call newton_fixed_point_iteration(sys, bf, tol, tol_mode = 2)
 
          !Outpost solution
-         call outpost_dnek(bf, "BF_")
+         call outpost_nek(bf, "BF_")
 
          call nek_end()
       end if
@@ -121,6 +116,7 @@ c-----------------------------------------------------------------------
       end
 c-----------------------------------------------------------------------
       subroutine usrdat2
+      use LightKrylov_Logger
       include 'SIZE'
       include 'TOTAL'
       integer iel,ifc
@@ -147,6 +143,9 @@ c-----------------------------------------------------------------------
       enddo
       enddo
       endif
+
+      ! Setup logger
+      call logger_setup(nio=0, log_level=lk_information_level, log_stdout=.false., log_timestamp=.true.)
       
       return
       end
