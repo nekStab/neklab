@@ -341,6 +341,7 @@
             logical, optional, intent(in) :: full_summary
             logical :: full_summary_
             character(len=*), parameter :: nekfmt = '(5X,A)'
+            character(len=*), parameter :: this_procedure = 'nek_status'
             integer, parameter :: pad = 20
             full_summary_ = optval(full_summary, .false.)
       ! overview
@@ -353,39 +354,39 @@
             if (ifpert) then
                if (full_summary_) then
                   call nek_log_message('')
-                  call nek_log_message('LINEAR MODE:', this_module, 'nek_status', nekfmt)
+                  call nek_log_message('LINEAR MODE:', this_module, this_procedure, nekfmt)
                   write (msg, '(A,L15)') padl('ifpert: ', pad), ifpert
-                  call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+                  call nek_log_message(msg, this_module, this_procedure, nekfmt)
                   write (msg, '(A,I15)') padl('npert: ', pad), npert
-                  call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+                  call nek_log_message(msg, this_module, this_procedure, nekfmt)
                   if (ifadj) then
                      write (msg, '(A,L15)') padl('adjoint mode: ', pad), ifadj
-                     call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+                     call nek_log_message(msg, this_module, this_procedure, nekfmt)
                   end if
                   if (ifbase) then
                      write (msg, '(A,L15)') padl('solve for baseflow: ', pad), ifbase
-                     call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+                     call nek_log_message(msg, this_module, this_procedure, nekfmt)
                   end if
                   write (msg, '(A,L15)') padl('OIFS: ', pad), ifchar
-                  call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+                  call nek_log_message(msg, this_module, this_procedure, nekfmt)
                else
-                  call nek_log_debug('LINEAR MODE', this_module, 'nek_status', nekfmt)
+                  call nek_log_debug('LINEAR MODE', this_module, this_procedure, nekfmt)
                end if
             else
                if (full_summary_) then
-                  call nek_log_message('', this_module, 'nek_status', nekfmt)
-                  call nek_log_message('NONLINEAR MODE:', this_module, 'nek_status', nekfmt)
+                  call nek_log_message('', this_module, this_procedure, nekfmt)
+                  call nek_log_message('NONLINEAR MODE:', this_module, this_procedure, nekfmt)
                   write (msg, '(A,L15)') padl('OIFS: ', pad), ifchar
-                  call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+                  call nek_log_message(msg, this_module, this_procedure, nekfmt)
                else
-                  call nek_log_debug('NONLINEAR MODE', this_module, 'nek_status', nekfmt)
+                  call nek_log_debug('NONLINEAR MODE', this_module, this_procedure, nekfmt)
                end if
             end if
             if (full_summary_) then
       ! params
-               call nek_log_message('PARAMETERS:', this_module, 'nek_status', nekfmt)
+               call nek_log_message('PARAMETERS:', this_module, this_procedure, nekfmt)
                write (msg, '(A,F15.8)') padl('endtime: ', pad), param(10)
-               call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+               call nek_log_message(msg, this_module, this_procedure, nekfmt)
                if (param(12) >= 0.0_dp) then
                   if (ifpert) then
                      write (msg, '(A,A)') padl('variable dt: ', pad), 'read from bflow'
@@ -395,17 +396,17 @@
                else
                   write (msg, '(A,ES15.8)') padl('dt: ', pad), abs(param(12))
                end if
-               call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+               call nek_log_message(msg, this_module, this_procedure, nekfmt)
                if (nsteps > 0) then
                   write (msg, '(A,I15)') padl('nsteps: ', pad), nsteps
-                  call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+                  call nek_log_message(msg, this_module, this_procedure, nekfmt)
                end if
                write (msg, '(A,F15.4)') padl('target CFL: ', pad), param(26)
-               call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+               call nek_log_message(msg, this_module, this_procedure, nekfmt)
                write (msg, '(A,ES15.4)') padl('pressure tol: ', pad), param(21)
-               call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+               call nek_log_message(msg, this_module, this_procedure, nekfmt)
                write (msg, '(A,ES15.4)') padl('velocity tol: ', pad), param(22)
-               call nek_log_message(msg, this_module, 'nek_status', nekfmt)
+               call nek_log_message(msg, this_module, this_procedure, nekfmt)
                call nek_log_message('')
             end if
             if (nid == 0) then

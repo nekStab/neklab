@@ -1,4 +1,5 @@
       module neklab_linops
+         use stdlib_strings, only: padl
          use stdlib_optval, only: optval
          use LightKrylov, only: dp, atol_dp, rtol_dp
          use LightKrylov, only: abstract_exptA_linop_rdp, abstract_linop_rdp, abstract_vector_rdp
