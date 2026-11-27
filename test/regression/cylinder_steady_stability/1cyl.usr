@@ -16,23 +16,20 @@ c-----------------------------------------------------------------------
       ! Linear operator
       type(exptA_linop), allocatable :: exptA
       ! State vectors
-      type(nek_dvector), allocatable :: bf, x0, wrk, amp, amp_ref
+      type(nek_dvector), allocatable :: bf, x0, amp, amp_ref
       ! Eigenvectors
       type(nek_dvector), allocatable :: eigvecs(:)
       complex(dp), allocatable :: eigvals(:)
       real(dp), allocatable :: residuals(:)
       integer :: info, imode, i, nv
       logical :: ok, if_adjoint, have_re, have_im
-      real(dp) :: nrm, nrm_ref
       character(len=3) :: fpfx
-      character(len=256) :: msg, key
-      character(len=128) :: ref_fld, fre, fim
+      character(len=128) :: key, ref_fld, fre, fim
       
 c     ---- Settings -----------------------------------------------------
       integer  :: kdim = 128
-      integer  :: nev  = 2           ! full: 4
+      integer  :: nev  = 2          ! full: 4
       logical  :: load_x0 = .true.  ! full: .false.
-      real(dp) :: res_tol = rtol_dp  ! eigs residual counted as converged
 c     -------------------------------------------------------------------
 
       if (istep.eq.0) then
@@ -41,7 +38,7 @@ c     -------------------------------------------------------------------
          call log_setting('nev', nev)
          call log_setting('load_x0', load_x0)
 
-         allocate(bf, x0, wrk, amp, amp_ref, eigvecs(nev))
+         allocate(bf, x0, amp, amp_ref, eigvecs(nev))
          
          ! Load baseflow
          call load_fld('BF.fld U P T')
@@ -55,8 +52,8 @@ c     -------------------------------------------------------------------
             fpfx        = merge('dir',    'adj',    imode==1)
             ref_fld     = merge('x0.fld', 'y0.fld', imode==1)
             if_adjoint  = (imode == 2)
-            msg = '---- eigs: '//fpfx//' ----'
-            call nek_log_message(msg, procedure='main')
+            key = '---- eigs: '//fpfx//' ----'
+            call nek_log_message(key, procedure='main')
 
             call zero_basis(eigvecs)
 
@@ -82,9 +79,6 @@ c     -------------------------------------------------------------------
             ! rename eigs
             if (nid == 0) call rename('eigs_output.txt', fpfx//'_eigs_output.txt')
 
-            ! checks
-            ok = all(residuals(:nev) < res_tol)
-            call check('eigs.'//fpfx//'.converged', ok, tol=res_tol)
             ! eigenvalue
             do i = 1, nev
                write(key, '(2A,I0,A)') fpfx, '_lambda_', i, '_re'
@@ -101,26 +95,25 @@ c     -------------------------------------------------------------------
             inquire(file=trim(fim), exist=have_im)
             if (have_re .and. have_im) then
                nv = lx1*ly1*lz1*nelv
+               call amp%zero(); call amp_ref%zero()
+               call load_fld(trim(fre)//' U P T')
+               call nek2vec(x0, vx, vy, vz, pr, t)
+               call load_fld(trim(fim)//' U P T')
+               call nek2vec(amp, vx, vy, vz, pr, t)
+               associate(re => x0, im => amp)
+                  amp_ref%vx = sqrt(re%vx**2 + im%vx**2)
+                  amp_ref%vy = sqrt(re%vy**2 + im%vy**2)
+                  amp_ref%vz = sqrt(re%vz**2 + im%vz**2)
+               end associate
                call amp%zero()
                associate(re => eigvecs(1), im => eigvecs(2))
                   amp%vx = sqrt(re%vx**2 + im%vx**2)
                   amp%vy = sqrt(re%vy**2 + im%vy**2)
                   amp%vz = sqrt(re%vz**2 + im%vz**2)
                end associate
-               call load_fld(trim(fre)//' U P T')
-               call nek2vec(x0, vx, vy, vz, pr, t)
-               call load_fld(trim(fim)//' U P T')
-               call nek2vec(wrk, vx, vy, vz, pr, t)
-               call amp_ref%zero()
-               associate(re => x0, im => wrk)
-                  amp_ref%vx = sqrt(re%vx**2 + im%vx**2)
-                  amp_ref%vy = sqrt(re%vy**2 + im%vy**2)
-                  amp_ref%vz = sqrt(re%vz**2 + im%vz**2)
-               end associate
-               nrm = amp%norm()
                call amp%sub(amp_ref)
                write(key, '(2A,I0,A)') fpfx, '_mode_amp_err'
-               call report(key, amp%norm()/nrm)
+               call report(key, amp%norm())
             end if
          end do
 

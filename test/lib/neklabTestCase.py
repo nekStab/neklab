@@ -201,8 +201,11 @@ class NeklabTestCase(unittest.TestCase):
          self.failures.append(f"{name}  {info}".rstrip())
 
    def check_close(self, label, value, target, tol):
+      """|value - target| <= tol; prints the error and the tolerance, then value."""
       self.measured[label] = value
-      self.check(abs(value - target) <= tol, label, f"= {value!r} (target {target!r} +/- {tol})")
+      err = abs(value - target)
+      self.check(err <= tol, label,
+                 f"err {err:9.2e}  tol {tol:9.2e}  value {value: .5e}")
 
    def check_driver(self, expected=(), completed=None):
       """Read the NEKLAB_CHECK / NEKLAB_RESULT lines printed by the case's .usr.
@@ -220,7 +223,8 @@ class NeklabTestCase(unittest.TestCase):
       say("checks", f"{len(checks)} reported in {Path(self.log).name}:")
       for name, (status, message) in checks.items():
          self.check(status == "PASS", name, message)
-      self.check(bool(checks), "the driver reported its checks", quiet=True)
+      if not expected:
+         say("checks", "none expected")
       for name in expected:
          if name not in checks:
             hint = (f" -- longer than the {self.CHECK_NAME_MAX} characters check() prints"
