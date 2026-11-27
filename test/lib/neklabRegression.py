@@ -215,16 +215,16 @@ class RegressionTest(NeklabTestCase):
       for key, (low, high) in self.option("bounds").items():
          v = value(key)
          if v is not None:
-            self.check(low <= v <= high, key, f"= {v!r} (bounds [{low}, {high}])")
+            self.check(low <= v <= high, key, f"err {v!r} (bounds [{low}, {high}])")
       if self.have_reference_fields:
          for key, high in self.option("field_errors").items():
             v = value(key)
             if v is not None:
-               self.check(v <= high, key, f"= {v!r} (at most {high})")
+               self.check(v <= high, key, f"err {v!r}  tol {high}")
       for key, high in self.opts.get("max", {}).items():
          v = value(key)
          if v is not None:
-            self.check(v <= high, key, f"= {v!r} (at most {high})")
+            self.check(v <= high, key, f"err {v!r}  tol {high}")
 
    # --- references (full only, see NeklabTestCase.finish) -------------------------
    def check_reference_outputs(self):
